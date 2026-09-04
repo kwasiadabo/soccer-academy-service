@@ -1,0 +1,1446 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================
+// Enums
+// ============================================================
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum DominantFoot {
+  LEFT
+  RIGHT
+  BOTH
+}
+
+enum PlayerStatus {
+  DRAFT
+  PENDING_PARENT_INFO
+  SUBMITTED
+  PENDING_APPROVAL
+  PENDING_REGISTRATION_PAYMENT
+  ACTIVE
+  SUSPENDED
+  WITHDRAWN
+}
+
+enum GuardianRelationship {
+  MOTHER
+  FATHER
+  GUARDIAN
+  OTHER
+}
+
+enum FeeCategory {
+  REGISTRATION
+  MONTHLY_SUBSCRIPTION
+  LEVY
+  TOURNAMENT
+  UNIFORM_EQUIPMENT
+  SPECIAL_ACTIVITY
+  DONATION
+  OTHER
+}
+
+enum InvoiceStatus {
+  PENDING
+  PARTIALLY_PAID
+  PAID
+  OVERDUE
+  WAIVED
+  CANCELLED
+}
+
+enum PaymentMethod {
+  CASH
+  BANK_TRANSFER
+  MOBILE_MONEY
+  CARD
+  ONLINE_GATEWAY
+  OTHER
+}
+
+enum PaymentStatus {
+  COMPLETED
+  REVERSED
+  VOIDED
+}
+
+enum AdjustmentType {
+  DISCOUNT
+  SCHOLARSHIP
+  WRITE_OFF
+  CORRECTION
+}
+
+enum CoachAssignmentRole {
+  PRIMARY
+  ASSISTANT
+}
+
+enum StaffRole {
+  COACH
+  KITMAN
+  RECEPTIONIST_CASHIER
+  MEDIA
+}
+
+enum TrainingApprovalStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  REJECTED
+  CHANGES_REQUESTED
+}
+
+enum TrainingSessionStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+  EXCUSED
+  INJURED
+}
+
+enum RatingScaleType {
+  SCALE_1_5
+  SCALE_1_10
+  QUALITATIVE
+}
+
+enum AssessmentCategory {
+  TECHNICAL
+  TACTICAL
+  PHYSICAL
+  MENTAL_BEHAVIOURAL
+}
+
+enum MatchStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+  POSTPONED
+}
+
+enum NotificationChannel {
+  IN_APP
+  EMAIL
+  SMS
+  WHATSAPP
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  FAILED
+  READ
+}
+
+enum DocumentOwnerType {
+  PLAYER
+  GUARDIAN
+  COACH
+  PRODUCT
+}
+
+enum DocumentType {
+  PHOTO
+  BIRTH_CERTIFICATE
+  MEDICAL_RECORD
+  IDENTIFICATION
+  QUALIFICATION
+  OTHER
+}
+
+// ============================================================
+// Identity & Security
+// ============================================================
+
+model User {
+  id                 String     @id @default(uuid())
+  email              String     @unique
+  passwordHash       String
+  firstName          String
+  lastName           String
+  phone              String?
+  status             UserStatus @default(ACTIVE)
+  mustChangePassword Boolean    @default(false)
+  refreshTokenHash   String?
+  lastLoginAt        DateTime?
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+  deletedAt          DateTime?
+
+  roles                      UserRole[]
+  coachProfile               Coach?
+  guardianProfile            Guardian?
+  notifications              Notification[]
+  auditLogs                  AuditLog[]
+  uploadedDocuments          Document[]
+  submittedFeedback          CoachFeedback[]
+  passwordResetTokens        PasswordResetToken[]
+  recordedAttendance         TrainingAttendance[] @relation("TrainingAttendanceRecorder")
+  submittedIssues            ParentIssue[]        @relation("IssueSubmitter")
+  issueMessages              IssueMessage[]       @relation("IssueMessageAuthor")
+  submittedMerchandiseOrders MerchandiseOrder[]   @relation("MerchandiseOrderSubmitter")
+  uploadedGalleryPhotos      GalleryPhoto[]
+
+  @@index([status])
+  @@map("users")
+}
+
+model PasswordResetToken {
+  id        String    @id @default(uuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("password_reset_tokens")
+}
+
+model Role {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  isSystem    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  users       UserRole[]
+  permissions RolePermission[]
+
+  @@map("roles")
+}
+
+model Permission {
+  id          String   @id @default(uuid())
+  key         String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+
+  roles RolePermission[]
+
+  @@map("permissions")
+}
+
+model UserRole {
+  id        String   @id @default(uuid())
+  userId    String
+  roleId    String
+  grantedAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, roleId])
+  @@map("user_roles")
+}
+
+model RolePermission {
+  id           String @id @default(uuid())
+  roleId       String
+  permissionId String
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+// ============================================================
+// Academy Structure
+// ============================================================
+
+model Season {
+  id        String   @id @default(uuid())
+  branchId  String?
+  name      String
+  startDate DateTime
+  endDate   DateTime
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  teams Team[]
+
+  @@index([branchId])
+  @@map("seasons")
+}
+
+model AgeCategory {
+  id        String   @id @default(uuid())
+  branchId  String?
+  name      String
+  code      String   @unique
+  minAge    Int
+  maxAge    Int
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  teams               Team[]
+  players             Player[]
+  feeStructures       FeeStructure[]
+  assessmentTemplates AssessmentTemplate[]
+  groupAssignments    PlayerGroupAssignment[]
+
+  @@index([branchId])
+  @@map("age_categories")
+}
+
+model Team {
+  id            String   @id @default(uuid())
+  branchId      String?
+  name          String
+  ageCategoryId String
+  seasonId      String
+  headCoachId   String?
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  ageCategory AgeCategory @relation(fields: [ageCategoryId], references: [id])
+  season      Season      @relation(fields: [seasonId], references: [id])
+  headCoach   Coach?      @relation(fields: [headCoachId], references: [id])
+
+  trainingGroups        TrainingGroup[]
+  players               Player[]
+  feeStructures         FeeStructure[]
+  coachAssignments      CoachAssignment[]
+  trainingPlans         TrainingPlan[]
+  trainingSessions      TrainingSession[]
+  matches               Match[]
+  groupAssignments      PlayerGroupAssignment[]
+  playerOfTheWeekAwards PlayerOfTheWeek[]
+
+  @@index([branchId])
+  @@index([ageCategoryId])
+  @@index([seasonId])
+  @@map("teams")
+}
+
+model TrainingGroup {
+  id             String   @id @default(uuid())
+  branchId       String?
+  name           String
+  teamId         String
+  primaryCoachId String?
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  team         Team   @relation(fields: [teamId], references: [id])
+  primaryCoach Coach? @relation(fields: [primaryCoachId], references: [id])
+
+  players          Player[]
+  coachAssignments CoachAssignment[]
+  trainingPlans    TrainingPlan[]
+  trainingSessions TrainingSession[]
+  groupAssignments PlayerGroupAssignment[]
+
+  @@index([teamId])
+  @@map("training_groups")
+}
+
+// ============================================================
+// Player Management
+// ============================================================
+
+model Player {
+  id                    String        @id @default(uuid())
+  playerCode            String?       @unique
+  firstName             String
+  middleName            String?
+  lastName              String
+  dateOfBirth           DateTime
+  gender                Gender
+  nationality           String?
+  photoDocumentId       String?
+  residentialAddress    String?
+  medicalNotes          String?
+  previousExperience    String?
+  preferredPosition     String?
+  dominantFoot          DominantFoot?
+  emergencyContactName  String?
+  emergencyContactPhone String?
+  status                PlayerStatus  @default(DRAFT)
+  ageCategoryId         String?
+  teamId                String?
+  trainingGroupId       String?
+  primaryCoachId        String?
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+  deletedAt             DateTime?
+
+  ageCategory   AgeCategory?   @relation(fields: [ageCategoryId], references: [id])
+  team          Team?          @relation(fields: [teamId], references: [id])
+  trainingGroup TrainingGroup? @relation(fields: [trainingGroupId], references: [id])
+  primaryCoach  Coach?         @relation(fields: [primaryCoachId], references: [id])
+  photo         Document?      @relation(fields: [photoDocumentId], references: [id])
+
+  guardians             PlayerGuardian[]
+  registrations         PlayerRegistration[]
+  groupAssignments      PlayerGroupAssignment[]
+  invoices              Invoice[]
+  payments              Payment[]
+  financialAdjustments  FinancialAdjustment[]
+  trainingAttendance    TrainingAttendance[]
+  assessments           PlayerAssessment[]
+  coachRemarks          CoachRemark[]
+  matchParticipations   MatchParticipation[]
+  matchAssessments      MatchPlayerAssessment[]
+  coachFeedback         CoachFeedback[]
+  merchandiseOrders     MerchandiseOrder[]
+  activityMarks         TrainingActivityMark[]
+  playerOfTheWeekAwards PlayerOfTheWeek[]
+
+  @@index([status])
+  @@index([ageCategoryId])
+  @@index([teamId])
+  @@map("players")
+}
+
+model Guardian {
+  id        String    @id @default(uuid())
+  userId    String?   @unique
+  firstName String
+  lastName  String
+  phone     String
+  email     String?
+  address   String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  user              User?              @relation(fields: [userId], references: [id])
+  players           PlayerGuardian[]
+  issues            ParentIssue[]
+  merchandiseOrders MerchandiseOrder[]
+
+  @@map("guardians")
+}
+
+model PlayerGuardian {
+  id           String               @id @default(uuid())
+  playerId     String
+  guardianId   String
+  relationship GuardianRelationship
+  isPrimary    Boolean              @default(false)
+  createdAt    DateTime             @default(now())
+
+  player   Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  guardian Guardian @relation(fields: [guardianId], references: [id], onDelete: Cascade)
+
+  @@unique([playerId, guardianId])
+  @@map("player_guardians")
+}
+
+model PlayerRegistration {
+  id                       String       @id @default(uuid())
+  playerId                 String
+  status                   PlayerStatus @default(DRAFT)
+  invitationToken          String?      @unique
+  invitedByUserId          String?
+  submittedAt              DateTime?
+  reviewedByUserId         String?
+  reviewedAt               DateTime?
+  reviewNotes              String?
+  registrationFeeInvoiceId String?      @unique
+  createdAt                DateTime     @default(now())
+  updatedAt                DateTime     @updatedAt
+
+  player                 Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  registrationFeeInvoice Invoice? @relation(fields: [registrationFeeInvoiceId], references: [id])
+
+  @@index([playerId])
+  @@index([status])
+  @@map("player_registrations")
+}
+
+model PlayerGroupAssignment {
+  id              String    @id @default(uuid())
+  playerId        String
+  ageCategoryId   String?
+  teamId          String?
+  trainingGroupId String?
+  coachId         String?
+  effectiveFrom   DateTime  @default(now())
+  effectiveTo     DateTime?
+  createdAt       DateTime  @default(now())
+
+  player        Player         @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  ageCategory   AgeCategory?   @relation(fields: [ageCategoryId], references: [id])
+  team          Team?          @relation(fields: [teamId], references: [id])
+  trainingGroup TrainingGroup? @relation(fields: [trainingGroupId], references: [id])
+  coach         Coach?         @relation(fields: [coachId], references: [id])
+
+  @@index([playerId])
+  @@map("player_group_assignments")
+}
+
+// ============================================================
+// Finance
+// ============================================================
+
+// A chargeable Fee (Registration, Monthly Subscription, a specific Levy, ...).
+// Its amount is never typed directly — it's always the sum of the FeeItems
+// attached via FeeTypeItem, recomputed whenever that composition changes.
+model FeeType {
+  id            String      @id @default(uuid())
+  name          String
+  category      FeeCategory
+  description   String?
+  isRecurring   Boolean     @default(false)
+  defaultAmount Decimal     @default(0) @db.Decimal(10, 2)
+  isActive      Boolean     @default(true)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  feeStructures FeeStructure[]
+  invoices      Invoice[]
+  items         FeeTypeItem[]
+
+  @@map("fee_types")
+}
+
+// A raw priced building block (Jersey, Training Kit, Admin Processing, ...).
+// Has no category of its own — it only becomes part of a chargeable Fee once
+// attached to a FeeType, which is what prevents a plain item from accidentally
+// becoming "the" Registration fee (or any other single-active fee) by itself.
+model FeeItem {
+  id            String   @id @default(uuid())
+  name          String
+  description   String?
+  defaultAmount Decimal  @db.Decimal(10, 2)
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  feeTypes FeeTypeItem[]
+
+  @@map("fee_items")
+}
+
+model FeeTypeItem {
+  feeTypeId String
+  feeItemId String
+  createdAt DateTime @default(now())
+
+  feeType FeeType @relation(fields: [feeTypeId], references: [id], onDelete: Cascade)
+  feeItem FeeItem @relation(fields: [feeItemId], references: [id], onDelete: Restrict)
+
+  @@id([feeTypeId, feeItemId])
+  @@map("fee_type_items")
+}
+
+model FeeStructure {
+  id                String    @id @default(uuid())
+  feeTypeId         String
+  ageCategoryId     String?
+  teamId            String?
+  amount            Decimal   @db.Decimal(10, 2)
+  billingDayOfMonth Int?
+  gracePeriodDays   Int       @default(0)
+  effectiveFrom     DateTime  @default(now())
+  effectiveTo       DateTime?
+  isActive          Boolean   @default(true)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  feeType     FeeType      @relation(fields: [feeTypeId], references: [id])
+  ageCategory AgeCategory? @relation(fields: [ageCategoryId], references: [id])
+  team        Team?        @relation(fields: [teamId], references: [id])
+
+  @@index([feeTypeId])
+  @@map("fee_structures")
+}
+
+model Invoice {
+  id              String        @id @default(uuid())
+  invoiceNumber   String        @unique
+  playerId        String
+  feeTypeId       String
+  description     String?
+  amount          Decimal       @db.Decimal(10, 2)
+  discountAmount  Decimal       @default(0) @db.Decimal(10, 2)
+  dueDate         DateTime
+  gracePeriodDays Int           @default(0)
+  status          InvoiceStatus @default(PENDING)
+  issuedAt        DateTime      @default(now())
+  waivedAt        DateTime?
+  waivedReason    String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  deletedAt       DateTime?
+
+  player  Player  @relation(fields: [playerId], references: [id])
+  feeType FeeType @relation(fields: [feeTypeId], references: [id])
+
+  allocations          PaymentAllocation[]
+  financialAdjustments FinancialAdjustment[]
+  registration         PlayerRegistration?
+  merchandiseOrder     MerchandiseOrder?
+
+  @@index([playerId])
+  @@index([status])
+  @@index([dueDate])
+  @@map("invoices")
+}
+
+model Payment {
+  id               String        @id @default(uuid())
+  receiptNumber    String        @unique
+  playerId         String
+  amount           Decimal       @db.Decimal(10, 2)
+  method           PaymentMethod
+  reference        String?
+  status           PaymentStatus @default(COMPLETED)
+  receivedByUserId String
+  reversedByUserId String?
+  reversedAt       DateTime?
+  reversalReason   String?
+  paidAt           DateTime      @default(now())
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  player      Player              @relation(fields: [playerId], references: [id])
+  allocations PaymentAllocation[]
+
+  @@index([playerId])
+  @@index([status])
+  @@map("payments")
+}
+
+model PaymentAllocation {
+  id        String   @id @default(uuid())
+  paymentId String
+  invoiceId String
+  amount    Decimal  @db.Decimal(10, 2)
+  createdAt DateTime @default(now())
+
+  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  invoice Invoice @relation(fields: [invoiceId], references: [id])
+
+  @@index([paymentId])
+  @@index([invoiceId])
+  @@map("payment_allocations")
+}
+
+model FinancialAdjustment {
+  id               String         @id @default(uuid())
+  playerId         String
+  invoiceId        String?
+  type             AdjustmentType
+  amount           Decimal        @db.Decimal(10, 2)
+  reason           String
+  approvedByUserId String
+  createdAt        DateTime       @default(now())
+
+  player  Player   @relation(fields: [playerId], references: [id])
+  invoice Invoice? @relation(fields: [invoiceId], references: [id])
+
+  @@index([playerId])
+  @@map("financial_adjustments")
+}
+
+// ============================================================
+// Coaching
+// ============================================================
+
+model Coach {
+  id         String    @id @default(uuid())
+  userId     String?   @unique
+  firstName  String
+  middleName String?
+  lastName   String
+  phone      String?
+  email      String?
+  bio        String?
+  role       StaffRole @default(COACH)
+  isActive   Boolean   @default(true)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  deletedAt  DateTime?
+
+  user User? @relation(fields: [userId], references: [id])
+
+  headOfTeams        Team[]
+  primaryOfGroups    TrainingGroup[]
+  qualifications     CoachQualification[]
+  assignments        CoachAssignment[]
+  primaryPlayers     Player[]
+  groupAssignments   PlayerGroupAssignment[]
+  trainingPlans      TrainingPlan[]
+  conductedSessions  TrainingSession[]
+  assessments        PlayerAssessment[]
+  remarks            CoachRemark[]
+  matchAssessments   MatchPlayerAssessment[]
+  feedbackReceived   CoachFeedback[]
+  activityMarksGiven TrainingActivityMark[]
+
+  @@map("coaches")
+}
+
+model CoachAssignment {
+  id              String              @id @default(uuid())
+  coachId         String
+  teamId          String?
+  trainingGroupId String?
+  role            CoachAssignmentRole @default(PRIMARY)
+  effectiveFrom   DateTime            @default(now())
+  effectiveTo     DateTime?
+  createdAt       DateTime            @default(now())
+
+  coach         Coach          @relation(fields: [coachId], references: [id], onDelete: Cascade)
+  team          Team?          @relation(fields: [teamId], references: [id])
+  trainingGroup TrainingGroup? @relation(fields: [trainingGroupId], references: [id])
+
+  @@index([coachId])
+  @@map("coach_assignments")
+}
+
+model CoachQualification {
+  id          String    @id @default(uuid())
+  coachId     String
+  title       String
+  issuingBody String?
+  issueDate   DateTime?
+  expiryDate  DateTime?
+  documentId  String?
+  createdAt   DateTime  @default(now())
+
+  coach    Coach     @relation(fields: [coachId], references: [id], onDelete: Cascade)
+  document Document? @relation(fields: [documentId], references: [id])
+
+  @@index([coachId])
+  @@map("coach_qualifications")
+}
+
+// ============================================================
+// Training
+// ============================================================
+
+model TrainingPlan {
+  id                 String                 @id @default(uuid())
+  coachId            String
+  teamId             String
+  trainingGroupId    String?
+  title              String
+  objectives         String?
+  scheduledDate      DateTime
+  scheduledStart     String?
+  scheduledEnd       String?
+  location           String?
+  requiredEquipment  String?
+  skillsFocus        String?
+  assessmentCriteria String?
+  approvalStatus     TrainingApprovalStatus @default(DRAFT)
+  version            Int                    @default(1)
+  createdAt          DateTime               @default(now())
+  updatedAt          DateTime               @updatedAt
+
+  coach         Coach          @relation(fields: [coachId], references: [id])
+  team          Team           @relation(fields: [teamId], references: [id])
+  trainingGroup TrainingGroup? @relation(fields: [trainingGroupId], references: [id])
+
+  activities TrainingActivity[]
+  approvals  TrainingApproval[]
+  sessions   TrainingSession[]
+
+  @@index([coachId])
+  @@index([teamId])
+  @@index([approvalStatus])
+  @@map("training_plans")
+}
+
+model TrainingActivity {
+  id              String  @id @default(uuid())
+  trainingPlanId  String
+  name            String
+  description     String?
+  durationMinutes Int?
+  skillsDeveloped String?
+  sortOrder       Int     @default(0)
+
+  trainingPlan TrainingPlan           @relation(fields: [trainingPlanId], references: [id], onDelete: Cascade)
+  marks        TrainingActivityMark[]
+
+  @@index([trainingPlanId])
+  @@map("training_activities")
+}
+
+// A coach's per-drill mark for one player — distinct from PlayerAssessment (which rates a
+// whole session/match against a reusable rubric): this is one simple 1-10 score tied to a
+// single TrainingActivity, meant to be quick to record right after running that drill.
+model TrainingActivityMark {
+  id                 String   @id @default(uuid())
+  trainingActivityId String
+  playerId           String
+  ratedByCoachId     String
+  rating             Int
+  remarks            String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  trainingActivity TrainingActivity @relation(fields: [trainingActivityId], references: [id], onDelete: Cascade)
+  player           Player           @relation(fields: [playerId], references: [id])
+  ratedByCoach     Coach            @relation(fields: [ratedByCoachId], references: [id])
+
+  @@unique([trainingActivityId, playerId])
+  @@index([playerId])
+  @@index([ratedByCoachId])
+  @@map("training_activity_marks")
+}
+
+model TrainingApproval {
+  id                String                 @id @default(uuid())
+  trainingPlanId    String
+  submittedByUserId String
+  submittedAt       DateTime               @default(now())
+  reviewedByUserId  String?
+  reviewedAt        DateTime?
+  decision          TrainingApprovalStatus @default(SUBMITTED)
+  comments          String?
+
+  trainingPlan TrainingPlan @relation(fields: [trainingPlanId], references: [id], onDelete: Cascade)
+
+  @@index([trainingPlanId])
+  @@map("training_approvals")
+}
+
+model TrainingSession {
+  id                 String                @id @default(uuid())
+  trainingPlanId     String?
+  teamId             String
+  trainingGroupId    String?
+  // Nullable: recurring Saturday sessions are auto-provisioned as a shared team fixture
+  // (see TrainingService#getOrCreateSaturdaySession) rather than personally scheduled by
+  // one coach, so there's often no single "creator" to attribute it to.
+  conductedByCoachId String?
+  date               DateTime
+  startTime          String?
+  endTime            String?
+  location           String?
+  status             TrainingSessionStatus @default(SCHEDULED)
+  createdAt          DateTime              @default(now())
+  updatedAt          DateTime              @updatedAt
+
+  trainingPlan     TrainingPlan?  @relation(fields: [trainingPlanId], references: [id])
+  team             Team           @relation(fields: [teamId], references: [id])
+  trainingGroup    TrainingGroup? @relation(fields: [trainingGroupId], references: [id])
+  conductedByCoach Coach?         @relation(fields: [conductedByCoachId], references: [id])
+
+  attendance        TrainingAttendance[]
+  assessments       PlayerAssessment[]
+  sessionActivities TrainingSessionActivity[]
+  playerOfTheWeek   PlayerOfTheWeek?
+
+  @@index([teamId])
+  @@index([date])
+  @@map("training_sessions")
+}
+
+// One pick per team per Saturday session — the player with the highest average
+// TrainingActivityMark rating from that week's training, computed automatically
+// by TrainingService's Saturday cron. Surfaced publicly on the marketing site and
+// starred for the guardian in the parent portal.
+model PlayerOfTheWeek {
+  id                String   @id @default(uuid())
+  playerId          String
+  teamId            String
+  trainingSessionId String   @unique
+  weekOf            DateTime
+  averageRating     Decimal  @db.Decimal(4, 2)
+  createdAt         DateTime @default(now())
+
+  player          Player          @relation(fields: [playerId], references: [id])
+  team            Team            @relation(fields: [teamId], references: [id])
+  trainingSession TrainingSession @relation(fields: [trainingSessionId], references: [id])
+
+  @@index([playerId])
+  @@index([teamId])
+  @@index([weekOf])
+  @@map("player_of_the_week")
+}
+
+enum GalleryPhotoContext {
+  SATURDAY_TRAINING
+  MATCH
+}
+
+// Publicly-displayed marketing photos. Every new batch upload for a given context
+// replaces the previous one outright (old rows deleted, old Cloudinary assets
+// removed) — see GalleryService#replaceForContext — so this is always "the current
+// set of photos," never an accumulating history.
+model GalleryPhoto {
+  id               String              @id @default(uuid())
+  context          GalleryPhotoContext
+  // Opaque key into StorageService (Cloudinary in production) — resolved to a public
+  // delivery URL on read via StorageService#resolvePath, and passed to
+  // StorageService#delete to remove the asset when this batch is replaced.
+  storageKey       String
+  sortOrder        Int                 @default(0)
+  // Every photo in a batch shares the same session details, entered once at upload
+  // time (see GalleryService#replaceForContext) — the date of the Saturday session
+  // or match, and a short description (e.g. "vs Rangers FC — Home win 3-1").
+  sessionDate      DateTime
+  details          String
+  uploadedByUserId String
+  createdAt        DateTime            @default(now())
+
+  uploadedByUser User @relation(fields: [uploadedByUserId], references: [id])
+
+  @@index([context])
+  @@map("gallery_photos")
+}
+
+model TrainingSessionActivity {
+  id                String   @id @default(uuid())
+  trainingSessionId String
+  name              String
+  sortOrder         Int      @default(0)
+  createdAt         DateTime @default(now())
+
+  trainingSession TrainingSession    @relation(fields: [trainingSessionId], references: [id], onDelete: Cascade)
+  ratings         AssessmentRating[]
+
+  @@index([trainingSessionId])
+  @@map("training_session_activities")
+}
+
+model TrainingAttendance {
+  id                String           @id @default(uuid())
+  trainingSessionId String
+  playerId          String
+  status            AttendanceStatus
+  remarks           String?
+  recordedByUserId  String
+  // Always re-stamped to the current time on every mark or re-mark (see
+  // TrainingService#recordAttendance) — this is a "when was it recorded" audit
+  // field, not just a creation timestamp.
+  recordedAt        DateTime         @default(now())
+
+  trainingSession TrainingSession @relation(fields: [trainingSessionId], references: [id], onDelete: Cascade)
+  player          Player          @relation(fields: [playerId], references: [id])
+  recordedByUser  User            @relation("TrainingAttendanceRecorder", fields: [recordedByUserId], references: [id])
+
+  @@unique([trainingSessionId, playerId])
+  @@index([playerId])
+  @@map("training_attendance")
+}
+
+// ============================================================
+// Assessments
+// ============================================================
+
+model AssessmentTemplate {
+  id            String          @id @default(uuid())
+  name          String
+  ageCategoryId String?
+  ratingScale   RatingScaleType @default(SCALE_1_5)
+  isActive      Boolean         @default(true)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  ageCategory AgeCategory? @relation(fields: [ageCategoryId], references: [id])
+
+  criteria    AssessmentCriteria[]
+  assessments PlayerAssessment[]
+
+  @@map("assessment_templates")
+}
+
+model AssessmentCriteria {
+  id          String             @id @default(uuid())
+  templateId  String
+  category    AssessmentCategory
+  name        String
+  description String?
+  sortOrder   Int                @default(0)
+
+  template AssessmentTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  ratings  AssessmentRating[]
+
+  @@index([templateId])
+  @@map("assessment_criteria")
+}
+
+model PlayerAssessment {
+  id                  String    @id @default(uuid())
+  playerId            String
+  // Nullable: a session-scoped assessment rates a coach's ad hoc session activities
+  // instead of a pre-built template (see TrainingSessionActivity / AssessmentsService#createAssessment).
+  templateId          String?
+  trainingSessionId   String?
+  matchId             String?
+  assessedByCoachId   String
+  assessmentDate      DateTime  @default(now())
+  strengths           String?
+  areasForImprovement String?
+  developmentGoals    String?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  deletedAt           DateTime?
+
+  player          Player              @relation(fields: [playerId], references: [id])
+  template        AssessmentTemplate? @relation(fields: [templateId], references: [id], onDelete: Restrict)
+  trainingSession TrainingSession?    @relation(fields: [trainingSessionId], references: [id])
+  match           Match?              @relation(fields: [matchId], references: [id])
+  assessedByCoach Coach               @relation(fields: [assessedByCoachId], references: [id])
+
+  ratings AssessmentRating[]
+
+  @@index([playerId])
+  @@index([assessmentDate])
+  @@map("player_assessments")
+}
+
+model AssessmentRating {
+  id                 String  @id @default(uuid())
+  playerAssessmentId String
+  // Exactly one of criteriaId/sessionActivityId is set, depending on whether the parent
+  // PlayerAssessment used a template (criteriaId) or a session's set activities
+  // (sessionActivityId) — enforced in AssessmentsService#createAssessment.
+  criteriaId         String?
+  sessionActivityId  String?
+  ratingValue        Decimal @db.Decimal(5, 2)
+  ratingLabel        String?
+  remarks            String?
+
+  playerAssessment PlayerAssessment         @relation(fields: [playerAssessmentId], references: [id], onDelete: Cascade)
+  criteria         AssessmentCriteria?      @relation(fields: [criteriaId], references: [id], onDelete: Restrict)
+  sessionActivity  TrainingSessionActivity? @relation(fields: [sessionActivityId], references: [id], onDelete: Restrict)
+
+  @@unique([playerAssessmentId, criteriaId])
+  @@unique([playerAssessmentId, sessionActivityId])
+  @@map("assessment_ratings")
+}
+
+model CoachRemark {
+  id        String   @id @default(uuid())
+  playerId  String
+  coachId   String
+  remark    String
+  context   String?
+  createdAt DateTime @default(now())
+
+  player Player @relation(fields: [playerId], references: [id])
+  coach  Coach  @relation(fields: [coachId], references: [id])
+
+  @@index([playerId])
+  @@map("coach_remarks")
+}
+
+// ============================================================
+// Matches
+// ============================================================
+
+model Opponent {
+  id          String   @id @default(uuid())
+  name        String
+  contactInfo String?
+  createdAt   DateTime @default(now())
+
+  matches Match[]
+
+  @@map("opponents")
+}
+
+model Match {
+  id              String      @id @default(uuid())
+  teamId          String
+  opponentId      String
+  competitionName String?
+  venue           String?
+  matchDate       DateTime
+  status          MatchStatus @default(SCHEDULED)
+  homeScore       Int?
+  awayScore       Int?
+  notes           String?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  team     Team     @relation(fields: [teamId], references: [id])
+  opponent Opponent @relation(fields: [opponentId], references: [id])
+
+  participations         MatchParticipation[]
+  matchPlayerAssessments MatchPlayerAssessment[]
+  developmentAssessments PlayerAssessment[]
+
+  @@index([teamId])
+  @@index([matchDate])
+  @@map("matches")
+}
+
+model MatchParticipation {
+  id             String  @id @default(uuid())
+  matchId        String
+  playerId       String
+  isStarting     Boolean @default(false)
+  isSubstitute   Boolean @default(false)
+  positionPlayed String?
+  minutesPlayed  Int?
+
+  match  Match  @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  player Player @relation(fields: [playerId], references: [id])
+
+  @@unique([matchId, playerId])
+  @@map("match_participations")
+}
+
+model MatchPlayerAssessment {
+  id                     String   @id @default(uuid())
+  matchId                String
+  playerId               String
+  assessedByCoachId      String
+  technicalRating        Decimal? @db.Decimal(5, 2)
+  tacticalRating         Decimal? @db.Decimal(5, 2)
+  teamContributionRating Decimal? @db.Decimal(5, 2)
+  disciplineRating       Decimal? @db.Decimal(5, 2)
+  effortRating           Decimal? @db.Decimal(5, 2)
+  overallRating          Decimal? @db.Decimal(5, 2)
+  remarks                String?
+  recommendations        String?
+  createdAt              DateTime @default(now())
+
+  match           Match  @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  player          Player @relation(fields: [playerId], references: [id])
+  assessedByCoach Coach  @relation(fields: [assessedByCoachId], references: [id])
+
+  @@unique([matchId, playerId])
+  @@map("match_player_assessments")
+}
+
+// ============================================================
+// Coach Feedback (from parents)
+// ============================================================
+
+model CoachFeedback {
+  id                String   @id @default(uuid())
+  coachId           String
+  submittedByUserId String
+  playerId          String
+  period            String?
+  overallRating     Decimal  @db.Decimal(3, 2)
+  isAnonymous       Boolean  @default(false)
+  comments          String?
+  createdAt         DateTime @default(now())
+
+  coach           Coach  @relation(fields: [coachId], references: [id])
+  submittedByUser User   @relation(fields: [submittedByUserId], references: [id])
+  player          Player @relation(fields: [playerId], references: [id])
+
+  criteria CoachFeedbackCriteria[]
+
+  @@unique([coachId, submittedByUserId, playerId, period])
+  @@index([coachId])
+  @@map("coach_feedback")
+}
+
+model CoachFeedbackCriteria {
+  id            String  @id @default(uuid())
+  feedbackId    String
+  criterionName String
+  rating        Decimal @db.Decimal(3, 2)
+
+  feedback CoachFeedback @relation(fields: [feedbackId], references: [id], onDelete: Cascade)
+
+  @@index([feedbackId])
+  @@map("coach_feedback_criteria")
+}
+
+enum IssueStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+// A parent-raised issue/complaint, with a threaded conversation (IssueMessage) between
+// the guardian and academy staff (Admin, Receptionist, Head Coach — gated by
+// PERMISSIONS.ISSUES_MANAGE).
+model ParentIssue {
+  id                String      @id @default(uuid())
+  guardianId        String
+  submittedByUserId String
+  subject           String
+  description       String
+  status            IssueStatus @default(OPEN)
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  guardian    Guardian       @relation(fields: [guardianId], references: [id])
+  submittedBy User           @relation("IssueSubmitter", fields: [submittedByUserId], references: [id])
+  messages    IssueMessage[]
+
+  @@index([guardianId])
+  @@map("parent_issues")
+}
+
+model IssueMessage {
+  id           String    @id @default(uuid())
+  issueId      String
+  authorUserId String
+  isStaffReply Boolean
+  message      String
+  readAt       DateTime?
+  createdAt    DateTime  @default(now())
+
+  issue  ParentIssue @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  author User        @relation("IssueMessageAuthor", fields: [authorUserId], references: [id])
+
+  @@index([issueId])
+  @@map("issue_messages")
+}
+
+// ============================================================
+// Merchandise
+// ============================================================
+
+enum ProductCategory {
+  JERSEY
+  TRACK_SUIT
+  BOOTS
+  SOCKS
+  OTHER
+}
+
+enum MerchandiseOrderStatus {
+  PENDING
+  APPROVED
+  READY_FOR_PICKUP
+  FULFILLED
+  REJECTED
+  CANCELLED
+}
+
+model Product {
+  id          String          @id @default(uuid())
+  name        String
+  description String?
+  category    ProductCategory
+  basePrice   Decimal         @db.Decimal(10, 2)
+  isActive    Boolean         @default(true)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  deletedAt   DateTime?
+
+  images   ProductImage[]
+  variants ProductVariant[]
+
+  @@index([category])
+  @@index([isActive])
+  @@map("products")
+}
+
+// A photo of a Product — a product can carry several (front/back/detail shots) so the
+// shop can show "different sides" of the merchandise; sortOrder[0] is the cover image
+// used in catalog grids.
+model ProductImage {
+  id         String   @id @default(uuid())
+  productId  String
+  documentId String
+  sortOrder  Int      @default(0)
+  createdAt  DateTime @default(now())
+
+  product  Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  document Document @relation(fields: [documentId], references: [id])
+
+  @@index([productId])
+  @@map("product_images")
+}
+
+// One purchasable size/variant of a Product (S/M/L, boot size, "One Size").
+// priceOverride lets one size cost more than basePrice (e.g. XXL); null falls
+// back to Product.basePrice.
+model ProductVariant {
+  id            String   @id @default(uuid())
+  productId     String
+  sizeLabel     String
+  priceOverride Decimal? @db.Decimal(10, 2)
+  stockQuantity Int      @default(0)
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  product    Product                @relation(fields: [productId], references: [id], onDelete: Cascade)
+  orderItems MerchandiseOrderItem[]
+
+  @@unique([productId, sizeLabel])
+  @@index([productId])
+  @@map("product_variants")
+}
+
+// A parent's request to buy merchandise for one child. Submission is gated by
+// PARENT_PORTAL_ACCESS (via GuardianContextService.assertOwnsPlayer, same as
+// ParentIssue); staff fulfillment is gated by PERMISSIONS.ORDERS_MANAGE.
+// Approving generates an Invoice so payment flows through the existing
+// in-person collection UI.
+model MerchandiseOrder {
+  id                String                 @id @default(uuid())
+  guardianId        String
+  submittedByUserId String
+  playerId          String
+  status            MerchandiseOrderStatus @default(PENDING)
+  totalAmount       Decimal                @db.Decimal(10, 2)
+  invoiceId         String?                @unique
+  staffNotes        String?
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+
+  guardian    Guardian @relation(fields: [guardianId], references: [id])
+  submittedBy User     @relation("MerchandiseOrderSubmitter", fields: [submittedByUserId], references: [id])
+  player      Player   @relation(fields: [playerId], references: [id])
+  invoice     Invoice? @relation(fields: [invoiceId], references: [id])
+
+  items MerchandiseOrderItem[]
+
+  @@index([guardianId])
+  @@index([playerId])
+  @@index([status])
+  @@map("merchandise_orders")
+}
+
+model MerchandiseOrderItem {
+  id               String   @id @default(uuid())
+  orderId          String
+  productVariantId String
+  quantity         Int
+  unitPriceAtOrder Decimal  @db.Decimal(10, 2)
+  lineTotal        Decimal  @db.Decimal(10, 2)
+  createdAt        DateTime @default(now())
+
+  order          MerchandiseOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productVariant ProductVariant   @relation(fields: [productVariantId], references: [id])
+
+  @@index([orderId])
+  @@index([productVariantId])
+  @@map("merchandise_order_items")
+}
+
+// ============================================================
+// System
+// ============================================================
+
+model Notification {
+  id                String              @id @default(uuid())
+  userId            String
+  channel           NotificationChannel
+  title             String
+  body              String
+  status            NotificationStatus  @default(PENDING)
+  relatedEntityType String?
+  relatedEntityId   String?
+  sentAt            DateTime?
+  readAt            DateTime?
+  createdAt         DateTime            @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+  @@map("notifications")
+}
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  actorUserId String?
+  action      String
+  entityType  String
+  entityId    String?
+  beforeData  Json?
+  afterData   Json?
+  ipAddress   String?
+  createdAt   DateTime @default(now())
+
+  actorUser User? @relation(fields: [actorUserId], references: [id])
+
+  @@index([entityType, entityId])
+  @@index([actorUserId])
+  @@map("audit_logs")
+}
+
+model Document {
+  id               String            @id @default(uuid())
+  ownerType        DocumentOwnerType
+  ownerId          String
+  documentType     DocumentType
+  fileName         String
+  storageKey       String
+  mimeType         String
+  sizeBytes        Int
+  uploadedByUserId String
+  createdAt        DateTime          @default(now())
+
+  uploadedByUser User @relation(fields: [uploadedByUserId], references: [id])
+
+  players             Player[]
+  coachQualifications CoachQualification[]
+  productImages       ProductImage[]
+
+  @@index([ownerType, ownerId])
+  @@map("documents")
+}
+
+model ConfigurationSetting {
+  id              String   @id @default(uuid())
+  key             String   @unique
+  value           Json
+  description     String?
+  updatedByUserId String?
+  updatedAt       DateTime @updatedAt
+
+  @@map("configuration_settings")
+}
+
+enum InquiryStatus {
+  NEW
+  CONTACTED
+  CONVERTED
+  CLOSED
+}
+
+model PublicInquiry {
+  id               String        @id @default(uuid())
+  childFirstName   String
+  childLastName    String
+  childDateOfBirth DateTime?
+  guardianName     String
+  guardianPhone    String
+  guardianEmail    String?
+  preferredProgram String?
+  message          String?
+  status           InquiryStatus @default(NEW)
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  @@map("public_inquiries")
+}

@@ -1,0 +1,35 @@
+export declare const PERMISSIONS: {
+    readonly ACADEMY_CONFIG_MANAGE: "academy-config:manage";
+    readonly ACADEMY_CONFIG_VIEW: "academy-config:view";
+    readonly USERS_MANAGE: "users:manage";
+    readonly PLAYERS_MANAGE: "players:manage";
+    readonly PLAYERS_VIEW: "players:view";
+    readonly FINANCE_MANAGE: "finance:manage";
+    readonly FINANCE_VIEW: "finance:view";
+    readonly TRAINING_MANAGE_OWN: "training:manage-own";
+    readonly TRAINING_APPROVE: "training:approve";
+    readonly TRAINING_ATTENDANCE_RECORD: "training:attendance-record";
+    readonly ASSESSMENTS_MANAGE_OWN: "assessments:manage-own";
+    readonly ASSESSMENTS_VIEW: "assessments:view";
+    readonly ASSESSMENTS_MANAGE_TEMPLATES: "assessments:manage-templates";
+    readonly MATCHES_MANAGE: "matches:manage";
+    readonly COACHES_MANAGE: "coaches:manage";
+    readonly TEAMS_MANAGE: "teams:manage";
+    readonly PLAYERS_TEAM_ASSIGN: "players:team-assign";
+    readonly PLAYERS_STATUS_MANAGE: "players:status-manage";
+    readonly PARENT_PORTAL_ACCESS: "parent-portal:access";
+    readonly AUDIT_VIEW: "audit:view";
+    readonly ISSUES_MANAGE: "issues:manage";
+    readonly ORDERS_MANAGE: "orders:manage";
+    readonly GALLERY_MANAGE: "gallery:manage";
+};
+export type PermissionKey = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
+export declare const ROLE_NAMES: {
+    readonly ADMIN: "System Administrator";
+    readonly RECEPTIONIST: "Receptionist";
+    readonly HEAD_COACH: "Head Coach";
+    readonly COACH: "Coach";
+    readonly PARENT: "Parent";
+    readonly PLAYER: "Player";
+};
+export declare const ROLE_PERMISSIONS: Record<string, PermissionKey[]>;
