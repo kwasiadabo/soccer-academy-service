@@ -1,5 +1,5 @@
-# Build context must be the monorepo root, since this workspace installs via npm workspaces:
-#   docker build -f apps/api/Dockerfile -t soccer-academy-api .
+# Build context is this repo's root (this repo IS apps/api's content, not the monorepo):
+#   docker build -t soccer-academy-api .
 #
 # Requires (at container runtime, e.g. via `docker run -e` or compose `environment:`):
 #   DATABASE_URL, JWT_ACCESS_SECRET (16+ chars), JWT_REFRESH_SECRET (16+ chars)
@@ -11,26 +11,24 @@ FROM node:20-alpine AS deps
 # Prisma's query engine binary is dynamically linked against libssl — without this,
 # it fails at runtime with "Unable to require ...libquery_engine...node" on Alpine.
 RUN apk add --no-cache openssl
-WORKDIR /repo
+WORKDIR /app
 COPY package.json package-lock.json ./
-COPY apps/api/package.json apps/api/package.json
-COPY apps/api/prisma apps/api/prisma
+COPY prisma ./prisma
 RUN npm ci
 
 FROM deps AS build
-COPY apps/api apps/api
-RUN npm run build --workspace=apps/api
+COPY . .
+RUN npm run build
 RUN npm prune --omit=dev
 
 FROM node:20-alpine AS runtime
 RUN apk add --no-cache openssl tini
-WORKDIR /repo/apps/api
+WORKDIR /app
 ENV NODE_ENV=production
-COPY --from=build /repo/node_modules /repo/node_modules
-COPY --from=build /repo/apps/api/node_modules ./node_modules
-COPY --from=build /repo/apps/api/package.json ./package.json
-COPY --from=build /repo/apps/api/dist ./dist
-COPY --from=build /repo/apps/api/prisma ./prisma
+COPY --from=build /app/node_modules ./node_modules
+COPY --from=build /app/package.json ./package.json
+COPY --from=build /app/dist ./dist
+COPY --from=build /app/prisma ./prisma
 RUN mkdir -p uploads && chown -R node:node .
 USER node
 
