@@ -1307,7 +1307,14 @@ model ProductVariant {
 model MerchandiseOrder {
   id                String                 @id @default(uuid())
   guardianId        String
-  submittedByUserId String
+  // Null for a guest checkout placed from the public store without logging in —
+  // the guest's own contact details are captured in the guest* fields below instead.
+  submittedByUserId String?
+  // Populated only for a guest (unauthenticated) checkout — who to reach about
+  // this order when there's no linked User account to fall back on.
+  guestName         String?
+  guestPhone        String?
+  guestEmail        String?
   playerId          String
   status            MerchandiseOrderStatus @default(PENDING)
   totalAmount       Decimal                @db.Decimal(10, 2)
@@ -1317,7 +1324,7 @@ model MerchandiseOrder {
   updatedAt         DateTime               @updatedAt
 
   guardian    Guardian @relation(fields: [guardianId], references: [id])
-  submittedBy User     @relation("MerchandiseOrderSubmitter", fields: [submittedByUserId], references: [id])
+  submittedBy User?    @relation("MerchandiseOrderSubmitter", fields: [submittedByUserId], references: [id])
   player      Player   @relation(fields: [playerId], references: [id])
   invoice     Invoice? @relation(fields: [invoiceId], references: [id])
 

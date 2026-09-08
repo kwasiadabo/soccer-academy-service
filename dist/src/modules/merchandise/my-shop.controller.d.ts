@@ -134,7 +134,7 @@ export declare class MyShopController {
             id: string;
             firstName: string;
             lastName: string;
-        };
+        } | null;
     } & {
         id: string;
         createdAt: Date;
@@ -143,7 +143,10 @@ export declare class MyShopController {
         playerId: string;
         guardianId: string;
         invoiceId: string | null;
-        submittedByUserId: string;
+        submittedByUserId: string | null;
+        guestName: string | null;
+        guestPhone: string | null;
+        guestEmail: string | null;
         totalAmount: import("@prisma/client/runtime/library").Decimal;
         staffNotes: string | null;
     })[]>;
@@ -215,7 +218,7 @@ export declare class MyShopController {
             id: string;
             firstName: string;
             lastName: string;
-        };
+        } | null;
     } & {
         id: string;
         createdAt: Date;
@@ -224,7 +227,10 @@ export declare class MyShopController {
         playerId: string;
         guardianId: string;
         invoiceId: string | null;
-        submittedByUserId: string;
+        submittedByUserId: string | null;
+        guestName: string | null;
+        guestPhone: string | null;
+        guestEmail: string | null;
         totalAmount: import("@prisma/client/runtime/library").Decimal;
         staffNotes: string | null;
     }>;
@@ -296,7 +302,7 @@ export declare class MyShopController {
             id: string;
             firstName: string;
             lastName: string;
-        };
+        } | null;
     } & {
         id: string;
         createdAt: Date;
@@ -305,7 +311,10 @@ export declare class MyShopController {
         playerId: string;
         guardianId: string;
         invoiceId: string | null;
-        submittedByUserId: string;
+        submittedByUserId: string | null;
+        guestName: string | null;
+        guestPhone: string | null;
+        guestEmail: string | null;
         totalAmount: import("@prisma/client/runtime/library").Decimal;
         staffNotes: string | null;
     }>;

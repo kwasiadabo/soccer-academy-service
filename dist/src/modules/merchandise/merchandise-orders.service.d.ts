@@ -2,6 +2,7 @@ import { MerchandiseOrderStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { GuardianContextService } from '../guardians/guardian-context.service';
 import { CreateOrderDto } from './dto/create-order.dto';
+import { CreateGuestOrderDto } from './dto/create-guest-order.dto';
 export declare class MerchandiseOrdersService {
     private readonly prisma;
     private readonly guardianContext;
@@ -74,7 +75,7 @@ export declare class MerchandiseOrdersService {
             id: string;
             firstName: string;
             lastName: string;
-        };
+        } | null;
     } & {
         id: string;
         createdAt: Date;
@@ -83,10 +84,106 @@ export declare class MerchandiseOrdersService {
         playerId: string;
         guardianId: string;
         invoiceId: string | null;
-        submittedByUserId: string;
+        submittedByUserId: string | null;
+        guestName: string | null;
+        guestPhone: string | null;
+        guestEmail: string | null;
         totalAmount: Prisma.Decimal;
         staffNotes: string | null;
     }>;
+    lookupPlayerByCode(playerCode: string): Promise<{
+        id: string;
+        firstName: string;
+        lastName: string;
+        team: {
+            name: string;
+        } | null;
+    }>;
+    createGuestOrder(dto: CreateGuestOrderDto): Promise<{
+        items: ({
+            productVariant: {
+                product: {
+                    images: {
+                        id: string;
+                        createdAt: Date;
+                        sortOrder: number;
+                        productId: string;
+                        documentId: string;
+                    }[];
+                } & {
+                    id: string;
+                    description: string | null;
+                    createdAt: Date;
+                    name: string;
+                    updatedAt: Date;
+                    deletedAt: Date | null;
+                    isActive: boolean;
+                    category: import(".prisma/client").$Enums.ProductCategory;
+                    basePrice: Prisma.Decimal;
+                };
+            } & {
+                id: string;
+                createdAt: Date;
+                updatedAt: Date;
+                isActive: boolean;
+                productId: string;
+                sizeLabel: string;
+                priceOverride: Prisma.Decimal | null;
+                stockQuantity: number;
+            };
+        } & {
+            id: string;
+            createdAt: Date;
+            orderId: string;
+            productVariantId: string;
+            quantity: number;
+            unitPriceAtOrder: Prisma.Decimal;
+            lineTotal: Prisma.Decimal;
+        })[];
+        player: {
+            id: string;
+            firstName: string;
+            lastName: string;
+            playerCode: string | null;
+        };
+        guardian: {
+            id: string;
+            firstName: string;
+            lastName: string;
+        };
+        invoice: {
+            id: string;
+            description: string | null;
+            status: import(".prisma/client").$Enums.InvoiceStatus;
+            amount: Prisma.Decimal;
+            allocations: {
+                amount: Prisma.Decimal;
+            }[];
+            invoiceNumber: string;
+            discountAmount: Prisma.Decimal;
+            dueDate: Date;
+        } | null;
+        submittedBy: {
+            id: string;
+            firstName: string;
+            lastName: string;
+        } | null;
+    } & {
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        status: import(".prisma/client").$Enums.MerchandiseOrderStatus;
+        playerId: string;
+        guardianId: string;
+        invoiceId: string | null;
+        submittedByUserId: string | null;
+        guestName: string | null;
+        guestPhone: string | null;
+        guestEmail: string | null;
+        totalAmount: Prisma.Decimal;
+        staffNotes: string | null;
+    }>;
+    private reserveItems;
     listMine(userId: string): Promise<({
         items: ({
             productVariant: {
@@ -155,7 +252,7 @@ export declare class MerchandiseOrdersService {
             id: string;
             firstName: string;
             lastName: string;
-        };
+        } | null;
     } & {
         id: string;
         createdAt: Date;
@@ -164,7 +261,10 @@ export declare class MerchandiseOrdersService {
         playerId: string;
         guardianId: string;
         invoiceId: string | null;
-        submittedByUserId: string;
+        submittedByUserId: string | null;
+        guestName: string | null;
+        guestPhone: string | null;
+        guestEmail: string | null;
         totalAmount: Prisma.Decimal;
         staffNotes: string | null;
     })[]>;
@@ -236,7 +336,7 @@ export declare class MerchandiseOrdersService {
             id: string;
             firstName: string;
             lastName: string;
-        };
+        } | null;
     } & {
         id: string;
         createdAt: Date;
@@ -245,7 +345,10 @@ export declare class MerchandiseOrdersService {
         playerId: string;
         guardianId: string;
         invoiceId: string | null;
-        submittedByUserId: string;
+        submittedByUserId: string | null;
+        guestName: string | null;
+        guestPhone: string | null;
+        guestEmail: string | null;
         totalAmount: Prisma.Decimal;
         staffNotes: string | null;
     }>;
@@ -317,7 +420,7 @@ export declare class MerchandiseOrdersService {
             id: string;
             firstName: string;
             lastName: string;
-        };
+        } | null;
     } & {
         id: string;
         createdAt: Date;
@@ -326,7 +429,10 @@ export declare class MerchandiseOrdersService {
         playerId: string;
         guardianId: string;
         invoiceId: string | null;
-        submittedByUserId: string;
+        submittedByUserId: string | null;
+        guestName: string | null;
+        guestPhone: string | null;
+        guestEmail: string | null;
         totalAmount: Prisma.Decimal;
         staffNotes: string | null;
     })[]>;
@@ -398,7 +504,7 @@ export declare class MerchandiseOrdersService {
             id: string;
             firstName: string;
             lastName: string;
-        };
+        } | null;
     } & {
         id: string;
         createdAt: Date;
@@ -407,7 +513,10 @@ export declare class MerchandiseOrdersService {
         playerId: string;
         guardianId: string;
         invoiceId: string | null;
-        submittedByUserId: string;
+        submittedByUserId: string | null;
+        guestName: string | null;
+        guestPhone: string | null;
+        guestEmail: string | null;
         totalAmount: Prisma.Decimal;
         staffNotes: string | null;
     }>;
@@ -480,7 +589,7 @@ export declare class MerchandiseOrdersService {
             id: string;
             firstName: string;
             lastName: string;
-        };
+        } | null;
     } & {
         id: string;
         createdAt: Date;
@@ -489,7 +598,10 @@ export declare class MerchandiseOrdersService {
         playerId: string;
         guardianId: string;
         invoiceId: string | null;
-        submittedByUserId: string;
+        submittedByUserId: string | null;
+        guestName: string | null;
+        guestPhone: string | null;
+        guestEmail: string | null;
         totalAmount: Prisma.Decimal;
         staffNotes: string | null;
     }>;

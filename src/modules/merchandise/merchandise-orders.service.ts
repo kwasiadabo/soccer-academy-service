@@ -4,6 +4,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { GuardianContextService } from '../guardians/guardian-context.service';
 import { generateInvoiceNumber } from '../finance/finance.utils';
 import { CreateOrderDto } from './dto/create-order.dto';
+import { CreateGuestOrderDto } from './dto/create-guest-order.dto';
 
 const MERCHANDISE_FEE_TYPE_ID = '00000000-0000-4000-8000-000000000004';
 const INVOICE_DUE_DAYS = 7;
@@ -50,39 +51,8 @@ export class MerchandiseOrdersService {
     const guardianId = await this.guardianContext.resolveGuardianId(userId);
     await this.guardianContext.assertOwnsPlayer(guardianId, dto.playerId);
 
-    const order = await this.prisma.$transaction(async (tx) => {
-      const items: { productVariantId: string; quantity: number; unitPriceAtOrder: number; lineTotal: number }[] = [];
-
-      for (const line of dto.items) {
-        const variant = await tx.productVariant.findUnique({
-          where: { id: line.productVariantId },
-          include: { product: true },
-        });
-        if (!variant || !variant.isActive || !variant.product.isActive || variant.product.deletedAt) {
-          throw new BadRequestException('One or more items are no longer available');
-        }
-
-        const result = await tx.productVariant.updateMany({
-          where: { id: variant.id, stockQuantity: { gte: line.quantity } },
-          data: { stockQuantity: { decrement: line.quantity } },
-        });
-        if (result.count === 0) {
-          throw new ConflictException(
-            `Not enough stock for ${variant.product.name} (${variant.sizeLabel})`,
-          );
-        }
-
-        const unitPrice = Number(variant.priceOverride ?? variant.product.basePrice);
-        items.push({
-          productVariantId: variant.id,
-          quantity: line.quantity,
-          unitPriceAtOrder: unitPrice,
-          lineTotal: unitPrice * line.quantity,
-        });
-      }
-
-      const totalAmount = items.reduce((sum, i) => sum + i.lineTotal, 0);
-
+    return this.prisma.$transaction(async (tx) => {
+      const { items, totalAmount } = await this.reserveItems(tx, dto.items);
       return tx.merchandiseOrder.create({
         data: {
           guardianId,
@@ -94,8 +64,97 @@ export class MerchandiseOrdersService {
         include: ORDER_INCLUDE,
       });
     });
+  }
 
-    return order;
+  // --- Public storefront (guest checkout, no login required) ---
+
+  // Deliberately narrow: only enough to confirm the code matches a real, active
+  // player before checkout — never returns a listable roster.
+  async lookupPlayerByCode(playerCode: string) {
+    const player = await this.prisma.player.findFirst({
+      where: { playerCode, status: 'ACTIVE', deletedAt: null },
+      select: { id: true, firstName: true, lastName: true, team: { select: { name: true } } },
+    });
+    if (!player) {
+      throw new NotFoundException('No active player found with that code');
+    }
+    return player;
+  }
+
+  async createGuestOrder(dto: CreateGuestOrderDto) {
+    const player = await this.prisma.player.findFirst({
+      where: { playerCode: dto.playerCode, status: 'ACTIVE', deletedAt: null },
+      select: { id: true },
+    });
+    if (!player) {
+      throw new NotFoundException('No active player found with that code');
+    }
+
+    // Every registered player has at least one guardian (enforced at registration) —
+    // prefer the primary one so the order lands with whoever the family designated.
+    const playerGuardian = await this.prisma.playerGuardian.findFirst({
+      where: { playerId: player.id },
+      orderBy: { isPrimary: 'desc' },
+      select: { guardianId: true },
+    });
+    if (!playerGuardian) {
+      throw new BadRequestException('This player has no guardian on file — visit the academy to place this order');
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      const { items, totalAmount } = await this.reserveItems(tx, dto.items);
+      return tx.merchandiseOrder.create({
+        data: {
+          guardianId: playerGuardian.guardianId,
+          playerId: player.id,
+          guestName: dto.guestName,
+          guestPhone: dto.guestPhone,
+          guestEmail: dto.guestEmail,
+          totalAmount,
+          items: { create: items },
+        },
+        include: ORDER_INCLUDE,
+      });
+    });
+  }
+
+  private async reserveItems(
+    tx: Prisma.TransactionClient,
+    lines: { productVariantId: string; quantity: number }[],
+  ): Promise<{
+    items: { productVariantId: string; quantity: number; unitPriceAtOrder: number; lineTotal: number }[];
+    totalAmount: number;
+  }> {
+    const items: { productVariantId: string; quantity: number; unitPriceAtOrder: number; lineTotal: number }[] = [];
+
+    for (const line of lines) {
+      const variant = await tx.productVariant.findUnique({
+        where: { id: line.productVariantId },
+        include: { product: true },
+      });
+      if (!variant || !variant.isActive || !variant.product.isActive || variant.product.deletedAt) {
+        throw new BadRequestException('One or more items are no longer available');
+      }
+
+      const result = await tx.productVariant.updateMany({
+        where: { id: variant.id, stockQuantity: { gte: line.quantity } },
+        data: { stockQuantity: { decrement: line.quantity } },
+      });
+      if (result.count === 0) {
+        throw new ConflictException(`Not enough stock for ${variant.product.name} (${variant.sizeLabel})`);
+      }
+
+      const unitPrice = Number(variant.priceOverride ?? variant.product.basePrice);
+      items.push({
+        productVariantId: variant.id,
+        quantity: line.quantity,
+        unitPriceAtOrder: unitPrice,
+        lineTotal: unitPrice * line.quantity,
+      });
+    }
+
+    const totalAmount = items.reduce((sum, i) => sum + i.lineTotal, 0);
+    return { items, totalAmount };
   }
 
   async listMine(userId: string) {

@@ -50,32 +50,8 @@ let MerchandiseOrdersService = class MerchandiseOrdersService {
     async createOrder(userId, dto) {
         const guardianId = await this.guardianContext.resolveGuardianId(userId);
         await this.guardianContext.assertOwnsPlayer(guardianId, dto.playerId);
-        const order = await this.prisma.$transaction(async (tx) => {
-            const items = [];
-            for (const line of dto.items) {
-                const variant = await tx.productVariant.findUnique({
-                    where: { id: line.productVariantId },
-                    include: { product: true },
-                });
-                if (!variant || !variant.isActive || !variant.product.isActive || variant.product.deletedAt) {
-                    throw new common_1.BadRequestException('One or more items are no longer available');
-                }
-                const result = await tx.productVariant.updateMany({
-                    where: { id: variant.id, stockQuantity: { gte: line.quantity } },
-                    data: { stockQuantity: { decrement: line.quantity } },
-                });
-                if (result.count === 0) {
-                    throw new common_1.ConflictException(`Not enough stock for ${variant.product.name} (${variant.sizeLabel})`);
-                }
-                const unitPrice = Number(variant.priceOverride ?? variant.product.basePrice);
-                items.push({
-                    productVariantId: variant.id,
-                    quantity: line.quantity,
-                    unitPriceAtOrder: unitPrice,
-                    lineTotal: unitPrice * line.quantity,
-                });
-            }
-            const totalAmount = items.reduce((sum, i) => sum + i.lineTotal, 0);
+        return this.prisma.$transaction(async (tx) => {
+            const { items, totalAmount } = await this.reserveItems(tx, dto.items);
             return tx.merchandiseOrder.create({
                 data: {
                     guardianId,
@@ -87,7 +63,76 @@ let MerchandiseOrdersService = class MerchandiseOrdersService {
                 include: ORDER_INCLUDE,
             });
         });
-        return order;
+    }
+    async lookupPlayerByCode(playerCode) {
+        const player = await this.prisma.player.findFirst({
+            where: { playerCode, status: 'ACTIVE', deletedAt: null },
+            select: { id: true, firstName: true, lastName: true, team: { select: { name: true } } },
+        });
+        if (!player) {
+            throw new common_1.NotFoundException('No active player found with that code');
+        }
+        return player;
+    }
+    async createGuestOrder(dto) {
+        const player = await this.prisma.player.findFirst({
+            where: { playerCode: dto.playerCode, status: 'ACTIVE', deletedAt: null },
+            select: { id: true },
+        });
+        if (!player) {
+            throw new common_1.NotFoundException('No active player found with that code');
+        }
+        const playerGuardian = await this.prisma.playerGuardian.findFirst({
+            where: { playerId: player.id },
+            orderBy: { isPrimary: 'desc' },
+            select: { guardianId: true },
+        });
+        if (!playerGuardian) {
+            throw new common_1.BadRequestException('This player has no guardian on file — visit the academy to place this order');
+        }
+        return this.prisma.$transaction(async (tx) => {
+            const { items, totalAmount } = await this.reserveItems(tx, dto.items);
+            return tx.merchandiseOrder.create({
+                data: {
+                    guardianId: playerGuardian.guardianId,
+                    playerId: player.id,
+                    guestName: dto.guestName,
+                    guestPhone: dto.guestPhone,
+                    guestEmail: dto.guestEmail,
+                    totalAmount,
+                    items: { create: items },
+                },
+                include: ORDER_INCLUDE,
+            });
+        });
+    }
+    async reserveItems(tx, lines) {
+        const items = [];
+        for (const line of lines) {
+            const variant = await tx.productVariant.findUnique({
+                where: { id: line.productVariantId },
+                include: { product: true },
+            });
+            if (!variant || !variant.isActive || !variant.product.isActive || variant.product.deletedAt) {
+                throw new common_1.BadRequestException('One or more items are no longer available');
+            }
+            const result = await tx.productVariant.updateMany({
+                where: { id: variant.id, stockQuantity: { gte: line.quantity } },
+                data: { stockQuantity: { decrement: line.quantity } },
+            });
+            if (result.count === 0) {
+                throw new common_1.ConflictException(`Not enough stock for ${variant.product.name} (${variant.sizeLabel})`);
+            }
+            const unitPrice = Number(variant.priceOverride ?? variant.product.basePrice);
+            items.push({
+                productVariantId: variant.id,
+                quantity: line.quantity,
+                unitPriceAtOrder: unitPrice,
+                lineTotal: unitPrice * line.quantity,
+            });
+        }
+        const totalAmount = items.reduce((sum, i) => sum + i.lineTotal, 0);
+        return { items, totalAmount };
     }
     async listMine(userId) {
         const guardianId = await this.guardianContext.resolveGuardianId(userId);

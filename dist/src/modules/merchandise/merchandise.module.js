@@ -13,6 +13,7 @@ const storage_module_1 = require("../storage/storage.module");
 const products_controller_1 = require("./products.controller");
 const merchandise_orders_controller_1 = require("./merchandise-orders.controller");
 const my_shop_controller_1 = require("./my-shop.controller");
+const public_shop_controller_1 = require("./public-shop.controller");
 const products_service_1 = require("./products.service");
 const merchandise_orders_service_1 = require("./merchandise-orders.service");
 let MerchandiseModule = class MerchandiseModule {
@@ -21,7 +22,7 @@ exports.MerchandiseModule = MerchandiseModule;
 exports.MerchandiseModule = MerchandiseModule = __decorate([
     (0, common_1.Module)({
         imports: [guardians_module_1.GuardiansModule, storage_module_1.StorageModule],
-        controllers: [products_controller_1.ProductsController, merchandise_orders_controller_1.MerchandiseOrdersController, my_shop_controller_1.MyShopController],
+        controllers: [products_controller_1.ProductsController, merchandise_orders_controller_1.MerchandiseOrdersController, my_shop_controller_1.MyShopController, public_shop_controller_1.PublicShopController],
         providers: [products_service_1.ProductsService, merchandise_orders_service_1.MerchandiseOrdersService],
     })
 ], MerchandiseModule);
