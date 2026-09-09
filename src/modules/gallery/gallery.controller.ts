@@ -1,6 +1,15 @@
 import { Body, Controller, Get, Param, ParseEnumPipe, Post, UploadedFiles, UseGuards, UseInterceptors } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
-import { ApiBearerAuth, ApiConsumes, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiConsumes,
+  ApiCreatedResponse,
+  ApiForbiddenResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiTags,
+  ApiUnauthorizedResponse,
+} from '@nestjs/swagger';
 import { GalleryPhotoContext } from '@prisma/client';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
@@ -19,6 +28,8 @@ export class GalleryController {
 
   // Public marketing-site gallery feed — unauthenticated by design.
   @Get('public')
+  @ApiOperation({ summary: 'List public gallery photos (unauthenticated).' })
+  @ApiOkResponse({ description: 'Photos returned.' })
   getPublic() {
     return this.galleryService.findPublic();
   }
@@ -29,6 +40,10 @@ export class GalleryController {
   @RequirePermissions(PERMISSIONS.GALLERY_MANAGE)
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(FilesInterceptor('files', 20))
+  @ApiOperation({ summary: 'Replace all gallery photos for a context (e.g. a training session).' })
+  @ApiCreatedResponse({ description: 'Photos replaced.' })
+  @ApiUnauthorizedResponse({ description: 'Missing or invalid access token.' })
+  @ApiForbiddenResponse({ description: 'Caller lacks the required permission.' })
   @AuditLog({ action: 'GALLERY_PHOTOS_REPLACE', entityType: 'GalleryPhoto' })
   replacePhotos(
     @Param('context', new ParseEnumPipe(GalleryPhotoContext)) context: GalleryPhotoContext,

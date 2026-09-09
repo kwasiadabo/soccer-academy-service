@@ -43,6 +43,8 @@ let MerchandiseOrdersController = class MerchandiseOrdersController {
 exports.MerchandiseOrdersController = MerchandiseOrdersController;
 __decorate([
     (0, common_1.Get)(),
+    (0, swagger_1.ApiOperation)({ summary: 'List merchandise orders, optionally filtered by status.' }),
+    (0, swagger_1.ApiOkResponse)({ description: 'Orders returned.' }),
     __param(0, (0, common_1.Query)('status')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),
@@ -50,12 +52,16 @@ __decorate([
 ], MerchandiseOrdersController.prototype, "listAll", null);
 __decorate([
     (0, common_1.Get)('pending-count'),
+    (0, swagger_1.ApiOperation)({ summary: 'Get the count of orders pending action.' }),
+    (0, swagger_1.ApiOkResponse)({ description: 'Count returned.' }),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", void 0)
 ], MerchandiseOrdersController.prototype, "pendingCount", null);
 __decorate([
     (0, common_1.Get)(':id'),
+    (0, swagger_1.ApiOperation)({ summary: 'Get an order by ID.' }),
+    (0, swagger_1.ApiOkResponse)({ description: 'Order returned.' }),
     __param(0, (0, common_1.Param)('id')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),
@@ -63,6 +69,8 @@ __decorate([
 ], MerchandiseOrdersController.prototype, "getOne", null);
 __decorate([
     (0, common_1.Patch)(':id/status'),
+    (0, swagger_1.ApiOperation)({ summary: 'Update the status of an order.' }),
+    (0, swagger_1.ApiOkResponse)({ description: 'Order updated.' }),
     (0, audit_log_decorator_1.AuditLog)({ action: 'MERCHANDISE_ORDER_STATUS_UPDATE', entityType: 'MerchandiseOrder' }),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Body)()),
@@ -73,6 +81,8 @@ __decorate([
 exports.MerchandiseOrdersController = MerchandiseOrdersController = __decorate([
     (0, swagger_1.ApiTags)('merchandise'),
     (0, swagger_1.ApiBearerAuth)(),
+    (0, swagger_1.ApiUnauthorizedResponse)({ description: 'Missing or invalid access token.' }),
+    (0, swagger_1.ApiForbiddenResponse)({ description: 'Caller lacks the required permission.' }),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, permissions_guard_1.PermissionsGuard),
     (0, permissions_decorator_1.RequirePermissions)(permissions_constants_1.PERMISSIONS.ORDERS_MANAGE),
     (0, common_1.Controller)('merchandise/orders'),

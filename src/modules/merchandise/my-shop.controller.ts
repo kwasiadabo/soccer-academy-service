@@ -1,5 +1,13 @@
 import { Body, Controller, Get, Param, Post, Res, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiCreatedResponse,
+  ApiForbiddenResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiTags,
+  ApiUnauthorizedResponse,
+} from '@nestjs/swagger';
 import { SkipThrottle } from '@nestjs/throttler';
 import type { Response } from 'express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -16,6 +24,8 @@ import { CreateOrderDto } from './dto/create-order.dto';
 // Parent-facing: browse the active catalog and manage this guardian's own orders.
 @ApiTags('parent-portal')
 @ApiBearerAuth()
+@ApiUnauthorizedResponse({ description: 'Missing or invalid access token.' })
+@ApiForbiddenResponse({ description: 'Caller lacks the required permission.' })
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 @RequirePermissions(PERMISSIONS.PARENT_PORTAL_ACCESS)
 @Controller('parent-portal/shop')
@@ -26,11 +36,15 @@ export class MyShopController {
   ) {}
 
   @Get('products')
+  @ApiOperation({ summary: 'List active shop products.' })
+  @ApiOkResponse({ description: 'Products returned.' })
   listProducts() {
     return this.productsService.findAll(false);
   }
 
   @Get('products/:id')
+  @ApiOperation({ summary: 'Get a product by ID.' })
+  @ApiOkResponse({ description: 'Product returned.' })
   getProduct(@Param('id') id: string) {
     return this.productsService.findOne(id, false);
   }
@@ -39,6 +53,8 @@ export class MyShopController {
   // compete with the shared API-wide rate limit meant for normal request traffic.
   @SkipThrottle()
   @Get('products/:id/images/:imageId')
+  @ApiOperation({ summary: 'Get a product image (binary response).' })
+  @ApiOkResponse({ description: 'Image bytes returned.' })
   async getProductImage(@Param('id') id: string, @Param('imageId') imageId: string, @Res() res: Response) {
     const { buffer, mimeType } = await this.productsService.getImage(id, imageId);
     res.setHeader('Content-Type', mimeType);
@@ -47,16 +63,22 @@ export class MyShopController {
   }
 
   @Get('orders')
+  @ApiOperation({ summary: "List the current guardian's orders." })
+  @ApiOkResponse({ description: 'Orders returned.' })
   listMyOrders(@CurrentUser() user: RequestUser) {
     return this.ordersService.listMine(user.userId);
   }
 
   @Get('orders/:id')
+  @ApiOperation({ summary: "Get one of the current guardian's orders by ID." })
+  @ApiOkResponse({ description: 'Order returned.' })
   getMyOrder(@Param('id') id: string, @CurrentUser() user: RequestUser) {
     return this.ordersService.getMine(user.userId, id);
   }
 
   @Post('orders')
+  @ApiOperation({ summary: 'Place a new order.' })
+  @ApiCreatedResponse({ description: 'Order created.' })
   @AuditLog({ action: 'MERCHANDISE_ORDER_CREATE', entityType: 'MerchandiseOrder' })
   createOrder(@Body() dto: CreateOrderDto, @CurrentUser() user: RequestUser) {
     return this.ordersService.createOrder(user.userId, dto);

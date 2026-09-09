@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Param, Post, Query, Res } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { SkipThrottle } from '@nestjs/throttler';
 import type { Response } from 'express';
 import { AuditLog } from '../audit/audit-log.decorator';
@@ -21,11 +21,15 @@ export class PublicShopController {
   ) {}
 
   @Get('products')
+  @ApiOperation({ summary: 'List active shop products (unauthenticated).' })
+  @ApiOkResponse({ description: 'Products returned.' })
   listProducts() {
     return this.productsService.findAll(false);
   }
 
   @Get('products/:id')
+  @ApiOperation({ summary: 'Get an active product by ID (unauthenticated).' })
+  @ApiOkResponse({ description: 'Product returned.' })
   getProduct(@Param('id') id: string) {
     return this.productsService.findOne(id, false);
   }
@@ -34,6 +38,8 @@ export class PublicShopController {
   // compete with the shared API-wide rate limit meant for normal request traffic.
   @SkipThrottle()
   @Get('products/:id/images/:imageId')
+  @ApiOperation({ summary: 'Get a product image (binary response, unauthenticated).' })
+  @ApiOkResponse({ description: 'Image bytes returned.' })
   async getProductImage(@Param('id') id: string, @Param('imageId') imageId: string, @Res() res: Response) {
     const { buffer, mimeType } = await this.productsService.getImage(id, imageId);
     res.setHeader('Content-Type', mimeType);
@@ -42,11 +48,15 @@ export class PublicShopController {
   }
 
   @Get('players/lookup')
+  @ApiOperation({ summary: 'Look up a player by their unique player code (unauthenticated).' })
+  @ApiOkResponse({ description: 'Player returned.' })
   lookupPlayer(@Query('code') code: string) {
     return this.ordersService.lookupPlayerByCode(code);
   }
 
   @Post('orders')
+  @ApiOperation({ summary: 'Place a guest order for a player, matched by player code (unauthenticated).' })
+  @ApiCreatedResponse({ description: 'Order created.' })
   @AuditLog({ action: 'MERCHANDISE_ORDER_CREATE', entityType: 'MerchandiseOrder' })
   createOrder(@Body() dto: CreateGuestOrderDto) {
     return this.ordersService.createGuestOrder(dto);

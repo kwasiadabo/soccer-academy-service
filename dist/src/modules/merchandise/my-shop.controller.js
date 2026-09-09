@@ -55,12 +55,16 @@ let MyShopController = class MyShopController {
 exports.MyShopController = MyShopController;
 __decorate([
     (0, common_1.Get)('products'),
+    (0, swagger_1.ApiOperation)({ summary: 'List active shop products.' }),
+    (0, swagger_1.ApiOkResponse)({ description: 'Products returned.' }),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", void 0)
 ], MyShopController.prototype, "listProducts", null);
 __decorate([
     (0, common_1.Get)('products/:id'),
+    (0, swagger_1.ApiOperation)({ summary: 'Get a product by ID.' }),
+    (0, swagger_1.ApiOkResponse)({ description: 'Product returned.' }),
     __param(0, (0, common_1.Param)('id')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),
@@ -69,6 +73,8 @@ __decorate([
 __decorate([
     (0, throttler_1.SkipThrottle)(),
     (0, common_1.Get)('products/:id/images/:imageId'),
+    (0, swagger_1.ApiOperation)({ summary: 'Get a product image (binary response).' }),
+    (0, swagger_1.ApiOkResponse)({ description: 'Image bytes returned.' }),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Param)('imageId')),
     __param(2, (0, common_1.Res)()),
@@ -78,6 +84,8 @@ __decorate([
 ], MyShopController.prototype, "getProductImage", null);
 __decorate([
     (0, common_1.Get)('orders'),
+    (0, swagger_1.ApiOperation)({ summary: "List the current guardian's orders." }),
+    (0, swagger_1.ApiOkResponse)({ description: 'Orders returned.' }),
     __param(0, (0, current_user_decorator_1.CurrentUser)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object]),
@@ -85,6 +93,8 @@ __decorate([
 ], MyShopController.prototype, "listMyOrders", null);
 __decorate([
     (0, common_1.Get)('orders/:id'),
+    (0, swagger_1.ApiOperation)({ summary: "Get one of the current guardian's orders by ID." }),
+    (0, swagger_1.ApiOkResponse)({ description: 'Order returned.' }),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, current_user_decorator_1.CurrentUser)()),
     __metadata("design:type", Function),
@@ -93,6 +103,8 @@ __decorate([
 ], MyShopController.prototype, "getMyOrder", null);
 __decorate([
     (0, common_1.Post)('orders'),
+    (0, swagger_1.ApiOperation)({ summary: 'Place a new order.' }),
+    (0, swagger_1.ApiCreatedResponse)({ description: 'Order created.' }),
     (0, audit_log_decorator_1.AuditLog)({ action: 'MERCHANDISE_ORDER_CREATE', entityType: 'MerchandiseOrder' }),
     __param(0, (0, common_1.Body)()),
     __param(1, (0, current_user_decorator_1.CurrentUser)()),
@@ -103,6 +115,8 @@ __decorate([
 exports.MyShopController = MyShopController = __decorate([
     (0, swagger_1.ApiTags)('parent-portal'),
     (0, swagger_1.ApiBearerAuth)(),
+    (0, swagger_1.ApiUnauthorizedResponse)({ description: 'Missing or invalid access token.' }),
+    (0, swagger_1.ApiForbiddenResponse)({ description: 'Caller lacks the required permission.' }),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, permissions_guard_1.PermissionsGuard),
     (0, permissions_decorator_1.RequirePermissions)(permissions_constants_1.PERMISSIONS.PARENT_PORTAL_ACCESS),
     (0, common_1.Controller)('parent-portal/shop'),

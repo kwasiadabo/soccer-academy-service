@@ -52,6 +52,8 @@ exports.UsersController = UsersController;
 __decorate([
     (0, common_1.Get)(),
     (0, permissions_decorator_1.RequirePermissions)(permissions_constants_1.PERMISSIONS.USERS_MANAGE),
+    (0, swagger_1.ApiOperation)({ summary: 'List staff user accounts.' }),
+    (0, swagger_1.ApiOkResponse)({ description: 'Users returned.' }),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", void 0)
@@ -59,6 +61,8 @@ __decorate([
 __decorate([
     (0, common_1.Get)(':id'),
     (0, permissions_decorator_1.RequirePermissions)(permissions_constants_1.PERMISSIONS.USERS_MANAGE),
+    (0, swagger_1.ApiOperation)({ summary: 'Get a staff user account by ID.' }),
+    (0, swagger_1.ApiOkResponse)({ description: 'User returned.' }),
     __param(0, (0, common_1.Param)('id')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),
@@ -68,6 +72,8 @@ __decorate([
     (0, common_1.Post)(),
     (0, permissions_decorator_1.RequirePermissions)(permissions_constants_1.PERMISSIONS.USERS_MANAGE),
     (0, audit_log_decorator_1.AuditLog)({ action: 'USER_CREATE', entityType: 'User' }),
+    (0, swagger_1.ApiOperation)({ summary: 'Create a staff user account.' }),
+    (0, swagger_1.ApiCreatedResponse)({ description: 'User created.' }),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [create_user_dto_1.CreateUserDto]),
@@ -77,6 +83,8 @@ __decorate([
     (0, common_1.Patch)(':id'),
     (0, permissions_decorator_1.RequirePermissions)(permissions_constants_1.PERMISSIONS.USERS_MANAGE),
     (0, audit_log_decorator_1.AuditLog)({ action: 'USER_UPDATE', entityType: 'User' }),
+    (0, swagger_1.ApiOperation)({ summary: 'Update a staff user account.' }),
+    (0, swagger_1.ApiOkResponse)({ description: 'User updated.' }),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
@@ -87,6 +95,8 @@ __decorate([
     (0, common_1.Delete)(':id'),
     (0, permissions_decorator_1.RequirePermissions)(permissions_constants_1.PERMISSIONS.USERS_MANAGE),
     (0, audit_log_decorator_1.AuditLog)({ action: 'USER_DELETE', entityType: 'User' }),
+    (0, swagger_1.ApiOperation)({ summary: 'Delete a staff user account.' }),
+    (0, swagger_1.ApiOkResponse)({ description: 'User deleted.' }),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, current_user_decorator_1.CurrentUser)()),
     __metadata("design:type", Function),
@@ -97,6 +107,8 @@ __decorate([
     (0, common_1.Post)(':id/reset-password'),
     (0, permissions_decorator_1.RequirePermissions)(permissions_constants_1.PERMISSIONS.USERS_MANAGE),
     (0, audit_log_decorator_1.AuditLog)({ action: 'USER_RESET_PASSWORD', entityType: 'User' }),
+    (0, swagger_1.ApiOperation)({ summary: "Reset a staff user's password." }),
+    (0, swagger_1.ApiCreatedResponse)({ description: 'Password reset.' }),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
@@ -106,6 +118,8 @@ __decorate([
 exports.UsersController = UsersController = __decorate([
     (0, swagger_1.ApiTags)('users'),
     (0, swagger_1.ApiBearerAuth)(),
+    (0, swagger_1.ApiUnauthorizedResponse)({ description: 'Missing or invalid access token.' }),
+    (0, swagger_1.ApiForbiddenResponse)({ description: 'Caller lacks the required permission.' }),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, permissions_guard_1.PermissionsGuard),
     (0, common_1.Controller)('users'),
     __metadata("design:paramtypes", [users_service_1.UsersService])

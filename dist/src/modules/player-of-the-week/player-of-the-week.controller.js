@@ -35,6 +35,8 @@ exports.PlayerOfTheWeekController = PlayerOfTheWeekController;
 __decorate([
     (0, common_1.Get)('public'),
     (0, throttler_1.Throttle)({ default: { limit: 30, ttl: 60_000 } }),
+    (0, swagger_1.ApiOperation)({ summary: 'List Player of the Week awards for the public marketing site (unauthenticated).' }),
+    (0, swagger_1.ApiOkResponse)({ description: 'Awards returned.' }),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", void 0)
@@ -42,6 +44,8 @@ __decorate([
 __decorate([
     (0, common_1.Get)('public/:id/photo'),
     (0, throttler_1.Throttle)({ default: { limit: 30, ttl: 60_000 } }),
+    (0, swagger_1.ApiOperation)({ summary: 'Get a Player of the Week photo (binary response, unauthenticated).' }),
+    (0, swagger_1.ApiOkResponse)({ description: 'Image bytes returned.' }),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Res)()),
     __metadata("design:type", Function),

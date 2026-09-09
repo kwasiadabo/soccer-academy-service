@@ -1,5 +1,13 @@
 import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiCreatedResponse,
+  ApiForbiddenResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiTags,
+  ApiUnauthorizedResponse,
+} from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import { RequireAnyPermission, RequirePermissions } from '../auth/decorators/permissions.decorator';
@@ -24,6 +32,8 @@ const ANY_ASSESSMENT_ACCESS = [
 
 @ApiTags('assessments')
 @ApiBearerAuth()
+@ApiUnauthorizedResponse({ description: 'Missing or invalid access token.' })
+@ApiForbiddenResponse({ description: 'Caller lacks the required permission.' })
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller('assessments')
 export class AssessmentsController {
@@ -31,12 +41,16 @@ export class AssessmentsController {
 
   @Get('templates')
   @RequireAnyPermission(...ANY_ASSESSMENT_ACCESS)
+  @ApiOperation({ summary: 'List all assessment templates.' })
+  @ApiOkResponse({ description: 'Assessment templates returned.' })
   findAllTemplates() {
     return this.assessmentsService.findAllTemplates();
   }
 
   @Get('oversight')
   @RequirePermissions(PERMISSIONS.ASSESSMENTS_VIEW)
+  @ApiOperation({ summary: 'List player assessments across the academy, optionally filtered by team or session.' })
+  @ApiOkResponse({ description: 'Assessments returned.' })
   findAllOversight(@Query('teamId') teamId?: string, @Query('trainingSessionId') trainingSessionId?: string) {
     return this.assessmentsService.findAllOversight(teamId, trainingSessionId);
   }
@@ -44,6 +58,8 @@ export class AssessmentsController {
   @Post('templates')
   @RequirePermissions(PERMISSIONS.ASSESSMENTS_MANAGE_TEMPLATES)
   @AuditLog({ action: 'ASSESSMENT_TEMPLATE_CREATE', entityType: 'AssessmentTemplate' })
+  @ApiOperation({ summary: 'Create an assessment template.' })
+  @ApiCreatedResponse({ description: 'Assessment template created.' })
   createTemplate(@Body() dto: CreateAssessmentTemplateDto) {
     return this.assessmentsService.createTemplate(dto);
   }
@@ -51,6 +67,8 @@ export class AssessmentsController {
   @Patch('templates/:id')
   @RequirePermissions(PERMISSIONS.ASSESSMENTS_MANAGE_TEMPLATES)
   @AuditLog({ action: 'ASSESSMENT_TEMPLATE_UPDATE', entityType: 'AssessmentTemplate' })
+  @ApiOperation({ summary: 'Update an assessment template.' })
+  @ApiOkResponse({ description: 'Assessment template updated.' })
   updateTemplate(@Param('id') id: string, @Body() dto: UpdateAssessmentTemplateDto) {
     return this.assessmentsService.updateTemplate(id, dto);
   }
@@ -58,12 +76,16 @@ export class AssessmentsController {
   @Post('templates/:id/criteria')
   @RequirePermissions(PERMISSIONS.ASSESSMENTS_MANAGE_TEMPLATES)
   @AuditLog({ action: 'ASSESSMENT_CRITERIA_CREATE', entityType: 'AssessmentTemplate' })
+  @ApiOperation({ summary: 'Add a criterion to an assessment template.' })
+  @ApiCreatedResponse({ description: 'Criterion added.' })
   addCriteria(@Param('id') id: string, @Body() dto: CreateAssessmentCriteriaInputDto) {
     return this.assessmentsService.addCriteria(id, dto);
   }
 
   @Get('players/:playerId')
   @RequireAnyPermission(PERMISSIONS.ASSESSMENTS_VIEW, PERMISSIONS.ASSESSMENTS_MANAGE_OWN)
+  @ApiOperation({ summary: "List a player's assessments." })
+  @ApiOkResponse({ description: 'Assessments returned.' })
   findForPlayer(@Param('playerId') playerId: string, @CurrentUser() user: RequestUser) {
     return this.assessmentsService.findForPlayer(playerId, user);
   }
@@ -71,6 +93,8 @@ export class AssessmentsController {
   @Post('players/:playerId')
   @RequirePermissions(PERMISSIONS.ASSESSMENTS_MANAGE_OWN)
   @AuditLog({ action: 'PLAYER_ASSESSMENT_CREATE', entityType: 'PlayerAssessment' })
+  @ApiOperation({ summary: 'Create an assessment for a player.' })
+  @ApiCreatedResponse({ description: 'Assessment created.' })
   createAssessment(
     @Param('playerId') playerId: string,
     @Body() dto: CreatePlayerAssessmentDto,
@@ -82,6 +106,8 @@ export class AssessmentsController {
   @Patch('players/:playerId/:assessmentId')
   @RequirePermissions(PERMISSIONS.ASSESSMENTS_MANAGE_OWN)
   @AuditLog({ action: 'PLAYER_ASSESSMENT_UPDATE', entityType: 'PlayerAssessment' })
+  @ApiOperation({ summary: "Update a player's assessment." })
+  @ApiOkResponse({ description: 'Assessment updated.' })
   updateAssessment(
     @Param('playerId') playerId: string,
     @Param('assessmentId') assessmentId: string,
@@ -93,6 +119,8 @@ export class AssessmentsController {
 
   @Get('players/:playerId/remarks')
   @RequireAnyPermission(PERMISSIONS.ASSESSMENTS_VIEW, PERMISSIONS.ASSESSMENTS_MANAGE_OWN)
+  @ApiOperation({ summary: "List a player's coach remarks." })
+  @ApiOkResponse({ description: 'Remarks returned.' })
   findRemarks(@Param('playerId') playerId: string, @CurrentUser() user: RequestUser) {
     return this.assessmentsService.findRemarksForPlayer(playerId, user);
   }
@@ -100,6 +128,8 @@ export class AssessmentsController {
   @Post('players/:playerId/remarks')
   @RequirePermissions(PERMISSIONS.ASSESSMENTS_MANAGE_OWN)
   @AuditLog({ action: 'COACH_REMARK_CREATE', entityType: 'CoachRemark' })
+  @ApiOperation({ summary: 'Add a coach remark for a player.' })
+  @ApiCreatedResponse({ description: 'Remark created.' })
   createRemark(
     @Param('playerId') playerId: string,
     @Body() dto: CreateCoachRemarkDto,

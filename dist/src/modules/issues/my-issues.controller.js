@@ -47,6 +47,8 @@ let MyIssuesController = class MyIssuesController {
 exports.MyIssuesController = MyIssuesController;
 __decorate([
     (0, common_1.Get)(),
+    (0, swagger_1.ApiOperation)({ summary: "List the current guardian's issues." }),
+    (0, swagger_1.ApiOkResponse)({ description: 'Issues returned.' }),
     __param(0, (0, current_user_decorator_1.CurrentUser)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object]),
@@ -54,6 +56,8 @@ __decorate([
 ], MyIssuesController.prototype, "listMine", null);
 __decorate([
     (0, common_1.Get)('unread-count'),
+    (0, swagger_1.ApiOperation)({ summary: 'Get the count of unread staff replies across the current guardian\'s issues.' }),
+    (0, swagger_1.ApiOkResponse)({ description: 'Count returned.' }),
     __param(0, (0, current_user_decorator_1.CurrentUser)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object]),
@@ -61,6 +65,8 @@ __decorate([
 ], MyIssuesController.prototype, "unreadCount", null);
 __decorate([
     (0, common_1.Post)(),
+    (0, swagger_1.ApiOperation)({ summary: 'Raise a new issue.' }),
+    (0, swagger_1.ApiCreatedResponse)({ description: 'Issue created.' }),
     (0, audit_log_decorator_1.AuditLog)({ action: 'ISSUE_CREATE', entityType: 'ParentIssue' }),
     __param(0, (0, common_1.Body)()),
     __param(1, (0, current_user_decorator_1.CurrentUser)()),
@@ -70,6 +76,8 @@ __decorate([
 ], MyIssuesController.prototype, "create", null);
 __decorate([
     (0, common_1.Get)(':id'),
+    (0, swagger_1.ApiOperation)({ summary: 'Get one of the current guardian\'s issues by ID.' }),
+    (0, swagger_1.ApiOkResponse)({ description: 'Issue returned.' }),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, current_user_decorator_1.CurrentUser)()),
     __metadata("design:type", Function),
@@ -78,6 +86,8 @@ __decorate([
 ], MyIssuesController.prototype, "getOne", null);
 __decorate([
     (0, common_1.Post)(':id/messages'),
+    (0, swagger_1.ApiOperation)({ summary: 'Add a message to one of the current guardian\'s issues.' }),
+    (0, swagger_1.ApiCreatedResponse)({ description: 'Message added.' }),
     (0, audit_log_decorator_1.AuditLog)({ action: 'ISSUE_MESSAGE_ADD', entityType: 'ParentIssue' }),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Body)()),
@@ -89,6 +99,8 @@ __decorate([
 exports.MyIssuesController = MyIssuesController = __decorate([
     (0, swagger_1.ApiTags)('parent-portal'),
     (0, swagger_1.ApiBearerAuth)(),
+    (0, swagger_1.ApiUnauthorizedResponse)({ description: 'Missing or invalid access token.' }),
+    (0, swagger_1.ApiForbiddenResponse)({ description: 'Caller lacks the required permission.' }),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, permissions_guard_1.PermissionsGuard),
     (0, permissions_decorator_1.RequirePermissions)(permissions_constants_1.PERMISSIONS.PARENT_PORTAL_ACCESS),
     (0, common_1.Controller)('parent-portal/issues'),

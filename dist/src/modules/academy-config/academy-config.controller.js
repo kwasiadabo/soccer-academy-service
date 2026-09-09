@@ -70,6 +70,8 @@ exports.AcademyConfigController = AcademyConfigController;
 __decorate([
     (0, common_1.Get)('seasons'),
     (0, permissions_decorator_1.RequirePermissions)(permissions_constants_1.PERMISSIONS.ACADEMY_CONFIG_VIEW),
+    (0, swagger_1.ApiOperation)({ summary: 'List all seasons.' }),
+    (0, swagger_1.ApiOkResponse)({ description: 'Seasons returned.' }),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", void 0)
@@ -78,6 +80,8 @@ __decorate([
     (0, common_1.Post)('seasons'),
     (0, permissions_decorator_1.RequirePermissions)(permissions_constants_1.PERMISSIONS.ACADEMY_CONFIG_MANAGE),
     (0, audit_log_decorator_1.AuditLog)({ action: 'SEASON_CREATE', entityType: 'Season' }),
+    (0, swagger_1.ApiOperation)({ summary: 'Create a season.' }),
+    (0, swagger_1.ApiCreatedResponse)({ description: 'Season created.' }),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [season_dto_1.CreateSeasonDto]),
@@ -87,6 +91,8 @@ __decorate([
     (0, common_1.Patch)('seasons/:id'),
     (0, permissions_decorator_1.RequirePermissions)(permissions_constants_1.PERMISSIONS.ACADEMY_CONFIG_MANAGE),
     (0, audit_log_decorator_1.AuditLog)({ action: 'SEASON_UPDATE', entityType: 'Season' }),
+    (0, swagger_1.ApiOperation)({ summary: 'Update a season.' }),
+    (0, swagger_1.ApiOkResponse)({ description: 'Season updated.' }),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
@@ -96,6 +102,8 @@ __decorate([
 __decorate([
     (0, common_1.Get)('age-categories'),
     (0, permissions_decorator_1.RequirePermissions)(permissions_constants_1.PERMISSIONS.ACADEMY_CONFIG_VIEW),
+    (0, swagger_1.ApiOperation)({ summary: 'List all age categories.' }),
+    (0, swagger_1.ApiOkResponse)({ description: 'Age categories returned.' }),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", void 0)
@@ -104,6 +112,8 @@ __decorate([
     (0, common_1.Post)('age-categories'),
     (0, permissions_decorator_1.RequirePermissions)(permissions_constants_1.PERMISSIONS.ACADEMY_CONFIG_MANAGE),
     (0, audit_log_decorator_1.AuditLog)({ action: 'AGE_CATEGORY_CREATE', entityType: 'AgeCategory' }),
+    (0, swagger_1.ApiOperation)({ summary: 'Create an age category.' }),
+    (0, swagger_1.ApiCreatedResponse)({ description: 'Age category created.' }),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [age_category_dto_1.CreateAgeCategoryDto]),
@@ -113,6 +123,8 @@ __decorate([
     (0, common_1.Patch)('age-categories/:id'),
     (0, permissions_decorator_1.RequirePermissions)(permissions_constants_1.PERMISSIONS.ACADEMY_CONFIG_MANAGE),
     (0, audit_log_decorator_1.AuditLog)({ action: 'AGE_CATEGORY_UPDATE', entityType: 'AgeCategory' }),
+    (0, swagger_1.ApiOperation)({ summary: 'Update an age category.' }),
+    (0, swagger_1.ApiOkResponse)({ description: 'Age category updated.' }),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
@@ -122,6 +134,8 @@ __decorate([
 __decorate([
     (0, common_1.Get)('teams'),
     (0, permissions_decorator_1.RequirePermissions)(permissions_constants_1.PERMISSIONS.ACADEMY_CONFIG_VIEW),
+    (0, swagger_1.ApiOperation)({ summary: 'List all teams.' }),
+    (0, swagger_1.ApiOkResponse)({ description: 'Teams returned.' }),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", void 0)
@@ -130,6 +144,8 @@ __decorate([
     (0, common_1.Post)('teams'),
     (0, permissions_decorator_1.RequireAnyPermission)(permissions_constants_1.PERMISSIONS.ACADEMY_CONFIG_MANAGE, permissions_constants_1.PERMISSIONS.TEAMS_MANAGE),
     (0, audit_log_decorator_1.AuditLog)({ action: 'TEAM_CREATE', entityType: 'Team' }),
+    (0, swagger_1.ApiOperation)({ summary: 'Create a team.' }),
+    (0, swagger_1.ApiCreatedResponse)({ description: 'Team created.' }),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [team_dto_1.CreateTeamDto]),
@@ -139,6 +155,8 @@ __decorate([
     (0, common_1.Patch)('teams/:id'),
     (0, permissions_decorator_1.RequireAnyPermission)(permissions_constants_1.PERMISSIONS.ACADEMY_CONFIG_MANAGE, permissions_constants_1.PERMISSIONS.TEAMS_MANAGE),
     (0, audit_log_decorator_1.AuditLog)({ action: 'TEAM_UPDATE', entityType: 'Team' }),
+    (0, swagger_1.ApiOperation)({ summary: 'Update a team.' }),
+    (0, swagger_1.ApiOkResponse)({ description: 'Team updated.' }),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
@@ -148,6 +166,8 @@ __decorate([
 __decorate([
     (0, common_1.Get)('training-groups'),
     (0, permissions_decorator_1.RequirePermissions)(permissions_constants_1.PERMISSIONS.ACADEMY_CONFIG_VIEW),
+    (0, swagger_1.ApiOperation)({ summary: 'List all training groups.' }),
+    (0, swagger_1.ApiOkResponse)({ description: 'Training groups returned.' }),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", void 0)
@@ -156,6 +176,8 @@ __decorate([
     (0, common_1.Post)('training-groups'),
     (0, permissions_decorator_1.RequirePermissions)(permissions_constants_1.PERMISSIONS.ACADEMY_CONFIG_MANAGE),
     (0, audit_log_decorator_1.AuditLog)({ action: 'TRAINING_GROUP_CREATE', entityType: 'TrainingGroup' }),
+    (0, swagger_1.ApiOperation)({ summary: 'Create a training group.' }),
+    (0, swagger_1.ApiCreatedResponse)({ description: 'Training group created.' }),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [training_group_dto_1.CreateTrainingGroupDto]),
@@ -165,6 +187,8 @@ __decorate([
     (0, common_1.Patch)('training-groups/:id'),
     (0, permissions_decorator_1.RequirePermissions)(permissions_constants_1.PERMISSIONS.ACADEMY_CONFIG_MANAGE),
     (0, audit_log_decorator_1.AuditLog)({ action: 'TRAINING_GROUP_UPDATE', entityType: 'TrainingGroup' }),
+    (0, swagger_1.ApiOperation)({ summary: 'Update a training group.' }),
+    (0, swagger_1.ApiOkResponse)({ description: 'Training group updated.' }),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
@@ -174,6 +198,8 @@ __decorate([
 exports.AcademyConfigController = AcademyConfigController = __decorate([
     (0, swagger_1.ApiTags)('academy-config'),
     (0, swagger_1.ApiBearerAuth)(),
+    (0, swagger_1.ApiUnauthorizedResponse)({ description: 'Missing or invalid access token.' }),
+    (0, swagger_1.ApiForbiddenResponse)({ description: 'Caller lacks the required permission.' }),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, permissions_guard_1.PermissionsGuard),
     (0, common_1.Controller)('academy-config'),
     __metadata("design:paramtypes", [academy_config_service_1.AcademyConfigService])

@@ -1,5 +1,13 @@
 import { Body, Controller, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiCreatedResponse,
+  ApiForbiddenResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiTags,
+  ApiUnauthorizedResponse,
+} from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import { RequireAnyPermission, RequirePermissions } from '../auth/decorators/permissions.decorator';
@@ -13,6 +21,8 @@ import { CreateTrainingGroupDto, UpdateTrainingGroupDto } from './dto/training-g
 
 @ApiTags('academy-config')
 @ApiBearerAuth()
+@ApiUnauthorizedResponse({ description: 'Missing or invalid access token.' })
+@ApiForbiddenResponse({ description: 'Caller lacks the required permission.' })
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller('academy-config')
 export class AcademyConfigController {
@@ -21,6 +31,8 @@ export class AcademyConfigController {
   // Seasons
   @Get('seasons')
   @RequirePermissions(PERMISSIONS.ACADEMY_CONFIG_VIEW)
+  @ApiOperation({ summary: 'List all seasons.' })
+  @ApiOkResponse({ description: 'Seasons returned.' })
   listSeasons() {
     return this.service.listSeasons();
   }
@@ -28,6 +40,8 @@ export class AcademyConfigController {
   @Post('seasons')
   @RequirePermissions(PERMISSIONS.ACADEMY_CONFIG_MANAGE)
   @AuditLog({ action: 'SEASON_CREATE', entityType: 'Season' })
+  @ApiOperation({ summary: 'Create a season.' })
+  @ApiCreatedResponse({ description: 'Season created.' })
   createSeason(@Body() dto: CreateSeasonDto) {
     return this.service.createSeason(dto);
   }
@@ -35,6 +49,8 @@ export class AcademyConfigController {
   @Patch('seasons/:id')
   @RequirePermissions(PERMISSIONS.ACADEMY_CONFIG_MANAGE)
   @AuditLog({ action: 'SEASON_UPDATE', entityType: 'Season' })
+  @ApiOperation({ summary: 'Update a season.' })
+  @ApiOkResponse({ description: 'Season updated.' })
   updateSeason(@Param('id') id: string, @Body() dto: UpdateSeasonDto) {
     return this.service.updateSeason(id, dto);
   }
@@ -42,6 +58,8 @@ export class AcademyConfigController {
   // Age Categories
   @Get('age-categories')
   @RequirePermissions(PERMISSIONS.ACADEMY_CONFIG_VIEW)
+  @ApiOperation({ summary: 'List all age categories.' })
+  @ApiOkResponse({ description: 'Age categories returned.' })
   listAgeCategories() {
     return this.service.listAgeCategories();
   }
@@ -49,6 +67,8 @@ export class AcademyConfigController {
   @Post('age-categories')
   @RequirePermissions(PERMISSIONS.ACADEMY_CONFIG_MANAGE)
   @AuditLog({ action: 'AGE_CATEGORY_CREATE', entityType: 'AgeCategory' })
+  @ApiOperation({ summary: 'Create an age category.' })
+  @ApiCreatedResponse({ description: 'Age category created.' })
   createAgeCategory(@Body() dto: CreateAgeCategoryDto) {
     return this.service.createAgeCategory(dto);
   }
@@ -56,6 +76,8 @@ export class AcademyConfigController {
   @Patch('age-categories/:id')
   @RequirePermissions(PERMISSIONS.ACADEMY_CONFIG_MANAGE)
   @AuditLog({ action: 'AGE_CATEGORY_UPDATE', entityType: 'AgeCategory' })
+  @ApiOperation({ summary: 'Update an age category.' })
+  @ApiOkResponse({ description: 'Age category updated.' })
   updateAgeCategory(@Param('id') id: string, @Body() dto: UpdateAgeCategoryDto) {
     return this.service.updateAgeCategory(id, dto);
   }
@@ -63,6 +85,8 @@ export class AcademyConfigController {
   // Teams
   @Get('teams')
   @RequirePermissions(PERMISSIONS.ACADEMY_CONFIG_VIEW)
+  @ApiOperation({ summary: 'List all teams.' })
+  @ApiOkResponse({ description: 'Teams returned.' })
   listTeams() {
     return this.service.listTeams();
   }
@@ -70,6 +94,8 @@ export class AcademyConfigController {
   @Post('teams')
   @RequireAnyPermission(PERMISSIONS.ACADEMY_CONFIG_MANAGE, PERMISSIONS.TEAMS_MANAGE)
   @AuditLog({ action: 'TEAM_CREATE', entityType: 'Team' })
+  @ApiOperation({ summary: 'Create a team.' })
+  @ApiCreatedResponse({ description: 'Team created.' })
   createTeam(@Body() dto: CreateTeamDto) {
     return this.service.createTeam(dto);
   }
@@ -77,6 +103,8 @@ export class AcademyConfigController {
   @Patch('teams/:id')
   @RequireAnyPermission(PERMISSIONS.ACADEMY_CONFIG_MANAGE, PERMISSIONS.TEAMS_MANAGE)
   @AuditLog({ action: 'TEAM_UPDATE', entityType: 'Team' })
+  @ApiOperation({ summary: 'Update a team.' })
+  @ApiOkResponse({ description: 'Team updated.' })
   updateTeam(@Param('id') id: string, @Body() dto: UpdateTeamDto) {
     return this.service.updateTeam(id, dto);
   }
@@ -84,6 +112,8 @@ export class AcademyConfigController {
   // Training Groups
   @Get('training-groups')
   @RequirePermissions(PERMISSIONS.ACADEMY_CONFIG_VIEW)
+  @ApiOperation({ summary: 'List all training groups.' })
+  @ApiOkResponse({ description: 'Training groups returned.' })
   listTrainingGroups() {
     return this.service.listTrainingGroups();
   }
@@ -91,6 +121,8 @@ export class AcademyConfigController {
   @Post('training-groups')
   @RequirePermissions(PERMISSIONS.ACADEMY_CONFIG_MANAGE)
   @AuditLog({ action: 'TRAINING_GROUP_CREATE', entityType: 'TrainingGroup' })
+  @ApiOperation({ summary: 'Create a training group.' })
+  @ApiCreatedResponse({ description: 'Training group created.' })
   createTrainingGroup(@Body() dto: CreateTrainingGroupDto) {
     return this.service.createTrainingGroup(dto);
   }
@@ -98,6 +130,8 @@ export class AcademyConfigController {
   @Patch('training-groups/:id')
   @RequirePermissions(PERMISSIONS.ACADEMY_CONFIG_MANAGE)
   @AuditLog({ action: 'TRAINING_GROUP_UPDATE', entityType: 'TrainingGroup' })
+  @ApiOperation({ summary: 'Update a training group.' })
+  @ApiOkResponse({ description: 'Training group updated.' })
   updateTrainingGroup(@Param('id') id: string, @Body() dto: UpdateTrainingGroupDto) {
     return this.service.updateTrainingGroup(id, dto);
   }

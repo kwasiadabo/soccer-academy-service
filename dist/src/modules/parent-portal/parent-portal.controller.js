@@ -70,6 +70,8 @@ let ParentPortalController = class ParentPortalController {
 exports.ParentPortalController = ParentPortalController;
 __decorate([
     (0, common_1.Get)('children'),
+    (0, swagger_1.ApiOperation)({ summary: "List the current guardian's children." }),
+    (0, swagger_1.ApiOkResponse)({ description: 'Children returned.' }),
     __param(0, (0, current_user_decorator_1.CurrentUser)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object]),
@@ -77,6 +79,8 @@ __decorate([
 ], ParentPortalController.prototype, "listChildren", null);
 __decorate([
     (0, common_1.Get)('player-of-the-week'),
+    (0, swagger_1.ApiOperation)({ summary: "List Player of the Week awards for the current guardian's children." }),
+    (0, swagger_1.ApiOkResponse)({ description: 'Awards returned.' }),
     __param(0, (0, current_user_decorator_1.CurrentUser)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object]),
@@ -84,6 +88,8 @@ __decorate([
 ], ParentPortalController.prototype, "getPlayerOfTheWeekAwards", null);
 __decorate([
     (0, common_1.Get)('children/:playerId'),
+    (0, swagger_1.ApiOperation)({ summary: "Get one of the current guardian's children by player ID." }),
+    (0, swagger_1.ApiOkResponse)({ description: 'Child returned.' }),
     __param(0, (0, common_1.Param)('playerId')),
     __param(1, (0, current_user_decorator_1.CurrentUser)()),
     __metadata("design:type", Function),
@@ -92,6 +98,8 @@ __decorate([
 ], ParentPortalController.prototype, "getChild", null);
 __decorate([
     (0, common_1.Get)('children/:playerId/photo'),
+    (0, swagger_1.ApiOperation)({ summary: "Get a child's photo (binary response)." }),
+    (0, swagger_1.ApiOkResponse)({ description: 'Image bytes returned.' }),
     __param(0, (0, common_1.Param)('playerId')),
     __param(1, (0, current_user_decorator_1.CurrentUser)()),
     __param(2, (0, common_1.Res)()),
@@ -101,6 +109,8 @@ __decorate([
 ], ParentPortalController.prototype, "getPhoto", null);
 __decorate([
     (0, common_1.Get)('children/:playerId/attendance'),
+    (0, swagger_1.ApiOperation)({ summary: "Get a child's attendance record." }),
+    (0, swagger_1.ApiOkResponse)({ description: 'Attendance returned.' }),
     __param(0, (0, common_1.Param)('playerId')),
     __param(1, (0, current_user_decorator_1.CurrentUser)()),
     __metadata("design:type", Function),
@@ -109,6 +119,8 @@ __decorate([
 ], ParentPortalController.prototype, "getAttendance", null);
 __decorate([
     (0, common_1.Get)('children/:playerId/assessments'),
+    (0, swagger_1.ApiOperation)({ summary: "Get a child's assessments." }),
+    (0, swagger_1.ApiOkResponse)({ description: 'Assessments returned.' }),
     __param(0, (0, common_1.Param)('playerId')),
     __param(1, (0, current_user_decorator_1.CurrentUser)()),
     __metadata("design:type", Function),
@@ -117,6 +129,8 @@ __decorate([
 ], ParentPortalController.prototype, "getAssessments", null);
 __decorate([
     (0, common_1.Get)('children/:playerId/activity-marks'),
+    (0, swagger_1.ApiOperation)({ summary: "Get a child's training activity marks." }),
+    (0, swagger_1.ApiOkResponse)({ description: 'Activity marks returned.' }),
     __param(0, (0, common_1.Param)('playerId')),
     __param(1, (0, current_user_decorator_1.CurrentUser)()),
     __metadata("design:type", Function),
@@ -125,6 +139,8 @@ __decorate([
 ], ParentPortalController.prototype, "getActivityMarks", null);
 __decorate([
     (0, common_1.Get)('children/:playerId/coaches'),
+    (0, swagger_1.ApiOperation)({ summary: "Get a child's assigned coaches." }),
+    (0, swagger_1.ApiOkResponse)({ description: 'Coaches returned.' }),
     __param(0, (0, common_1.Param)('playerId')),
     __param(1, (0, current_user_decorator_1.CurrentUser)()),
     __metadata("design:type", Function),
@@ -133,6 +149,8 @@ __decorate([
 ], ParentPortalController.prototype, "getCoaches", null);
 __decorate([
     (0, common_1.Get)('children/:playerId/matches'),
+    (0, swagger_1.ApiOperation)({ summary: "Get a child's match history." }),
+    (0, swagger_1.ApiOkResponse)({ description: 'Matches returned.' }),
     __param(0, (0, common_1.Param)('playerId')),
     __param(1, (0, current_user_decorator_1.CurrentUser)()),
     __metadata("design:type", Function),
@@ -141,6 +159,8 @@ __decorate([
 ], ParentPortalController.prototype, "getMatches", null);
 __decorate([
     (0, common_1.Get)('children/:playerId/finance-summary'),
+    (0, swagger_1.ApiOperation)({ summary: "Get a child's finance summary." }),
+    (0, swagger_1.ApiOkResponse)({ description: 'Summary returned.' }),
     __param(0, (0, common_1.Param)('playerId')),
     __param(1, (0, current_user_decorator_1.CurrentUser)()),
     __metadata("design:type", Function),
@@ -149,6 +169,8 @@ __decorate([
 ], ParentPortalController.prototype, "getFinanceSummary", null);
 __decorate([
     (0, common_1.Get)('children/:playerId/statement'),
+    (0, swagger_1.ApiOperation)({ summary: "Get a child's billing statement." }),
+    (0, swagger_1.ApiOkResponse)({ description: 'Statement returned.' }),
     __param(0, (0, common_1.Param)('playerId')),
     __param(1, (0, current_user_decorator_1.CurrentUser)()),
     __metadata("design:type", Function),
@@ -157,6 +179,8 @@ __decorate([
 ], ParentPortalController.prototype, "getStatement", null);
 __decorate([
     (0, common_1.Post)('children/:playerId/feedback'),
+    (0, swagger_1.ApiOperation)({ summary: 'Submit feedback to a coach about a child.' }),
+    (0, swagger_1.ApiCreatedResponse)({ description: 'Feedback submitted.' }),
     (0, audit_log_decorator_1.AuditLog)({ action: 'COACH_FEEDBACK_SUBMIT', entityType: 'CoachFeedback' }),
     __param(0, (0, common_1.Param)('playerId')),
     __param(1, (0, common_1.Body)()),
@@ -168,6 +192,8 @@ __decorate([
 exports.ParentPortalController = ParentPortalController = __decorate([
     (0, swagger_1.ApiTags)('parent-portal'),
     (0, swagger_1.ApiBearerAuth)(),
+    (0, swagger_1.ApiUnauthorizedResponse)({ description: 'Missing or invalid access token.' }),
+    (0, swagger_1.ApiForbiddenResponse)({ description: 'Caller lacks the required permission.' }),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, permissions_guard_1.PermissionsGuard),
     (0, permissions_decorator_1.RequirePermissions)(permissions_constants_1.PERMISSIONS.PARENT_PORTAL_ACCESS),
     (0, common_1.Controller)('parent-portal'),

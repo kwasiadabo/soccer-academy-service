@@ -13,7 +13,16 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { ApiBearerAuth, ApiConsumes, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiConsumes,
+  ApiCreatedResponse,
+  ApiForbiddenResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiTags,
+  ApiUnauthorizedResponse,
+} from '@nestjs/swagger';
 import type { Response } from 'express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
@@ -33,6 +42,8 @@ import { InitiatePaystackChargeDto, VerifyPaystackChargeDto } from './dto/paysta
 
 @ApiTags('players')
 @ApiBearerAuth()
+@ApiUnauthorizedResponse({ description: 'Missing or invalid access token.' })
+@ApiForbiddenResponse({ description: 'Caller lacks the required permission.' })
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller('players')
 export class PlayersController {
@@ -40,6 +51,8 @@ export class PlayersController {
 
   @Get()
   @RequirePermissions(PERMISSIONS.PLAYERS_VIEW)
+  @ApiOperation({ summary: 'List players, optionally filtered by status, search text, or team.' })
+  @ApiOkResponse({ description: 'Players returned.' })
   findAll(
     @CurrentUser() user: RequestUser,
     @Query('status') status?: string,
@@ -51,18 +64,24 @@ export class PlayersController {
 
   @Get('birthdays')
   @RequirePermissions(PERMISSIONS.PLAYERS_VIEW)
+  @ApiOperation({ summary: 'List players with birthdays within a window of days.' })
+  @ApiOkResponse({ description: 'Players returned.' })
   listBirthdays(@Query('withinDays') withinDays?: string) {
     return this.playersService.listBirthdays(withinDays ? Number(withinDays) : 30);
   }
 
   @Get(':id')
   @RequirePermissions(PERMISSIONS.PLAYERS_VIEW)
+  @ApiOperation({ summary: 'Get a player by ID.' })
+  @ApiOkResponse({ description: 'Player returned.' })
   findOne(@Param('id') id: string) {
     return this.playersService.findOne(id);
   }
 
   @Get(':id/photo')
   @RequirePermissions(PERMISSIONS.PLAYERS_VIEW)
+  @ApiOperation({ summary: "Get a player's photo (binary response)." })
+  @ApiOkResponse({ description: 'Image bytes returned.' })
   async getPhoto(@Param('id') id: string, @Res() res: Response) {
     const { buffer, mimeType } = await this.playersService.getPhoto(id);
     res.setHeader('Content-Type', mimeType);
@@ -73,6 +92,8 @@ export class PlayersController {
   @Post()
   @RequirePermissions(PERMISSIONS.PLAYERS_MANAGE)
   @AuditLog({ action: 'PLAYER_REGISTRATION_CREATE', entityType: 'Player' })
+  @ApiOperation({ summary: 'Start a player registration.' })
+  @ApiCreatedResponse({ description: 'Player created.' })
   create(@Body() dto: CreatePlayerDto) {
     return this.playersService.create(dto);
   }
@@ -80,6 +101,8 @@ export class PlayersController {
   @Patch(':id')
   @RequirePermissions(PERMISSIONS.PLAYERS_MANAGE)
   @AuditLog({ action: 'PLAYER_UPDATE', entityType: 'Player' })
+  @ApiOperation({ summary: 'Update a player.' })
+  @ApiOkResponse({ description: 'Player updated.' })
   update(@Param('id') id: string, @Body() dto: UpdatePlayerDto) {
     return this.playersService.update(id, dto);
   }
@@ -87,6 +110,8 @@ export class PlayersController {
   @Patch(':id/team')
   @RequireAnyPermission(PERMISSIONS.PLAYERS_MANAGE, PERMISSIONS.PLAYERS_TEAM_ASSIGN)
   @AuditLog({ action: 'PLAYER_TEAM_ASSIGN', entityType: 'Player' })
+  @ApiOperation({ summary: "Update a player's team assignment." })
+  @ApiOkResponse({ description: 'Assignment updated.' })
   updateTeamAssignment(@Param('id') id: string, @Body() dto: UpdatePlayerTeamAssignmentDto) {
     return this.playersService.updateTeamAssignment(id, dto);
   }
@@ -94,6 +119,8 @@ export class PlayersController {
   @Patch(':id/status')
   @RequireAnyPermission(PERMISSIONS.PLAYERS_MANAGE, PERMISSIONS.PLAYERS_STATUS_MANAGE)
   @AuditLog({ action: 'PLAYER_STATUS_UPDATE', entityType: 'Player' })
+  @ApiOperation({ summary: "Update a player's status." })
+  @ApiOkResponse({ description: 'Status updated.' })
   updateStatus(@Param('id') id: string, @Body() dto: UpdatePlayerStatusDto) {
     return this.playersService.updateStatus(id, dto.status);
   }
@@ -101,6 +128,8 @@ export class PlayersController {
   @Post(':id/guardians')
   @RequirePermissions(PERMISSIONS.PLAYERS_MANAGE)
   @AuditLog({ action: 'PLAYER_GUARDIAN_ADD', entityType: 'Player' })
+  @ApiOperation({ summary: 'Add a guardian to a player.' })
+  @ApiCreatedResponse({ description: 'Guardian added.' })
   addGuardian(@Param('id') id: string, @Body() dto: AddGuardianDto) {
     return this.playersService.addGuardian(id, dto);
   }
@@ -108,6 +137,8 @@ export class PlayersController {
   @Post(':id/submit')
   @RequirePermissions(PERMISSIONS.PLAYERS_MANAGE)
   @AuditLog({ action: 'PLAYER_REGISTRATION_SUBMIT', entityType: 'Player' })
+  @ApiOperation({ summary: 'Submit a player registration for approval.' })
+  @ApiCreatedResponse({ description: 'Registration submitted.' })
   submit(@Param('id') id: string) {
     return this.playersService.submit(id);
   }
@@ -115,6 +146,8 @@ export class PlayersController {
   @Post(':id/approve')
   @RequirePermissions(PERMISSIONS.PLAYERS_MANAGE)
   @AuditLog({ action: 'PLAYER_REGISTRATION_APPROVE', entityType: 'Player' })
+  @ApiOperation({ summary: 'Approve a player registration.' })
+  @ApiCreatedResponse({ description: 'Registration approved.' })
   approve(@Param('id') id: string, @CurrentUser() user: RequestUser) {
     return this.playersService.approve(id, user.userId);
   }
@@ -122,6 +155,8 @@ export class PlayersController {
   @Post(':id/confirm-payment')
   @RequirePermissions(PERMISSIONS.FINANCE_MANAGE)
   @AuditLog({ action: 'PLAYER_REGISTRATION_PAYMENT_CONFIRM', entityType: 'Player' })
+  @ApiOperation({ summary: 'Confirm a player registration payment was received manually.' })
+  @ApiCreatedResponse({ description: 'Payment confirmed.' })
   confirmPayment(
     @Param('id') id: string,
     @Body() dto: ConfirmRegistrationPaymentDto,
@@ -133,6 +168,8 @@ export class PlayersController {
   @Post(':id/registration-payment/paystack/charge')
   @RequirePermissions(PERMISSIONS.FINANCE_MANAGE)
   @AuditLog({ action: 'PLAYER_REGISTRATION_PAYSTACK_CHARGE', entityType: 'Player' })
+  @ApiOperation({ summary: 'Initiate a Paystack charge for a registration payment.' })
+  @ApiCreatedResponse({ description: 'Charge initiated.' })
   initiatePaystackCharge(@Param('id') id: string, @Body() dto: InitiatePaystackChargeDto) {
     return this.playersService.initiatePaystackRegistrationCharge(id, dto);
   }
@@ -140,6 +177,8 @@ export class PlayersController {
   @Post(':id/registration-payment/paystack/verify')
   @RequirePermissions(PERMISSIONS.FINANCE_MANAGE)
   @AuditLog({ action: 'PLAYER_REGISTRATION_PAYSTACK_VERIFY', entityType: 'Player' })
+  @ApiOperation({ summary: 'Verify a Paystack charge and confirm the registration payment.' })
+  @ApiCreatedResponse({ description: 'Charge verified.' })
   verifyPaystackCharge(
     @Param('id') id: string,
     @Body() dto: VerifyPaystackChargeDto,
@@ -152,6 +191,8 @@ export class PlayersController {
   @RequirePermissions(PERMISSIONS.PLAYERS_MANAGE)
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(FileInterceptor('file'))
+  @ApiOperation({ summary: "Upload a player's photo." })
+  @ApiCreatedResponse({ description: 'Photo uploaded.' })
   @AuditLog({ action: 'PLAYER_PHOTO_UPLOAD', entityType: 'Player' })
   uploadPhoto(
     @Param('id') id: string,

@@ -1,5 +1,13 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiCreatedResponse,
+  ApiForbiddenResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiTags,
+  ApiUnauthorizedResponse,
+} from '@nestjs/swagger';
 import { TrainingApprovalStatus } from '@prisma/client';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
@@ -34,6 +42,8 @@ const RECORD_ATTENDANCE = [PERMISSIONS.TRAINING_MANAGE_OWN, PERMISSIONS.TRAINING
 
 @ApiTags('training')
 @ApiBearerAuth()
+@ApiUnauthorizedResponse({ description: 'Missing or invalid access token.' })
+@ApiForbiddenResponse({ description: 'Caller lacks the required permission.' })
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller('training')
 export class TrainingController {
@@ -42,18 +52,24 @@ export class TrainingController {
   // --- Plans ---
   @Get('plans')
   @RequireAnyPermission(...OWN_OR_APPROVE)
+  @ApiOperation({ summary: 'List training plans, optionally filtered by approval status.' })
+  @ApiOkResponse({ description: 'Plans returned.' })
   findAllPlans(@CurrentUser() user: RequestUser, @Query('status') status?: TrainingApprovalStatus) {
     return this.trainingService.findAllPlans(user, status);
   }
 
   @Get('plans/teams')
   @RequireAnyPermission(...VIEW_SESSIONS)
+  @ApiOperation({ summary: 'List teams the current user can pick a training plan for.' })
+  @ApiOkResponse({ description: 'Teams returned.' })
   listTeams(@CurrentUser() user: RequestUser) {
     return this.trainingService.listTeamsForPicker(user);
   }
 
   @Get('plans/:id')
   @RequireAnyPermission(...OWN_OR_APPROVE)
+  @ApiOperation({ summary: 'Get a training plan by ID.' })
+  @ApiOkResponse({ description: 'Plan returned.' })
   findOnePlan(@Param('id') id: string, @CurrentUser() user: RequestUser) {
     return this.trainingService.findOnePlan(id, user);
   }
@@ -61,6 +77,8 @@ export class TrainingController {
   @Post('plans')
   @RequirePermissions(PERMISSIONS.TRAINING_MANAGE_OWN)
   @AuditLog({ action: 'TRAINING_PLAN_CREATE', entityType: 'TrainingPlan' })
+  @ApiOperation({ summary: 'Create a training plan.' })
+  @ApiCreatedResponse({ description: 'Plan created.' })
   createPlan(@Body() dto: CreateTrainingPlanDto, @CurrentUser() user: RequestUser) {
     return this.trainingService.createPlan(user.userId, dto);
   }
@@ -68,6 +86,8 @@ export class TrainingController {
   @Patch('plans/:id')
   @RequirePermissions(PERMISSIONS.TRAINING_MANAGE_OWN)
   @AuditLog({ action: 'TRAINING_PLAN_UPDATE', entityType: 'TrainingPlan' })
+  @ApiOperation({ summary: 'Update a training plan.' })
+  @ApiOkResponse({ description: 'Plan updated.' })
   updatePlan(@Param('id') id: string, @Body() dto: UpdateTrainingPlanDto, @CurrentUser() user: RequestUser) {
     return this.trainingService.updatePlan(id, user.userId, dto);
   }
@@ -75,6 +95,8 @@ export class TrainingController {
   @Post('plans/:id/activities')
   @RequirePermissions(PERMISSIONS.TRAINING_MANAGE_OWN)
   @AuditLog({ action: 'TRAINING_ACTIVITY_CREATE', entityType: 'TrainingPlan' })
+  @ApiOperation({ summary: 'Add an activity to a training plan.' })
+  @ApiCreatedResponse({ description: 'Activity added.' })
   addActivity(
     @Param('id') id: string,
     @Body() dto: CreateTrainingActivityInputDto,
@@ -86,6 +108,8 @@ export class TrainingController {
   @Patch('plans/:id/activities/:activityId')
   @RequirePermissions(PERMISSIONS.TRAINING_MANAGE_OWN)
   @AuditLog({ action: 'TRAINING_ACTIVITY_UPDATE', entityType: 'TrainingPlan' })
+  @ApiOperation({ summary: 'Update a training plan activity.' })
+  @ApiOkResponse({ description: 'Activity updated.' })
   updateActivity(
     @Param('id') id: string,
     @Param('activityId') activityId: string,
@@ -98,6 +122,8 @@ export class TrainingController {
   @Delete('plans/:id/activities/:activityId')
   @RequirePermissions(PERMISSIONS.TRAINING_MANAGE_OWN)
   @AuditLog({ action: 'TRAINING_ACTIVITY_DELETE', entityType: 'TrainingPlan' })
+  @ApiOperation({ summary: 'Remove an activity from a training plan.' })
+  @ApiOkResponse({ description: 'Activity removed.' })
   removeActivity(
     @Param('id') id: string,
     @Param('activityId') activityId: string,
@@ -109,6 +135,8 @@ export class TrainingController {
   @Post('plans/:id/submit')
   @RequirePermissions(PERMISSIONS.TRAINING_MANAGE_OWN)
   @AuditLog({ action: 'TRAINING_PLAN_SUBMIT', entityType: 'TrainingPlan' })
+  @ApiOperation({ summary: 'Submit a training plan for approval.' })
+  @ApiCreatedResponse({ description: 'Plan submitted.' })
   submit(@Param('id') id: string, @CurrentUser() user: RequestUser) {
     return this.trainingService.submit(id, user.userId);
   }
@@ -116,6 +144,8 @@ export class TrainingController {
   @Post('plans/:id/decision')
   @RequirePermissions(PERMISSIONS.TRAINING_APPROVE)
   @AuditLog({ action: 'TRAINING_PLAN_DECISION', entityType: 'TrainingPlan' })
+  @ApiOperation({ summary: 'Approve or reject a submitted training plan.' })
+  @ApiCreatedResponse({ description: 'Decision recorded.' })
   decide(@Param('id') id: string, @Body() dto: TrainingPlanDecisionDto, @CurrentUser() user: RequestUser) {
     return this.trainingService.decide(id, user.userId, dto);
   }
@@ -123,12 +153,16 @@ export class TrainingController {
   // --- Sessions ---
   @Get('sessions')
   @RequireAnyPermission(...VIEW_SESSIONS)
+  @ApiOperation({ summary: 'List training sessions.' })
+  @ApiOkResponse({ description: 'Sessions returned.' })
   findAllSessions(@CurrentUser() user: RequestUser) {
     return this.trainingService.findAllSessions(user);
   }
 
   @Get('sessions/:id')
   @RequireAnyPermission(...VIEW_SESSIONS)
+  @ApiOperation({ summary: 'Get a training session by ID.' })
+  @ApiOkResponse({ description: 'Session returned.' })
   findOneSession(@Param('id') id: string) {
     return this.trainingService.findOneSession(id);
   }
@@ -136,6 +170,8 @@ export class TrainingController {
   @Post('sessions')
   @RequirePermissions(PERMISSIONS.TRAINING_MANAGE_OWN)
   @AuditLog({ action: 'TRAINING_SESSION_CREATE', entityType: 'TrainingSession' })
+  @ApiOperation({ summary: 'Create a training session.' })
+  @ApiCreatedResponse({ description: 'Session created.' })
   createSession(@Body() dto: CreateTrainingSessionDto, @CurrentUser() user: RequestUser) {
     return this.trainingService.createSession(user.userId, dto);
   }
@@ -143,6 +179,8 @@ export class TrainingController {
   @Post('sessions/saturday')
   @RequireAnyPermission(...RECORD_ATTENDANCE)
   @AuditLog({ action: 'TRAINING_SESSION_SATURDAY_RESOLVE', entityType: 'TrainingSession' })
+  @ApiOperation({ summary: "Get or create a team's Saturday session for a given date." })
+  @ApiCreatedResponse({ description: 'Session resolved.' })
   getOrCreateSaturdaySession(@Body() dto: GetOrCreateSaturdaySessionDto) {
     return this.trainingService.getOrCreateSaturdaySession(dto.teamId, dto.date);
   }
@@ -152,6 +190,8 @@ export class TrainingController {
   @Post('attendance/mark')
   @RequireAnyPermission(...RECORD_ATTENDANCE)
   @AuditLog({ action: 'TRAINING_ATTENDANCE_RECORD', entityType: 'TrainingSession' })
+  @ApiOperation({ summary: "Mark a player's attendance for their own Saturday session." })
+  @ApiCreatedResponse({ description: 'Attendance recorded.' })
   quickMarkAttendance(@Body() dto: QuickMarkAttendanceDto, @CurrentUser() user: RequestUser) {
     return this.trainingService.quickMarkAttendance(dto.playerId, user, dto.status);
   }
@@ -159,6 +199,8 @@ export class TrainingController {
   @Patch('sessions/:id')
   @RequirePermissions(PERMISSIONS.TRAINING_MANAGE_OWN)
   @AuditLog({ action: 'TRAINING_SESSION_UPDATE', entityType: 'TrainingSession' })
+  @ApiOperation({ summary: 'Update a training session.' })
+  @ApiOkResponse({ description: 'Session updated.' })
   updateSession(@Param('id') id: string, @Body() dto: UpdateTrainingSessionDto, @CurrentUser() user: RequestUser) {
     return this.trainingService.updateSession(id, user.userId, dto);
   }
@@ -166,6 +208,8 @@ export class TrainingController {
   @Post('sessions/:id/attendance')
   @RequireAnyPermission(...RECORD_ATTENDANCE)
   @AuditLog({ action: 'TRAINING_ATTENDANCE_RECORD', entityType: 'TrainingSession' })
+  @ApiOperation({ summary: 'Record attendance for a training session.' })
+  @ApiCreatedResponse({ description: 'Attendance recorded.' })
   recordAttendance(@Param('id') id: string, @Body() dto: RecordAttendanceDto, @CurrentUser() user: RequestUser) {
     return this.trainingService.recordAttendance(id, user, dto);
   }
@@ -173,6 +217,8 @@ export class TrainingController {
   @Post('sessions/:id/activities')
   @RequirePermissions(PERMISSIONS.TRAINING_MANAGE_OWN)
   @AuditLog({ action: 'TRAINING_SESSION_ACTIVITY_CREATE', entityType: 'TrainingSession' })
+  @ApiOperation({ summary: 'Add an activity to a training session.' })
+  @ApiCreatedResponse({ description: 'Activity added.' })
   addSessionActivity(@Param('id') id: string, @Body() dto: CreateSessionActivityDto, @CurrentUser() user: RequestUser) {
     return this.trainingService.addSessionActivity(id, user, dto);
   }
@@ -180,6 +226,8 @@ export class TrainingController {
   @Delete('sessions/:id/activities/:activityId')
   @RequirePermissions(PERMISSIONS.TRAINING_MANAGE_OWN)
   @AuditLog({ action: 'TRAINING_SESSION_ACTIVITY_DELETE', entityType: 'TrainingSession' })
+  @ApiOperation({ summary: 'Remove an activity from a training session.' })
+  @ApiOkResponse({ description: 'Activity removed.' })
   removeSessionActivity(
     @Param('id') id: string,
     @Param('activityId') activityId: string,
@@ -191,6 +239,8 @@ export class TrainingController {
   // --- Activity Marks ---
   @Get('activities/:activityId/marks')
   @RequireAnyPermission(...OWN_OR_APPROVE)
+  @ApiOperation({ summary: 'Get recorded marks for a training activity.' })
+  @ApiOkResponse({ description: 'Marks returned.' })
   getActivityMarks(@Param('activityId') activityId: string, @CurrentUser() user: RequestUser) {
     return this.trainingService.getActivityMarks(activityId, user);
   }
@@ -198,6 +248,8 @@ export class TrainingController {
   @Post('activities/:activityId/marks')
   @RequirePermissions(PERMISSIONS.TRAINING_MANAGE_OWN)
   @AuditLog({ action: 'TRAINING_ACTIVITY_MARKS_RECORD', entityType: 'TrainingActivityMark' })
+  @ApiOperation({ summary: 'Record marks for a training activity.' })
+  @ApiCreatedResponse({ description: 'Marks recorded.' })
   upsertActivityMarks(
     @Param('activityId') activityId: string,
     @Body() dto: UpsertActivityMarksDto,
@@ -208,12 +260,16 @@ export class TrainingController {
 
   @Get('players/:playerId/marks')
   @RequireAnyPermission(...OWN_OR_APPROVE)
+  @ApiOperation({ summary: "Get a player's training activity marks." })
+  @ApiOkResponse({ description: 'Marks returned.' })
   getPlayerMarks(@Param('playerId') playerId: string, @CurrentUser() user: RequestUser) {
     return this.trainingService.getPlayerMarks(playerId, user);
   }
 
   @Get('teams/:teamId/marks')
   @RequireAnyPermission(...OWN_OR_APPROVE)
+  @ApiOperation({ summary: "Get a team's training activity marks." })
+  @ApiOkResponse({ description: 'Marks returned.' })
   getTeamMarks(@Param('teamId') teamId: string, @CurrentUser() user: RequestUser) {
     return this.trainingService.getTeamMarks(teamId, user);
   }

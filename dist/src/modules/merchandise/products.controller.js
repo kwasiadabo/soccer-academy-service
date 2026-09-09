@@ -69,12 +69,16 @@ let ProductsController = class ProductsController {
 exports.ProductsController = ProductsController;
 __decorate([
     (0, common_1.Get)(),
+    (0, swagger_1.ApiOperation)({ summary: 'List all products, including inactive ones.' }),
+    (0, swagger_1.ApiOkResponse)({ description: 'Products returned.' }),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", void 0)
 ], ProductsController.prototype, "findAll", null);
 __decorate([
     (0, common_1.Get)(':id'),
+    (0, swagger_1.ApiOperation)({ summary: 'Get a product by ID.' }),
+    (0, swagger_1.ApiOkResponse)({ description: 'Product returned.' }),
     __param(0, (0, common_1.Param)('id')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),
@@ -83,6 +87,8 @@ __decorate([
 __decorate([
     (0, throttler_1.SkipThrottle)(),
     (0, common_1.Get)(':id/images/:imageId'),
+    (0, swagger_1.ApiOperation)({ summary: 'Get a product image (binary response).' }),
+    (0, swagger_1.ApiOkResponse)({ description: 'Image bytes returned.' }),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Param)('imageId')),
     __param(2, (0, common_1.Res)()),
@@ -92,6 +98,8 @@ __decorate([
 ], ProductsController.prototype, "getImage", null);
 __decorate([
     (0, common_1.Post)(),
+    (0, swagger_1.ApiOperation)({ summary: 'Create a product.' }),
+    (0, swagger_1.ApiCreatedResponse)({ description: 'Product created.' }),
     (0, audit_log_decorator_1.AuditLog)({ action: 'PRODUCT_CREATE', entityType: 'Product' }),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
@@ -100,6 +108,8 @@ __decorate([
 ], ProductsController.prototype, "create", null);
 __decorate([
     (0, common_1.Patch)(':id'),
+    (0, swagger_1.ApiOperation)({ summary: 'Update a product.' }),
+    (0, swagger_1.ApiOkResponse)({ description: 'Product updated.' }),
     (0, audit_log_decorator_1.AuditLog)({ action: 'PRODUCT_UPDATE', entityType: 'Product' }),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Body)()),
@@ -109,6 +119,8 @@ __decorate([
 ], ProductsController.prototype, "update", null);
 __decorate([
     (0, common_1.Post)(':id/variants'),
+    (0, swagger_1.ApiOperation)({ summary: 'Add a variant (e.g. size) to a product.' }),
+    (0, swagger_1.ApiCreatedResponse)({ description: 'Variant created.' }),
     (0, audit_log_decorator_1.AuditLog)({ action: 'PRODUCT_VARIANT_CREATE', entityType: 'Product' }),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Body)()),
@@ -118,6 +130,8 @@ __decorate([
 ], ProductsController.prototype, "addVariant", null);
 __decorate([
     (0, common_1.Patch)(':id/variants/:variantId'),
+    (0, swagger_1.ApiOperation)({ summary: 'Update a product variant.' }),
+    (0, swagger_1.ApiOkResponse)({ description: 'Variant updated.' }),
     (0, audit_log_decorator_1.AuditLog)({ action: 'PRODUCT_VARIANT_UPDATE', entityType: 'Product' }),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Param)('variantId')),
@@ -130,6 +144,8 @@ __decorate([
     (0, common_1.Post)(':id/images'),
     (0, swagger_1.ApiConsumes)('multipart/form-data'),
     (0, common_1.UseInterceptors)((0, platform_express_1.FileInterceptor)('file')),
+    (0, swagger_1.ApiOperation)({ summary: 'Upload a product image.' }),
+    (0, swagger_1.ApiCreatedResponse)({ description: 'Image uploaded.' }),
     (0, audit_log_decorator_1.AuditLog)({ action: 'PRODUCT_IMAGE_UPLOAD', entityType: 'Product' }),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.UploadedFile)()),
@@ -140,6 +156,8 @@ __decorate([
 ], ProductsController.prototype, "addImage", null);
 __decorate([
     (0, common_1.Delete)(':id/images/:imageId'),
+    (0, swagger_1.ApiOperation)({ summary: 'Remove a product image.' }),
+    (0, swagger_1.ApiOkResponse)({ description: 'Image removed.' }),
     (0, audit_log_decorator_1.AuditLog)({ action: 'PRODUCT_IMAGE_DELETE', entityType: 'Product' }),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Param)('imageId')),
@@ -150,6 +168,8 @@ __decorate([
 exports.ProductsController = ProductsController = __decorate([
     (0, swagger_1.ApiTags)('merchandise'),
     (0, swagger_1.ApiBearerAuth)(),
+    (0, swagger_1.ApiUnauthorizedResponse)({ description: 'Missing or invalid access token.' }),
+    (0, swagger_1.ApiForbiddenResponse)({ description: 'Caller lacks the required permission.' }),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, permissions_guard_1.PermissionsGuard),
     (0, permissions_decorator_1.RequirePermissions)(permissions_constants_1.PERMISSIONS.ORDERS_MANAGE),
     (0, common_1.Controller)('merchandise/products'),

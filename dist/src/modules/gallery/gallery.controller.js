@@ -39,6 +39,8 @@ let GalleryController = class GalleryController {
 exports.GalleryController = GalleryController;
 __decorate([
     (0, common_1.Get)('public'),
+    (0, swagger_1.ApiOperation)({ summary: 'List public gallery photos (unauthenticated).' }),
+    (0, swagger_1.ApiOkResponse)({ description: 'Photos returned.' }),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", void 0)
@@ -50,6 +52,10 @@ __decorate([
     (0, permissions_decorator_1.RequirePermissions)(permissions_constants_1.PERMISSIONS.GALLERY_MANAGE),
     (0, swagger_1.ApiConsumes)('multipart/form-data'),
     (0, common_1.UseInterceptors)((0, platform_express_1.FilesInterceptor)('files', 20)),
+    (0, swagger_1.ApiOperation)({ summary: 'Replace all gallery photos for a context (e.g. a training session).' }),
+    (0, swagger_1.ApiCreatedResponse)({ description: 'Photos replaced.' }),
+    (0, swagger_1.ApiUnauthorizedResponse)({ description: 'Missing or invalid access token.' }),
+    (0, swagger_1.ApiForbiddenResponse)({ description: 'Caller lacks the required permission.' }),
     (0, audit_log_decorator_1.AuditLog)({ action: 'GALLERY_PHOTOS_REPLACE', entityType: 'GalleryPhoto' }),
     __param(0, (0, common_1.Param)('context', new common_1.ParseEnumPipe(client_1.GalleryPhotoContext))),
     __param(1, (0, common_1.UploadedFiles)()),

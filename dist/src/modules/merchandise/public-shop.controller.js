@@ -47,12 +47,16 @@ let PublicShopController = class PublicShopController {
 exports.PublicShopController = PublicShopController;
 __decorate([
     (0, common_1.Get)('products'),
+    (0, swagger_1.ApiOperation)({ summary: 'List active shop products (unauthenticated).' }),
+    (0, swagger_1.ApiOkResponse)({ description: 'Products returned.' }),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", void 0)
 ], PublicShopController.prototype, "listProducts", null);
 __decorate([
     (0, common_1.Get)('products/:id'),
+    (0, swagger_1.ApiOperation)({ summary: 'Get an active product by ID (unauthenticated).' }),
+    (0, swagger_1.ApiOkResponse)({ description: 'Product returned.' }),
     __param(0, (0, common_1.Param)('id')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),
@@ -61,6 +65,8 @@ __decorate([
 __decorate([
     (0, throttler_1.SkipThrottle)(),
     (0, common_1.Get)('products/:id/images/:imageId'),
+    (0, swagger_1.ApiOperation)({ summary: 'Get a product image (binary response, unauthenticated).' }),
+    (0, swagger_1.ApiOkResponse)({ description: 'Image bytes returned.' }),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Param)('imageId')),
     __param(2, (0, common_1.Res)()),
@@ -70,6 +76,8 @@ __decorate([
 ], PublicShopController.prototype, "getProductImage", null);
 __decorate([
     (0, common_1.Get)('players/lookup'),
+    (0, swagger_1.ApiOperation)({ summary: 'Look up a player by their unique player code (unauthenticated).' }),
+    (0, swagger_1.ApiOkResponse)({ description: 'Player returned.' }),
     __param(0, (0, common_1.Query)('code')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),
@@ -77,6 +85,8 @@ __decorate([
 ], PublicShopController.prototype, "lookupPlayer", null);
 __decorate([
     (0, common_1.Post)('orders'),
+    (0, swagger_1.ApiOperation)({ summary: 'Place a guest order for a player, matched by player code (unauthenticated).' }),
+    (0, swagger_1.ApiCreatedResponse)({ description: 'Order created.' }),
     (0, audit_log_decorator_1.AuditLog)({ action: 'MERCHANDISE_ORDER_CREATE', entityType: 'MerchandiseOrder' }),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),

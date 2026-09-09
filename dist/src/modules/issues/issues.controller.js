@@ -44,12 +44,16 @@ let IssuesController = class IssuesController {
 exports.IssuesController = IssuesController;
 __decorate([
     (0, common_1.Get)(),
+    (0, swagger_1.ApiOperation)({ summary: 'List all parent-raised issues.' }),
+    (0, swagger_1.ApiOkResponse)({ description: 'Issues returned.' }),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", void 0)
 ], IssuesController.prototype, "listAll", null);
 __decorate([
     (0, common_1.Get)(':id'),
+    (0, swagger_1.ApiOperation)({ summary: 'Get an issue by ID, including its message thread.' }),
+    (0, swagger_1.ApiOkResponse)({ description: 'Issue returned.' }),
     __param(0, (0, common_1.Param)('id')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),
@@ -57,6 +61,8 @@ __decorate([
 ], IssuesController.prototype, "getOne", null);
 __decorate([
     (0, common_1.Post)(':id/messages'),
+    (0, swagger_1.ApiOperation)({ summary: 'Reply to an issue as staff.' }),
+    (0, swagger_1.ApiCreatedResponse)({ description: 'Message added.' }),
     (0, audit_log_decorator_1.AuditLog)({ action: 'ISSUE_STAFF_REPLY', entityType: 'ParentIssue' }),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Body)()),
@@ -67,6 +73,8 @@ __decorate([
 ], IssuesController.prototype, "addMessage", null);
 __decorate([
     (0, common_1.Patch)(':id/status'),
+    (0, swagger_1.ApiOperation)({ summary: 'Update the status of an issue.' }),
+    (0, swagger_1.ApiOkResponse)({ description: 'Issue updated.' }),
     (0, audit_log_decorator_1.AuditLog)({ action: 'ISSUE_STATUS_UPDATE', entityType: 'ParentIssue' }),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Body)()),
@@ -77,6 +85,8 @@ __decorate([
 exports.IssuesController = IssuesController = __decorate([
     (0, swagger_1.ApiTags)('issues'),
     (0, swagger_1.ApiBearerAuth)(),
+    (0, swagger_1.ApiUnauthorizedResponse)({ description: 'Missing or invalid access token.' }),
+    (0, swagger_1.ApiForbiddenResponse)({ description: 'Caller lacks the required permission.' }),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, permissions_guard_1.PermissionsGuard),
     (0, permissions_decorator_1.RequirePermissions)(permissions_constants_1.PERMISSIONS.ISSUES_MANAGE),
     (0, common_1.Controller)('issues'),
