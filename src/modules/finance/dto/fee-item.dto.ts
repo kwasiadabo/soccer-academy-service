@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsBoolean, IsNumber, IsOptional, IsString, Min } from 'class-validator';
+import { IsBoolean, IsOptional, IsString } from 'class-validator';
 
 export class CreateFeeItemDto {
   @ApiProperty()
@@ -10,11 +10,6 @@ export class CreateFeeItemDto {
   @IsOptional()
   @IsString()
   description?: string;
-
-  @ApiProperty()
-  @IsNumber()
-  @Min(0)
-  defaultAmount!: number;
 }
 
 export class UpdateFeeItemDto {
@@ -27,12 +22,6 @@ export class UpdateFeeItemDto {
   @IsOptional()
   @IsString()
   description?: string;
-
-  @ApiProperty({ required: false })
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
-  defaultAmount?: number;
 
   @ApiProperty({ required: false })
   @IsOptional()

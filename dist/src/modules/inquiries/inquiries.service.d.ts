@@ -6,9 +6,10 @@ export declare class InquiriesService {
     constructor(prisma: PrismaService);
     create(dto: CreateInquiryDto): import(".prisma/client").Prisma.Prisma__PublicInquiryClient<{
         id: string;
+        status: import(".prisma/client").$Enums.InquiryStatus;
         createdAt: Date;
         updatedAt: Date;
-        status: import(".prisma/client").$Enums.InquiryStatus;
+        academyId: string;
         message: string | null;
         childFirstName: string;
         childLastName: string;
@@ -20,9 +21,10 @@ export declare class InquiriesService {
     }, never, import("@prisma/client/runtime/library").DefaultArgs>;
     findAll(): import(".prisma/client").Prisma.PrismaPromise<{
         id: string;
+        status: import(".prisma/client").$Enums.InquiryStatus;
         createdAt: Date;
         updatedAt: Date;
-        status: import(".prisma/client").$Enums.InquiryStatus;
+        academyId: string;
         message: string | null;
         childFirstName: string;
         childLastName: string;
@@ -34,9 +36,10 @@ export declare class InquiriesService {
     }[]>;
     updateStatus(id: string, dto: UpdateInquiryStatusDto): Promise<{
         id: string;
+        status: import(".prisma/client").$Enums.InquiryStatus;
         createdAt: Date;
         updatedAt: Date;
-        status: import(".prisma/client").$Enums.InquiryStatus;
+        academyId: string;
         message: string | null;
         childFirstName: string;
         childLastName: string;

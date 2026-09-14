@@ -1,9 +1,7 @@
 export declare class CreateUserDto {
+    coachId: string;
     email: string;
     password: string;
-    firstName: string;
-    lastName: string;
-    phone?: string;
     roleNames: string[];
     mustChangePassword?: boolean;
 }

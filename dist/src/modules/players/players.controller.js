@@ -28,6 +28,7 @@ const update_player_dto_1 = require("./dto/update-player.dto");
 const player_team_assignment_dto_1 = require("./dto/player-team-assignment.dto");
 const player_status_dto_1 = require("./dto/player-status.dto");
 const add_guardian_dto_1 = require("./dto/add-guardian.dto");
+const approve_registration_dto_1 = require("./dto/approve-registration.dto");
 const confirm_payment_dto_1 = require("./dto/confirm-payment.dto");
 const paystack_charge_dto_1 = require("./dto/paystack-charge.dto");
 let PlayersController = class PlayersController {
@@ -67,8 +68,8 @@ let PlayersController = class PlayersController {
     submit(id) {
         return this.playersService.submit(id);
     }
-    approve(id, user) {
-        return this.playersService.approve(id, user.userId);
+    approve(id, dto, user) {
+        return this.playersService.approve(id, user.userId, dto);
     }
     confirmPayment(id, dto, user) {
         return this.playersService.confirmPayment(id, user.userId, dto);
@@ -208,9 +209,10 @@ __decorate([
     (0, swagger_1.ApiOperation)({ summary: 'Approve a player registration.' }),
     (0, swagger_1.ApiCreatedResponse)({ description: 'Registration approved.' }),
     __param(0, (0, common_1.Param)('id')),
-    __param(1, (0, current_user_decorator_1.CurrentUser)()),
+    __param(1, (0, common_1.Body)()),
+    __param(2, (0, current_user_decorator_1.CurrentUser)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:paramtypes", [String, approve_registration_dto_1.ApproveRegistrationDto, Object]),
     __metadata("design:returntype", void 0)
 ], PlayersController.prototype, "approve", null);
 __decorate([

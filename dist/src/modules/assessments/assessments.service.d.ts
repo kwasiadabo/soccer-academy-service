@@ -13,17 +13,19 @@ export declare class AssessmentsService {
     findAllTemplates(): Prisma.PrismaPromise<({
         criteria: {
             id: string;
-            description: string | null;
             name: string;
+            description: string | null;
+            academyId: string;
             sortOrder: number;
-            category: import(".prisma/client").$Enums.AssessmentCategory;
             templateId: string;
+            category: import(".prisma/client").$Enums.AssessmentCategory;
         }[];
     } & {
         id: string;
-        createdAt: Date;
         name: string;
+        createdAt: Date;
         updatedAt: Date;
+        academyId: string;
         isActive: boolean;
         ageCategoryId: string | null;
         ratingScale: import(".prisma/client").$Enums.RatingScaleType;
@@ -31,17 +33,19 @@ export declare class AssessmentsService {
     createTemplate(dto: CreateAssessmentTemplateDto): Promise<{
         criteria: {
             id: string;
-            description: string | null;
             name: string;
+            description: string | null;
+            academyId: string;
             sortOrder: number;
-            category: import(".prisma/client").$Enums.AssessmentCategory;
             templateId: string;
+            category: import(".prisma/client").$Enums.AssessmentCategory;
         }[];
     } & {
         id: string;
-        createdAt: Date;
         name: string;
+        createdAt: Date;
         updatedAt: Date;
+        academyId: string;
         isActive: boolean;
         ageCategoryId: string | null;
         ratingScale: import(".prisma/client").$Enums.RatingScaleType;
@@ -49,17 +53,19 @@ export declare class AssessmentsService {
     updateTemplate(id: string, dto: UpdateAssessmentTemplateDto): Promise<{
         criteria: {
             id: string;
-            description: string | null;
             name: string;
+            description: string | null;
+            academyId: string;
             sortOrder: number;
-            category: import(".prisma/client").$Enums.AssessmentCategory;
             templateId: string;
+            category: import(".prisma/client").$Enums.AssessmentCategory;
         }[];
     } & {
         id: string;
-        createdAt: Date;
         name: string;
+        createdAt: Date;
         updatedAt: Date;
+        academyId: string;
         isActive: boolean;
         ageCategoryId: string | null;
         ratingScale: import(".prisma/client").$Enums.RatingScaleType;
@@ -67,17 +73,19 @@ export declare class AssessmentsService {
     addCriteria(templateId: string, dto: CreateAssessmentCriteriaInputDto): Promise<{
         criteria: {
             id: string;
-            description: string | null;
             name: string;
+            description: string | null;
+            academyId: string;
             sortOrder: number;
-            category: import(".prisma/client").$Enums.AssessmentCategory;
             templateId: string;
+            category: import(".prisma/client").$Enums.AssessmentCategory;
         }[];
     } & {
         id: string;
-        createdAt: Date;
         name: string;
+        createdAt: Date;
         updatedAt: Date;
+        academyId: string;
         isActive: boolean;
         ageCategoryId: string | null;
         ratingScale: import(".prisma/client").$Enums.RatingScaleType;
@@ -96,33 +104,37 @@ export declare class AssessmentsService {
         ratings: ({
             criteria: {
                 id: string;
-                description: string | null;
                 name: string;
+                description: string | null;
+                academyId: string;
                 sortOrder: number;
-                category: import(".prisma/client").$Enums.AssessmentCategory;
                 templateId: string;
+                category: import(".prisma/client").$Enums.AssessmentCategory;
             } | null;
             sessionActivity: {
                 id: string;
-                createdAt: Date;
                 name: string;
+                createdAt: Date;
+                academyId: string;
                 sortOrder: number;
                 trainingSessionId: string;
             } | null;
         } & {
             id: string;
+            academyId: string;
             remarks: string | null;
+            playerAssessmentId: string;
             criteriaId: string | null;
             sessionActivityId: string | null;
             ratingValue: Prisma.Decimal;
             ratingLabel: string | null;
-            playerAssessmentId: string;
         })[];
         template: {
             id: string;
-            createdAt: Date;
             name: string;
+            createdAt: Date;
             updatedAt: Date;
+            academyId: string;
             isActive: boolean;
             ageCategoryId: string | null;
             ratingScale: import(".prisma/client").$Enums.RatingScaleType;
@@ -136,48 +148,53 @@ export declare class AssessmentsService {
         id: string;
         createdAt: Date;
         updatedAt: Date;
+        academyId: string;
         deletedAt: Date | null;
         playerId: string;
         trainingSessionId: string | null;
         templateId: string | null;
         matchId: string | null;
+        assessedByCoachId: string;
+        assessmentDate: Date;
         strengths: string | null;
         areasForImprovement: string | null;
         developmentGoals: string | null;
-        assessedByCoachId: string;
-        assessmentDate: Date;
     })[]>;
     findForPlayer(playerId: string, user: RequestUser): Promise<({
         ratings: ({
             criteria: {
                 id: string;
-                description: string | null;
                 name: string;
+                description: string | null;
+                academyId: string;
                 sortOrder: number;
-                category: import(".prisma/client").$Enums.AssessmentCategory;
                 templateId: string;
+                category: import(".prisma/client").$Enums.AssessmentCategory;
             } | null;
             sessionActivity: {
                 id: string;
-                createdAt: Date;
                 name: string;
+                createdAt: Date;
+                academyId: string;
                 sortOrder: number;
                 trainingSessionId: string;
             } | null;
         } & {
             id: string;
+            academyId: string;
             remarks: string | null;
+            playerAssessmentId: string;
             criteriaId: string | null;
             sessionActivityId: string | null;
             ratingValue: Prisma.Decimal;
             ratingLabel: string | null;
-            playerAssessmentId: string;
         })[];
         template: {
             id: string;
-            createdAt: Date;
             name: string;
+            createdAt: Date;
             updatedAt: Date;
+            academyId: string;
             isActive: boolean;
             ageCategoryId: string | null;
             ratingScale: import(".prisma/client").$Enums.RatingScaleType;
@@ -191,16 +208,17 @@ export declare class AssessmentsService {
         id: string;
         createdAt: Date;
         updatedAt: Date;
+        academyId: string;
         deletedAt: Date | null;
         playerId: string;
         trainingSessionId: string | null;
         templateId: string | null;
         matchId: string | null;
+        assessedByCoachId: string;
+        assessmentDate: Date;
         strengths: string | null;
         areasForImprovement: string | null;
         developmentGoals: string | null;
-        assessedByCoachId: string;
-        assessmentDate: Date;
     })[]>;
     private assertValidRatings;
     private assertPlayerIsActive;
@@ -209,33 +227,37 @@ export declare class AssessmentsService {
         ratings: ({
             criteria: {
                 id: string;
-                description: string | null;
                 name: string;
+                description: string | null;
+                academyId: string;
                 sortOrder: number;
-                category: import(".prisma/client").$Enums.AssessmentCategory;
                 templateId: string;
+                category: import(".prisma/client").$Enums.AssessmentCategory;
             } | null;
             sessionActivity: {
                 id: string;
-                createdAt: Date;
                 name: string;
+                createdAt: Date;
+                academyId: string;
                 sortOrder: number;
                 trainingSessionId: string;
             } | null;
         } & {
             id: string;
+            academyId: string;
             remarks: string | null;
+            playerAssessmentId: string;
             criteriaId: string | null;
             sessionActivityId: string | null;
             ratingValue: Prisma.Decimal;
             ratingLabel: string | null;
-            playerAssessmentId: string;
         })[];
         template: {
             id: string;
-            createdAt: Date;
             name: string;
+            createdAt: Date;
             updatedAt: Date;
+            academyId: string;
             isActive: boolean;
             ageCategoryId: string | null;
             ratingScale: import(".prisma/client").$Enums.RatingScaleType;
@@ -249,48 +271,53 @@ export declare class AssessmentsService {
         id: string;
         createdAt: Date;
         updatedAt: Date;
+        academyId: string;
         deletedAt: Date | null;
         playerId: string;
         trainingSessionId: string | null;
         templateId: string | null;
         matchId: string | null;
+        assessedByCoachId: string;
+        assessmentDate: Date;
         strengths: string | null;
         areasForImprovement: string | null;
         developmentGoals: string | null;
-        assessedByCoachId: string;
-        assessmentDate: Date;
     }>;
     updateAssessment(playerId: string, assessmentId: string, userId: string, dto: UpdatePlayerAssessmentDto): Promise<{
         ratings: ({
             criteria: {
                 id: string;
-                description: string | null;
                 name: string;
+                description: string | null;
+                academyId: string;
                 sortOrder: number;
-                category: import(".prisma/client").$Enums.AssessmentCategory;
                 templateId: string;
+                category: import(".prisma/client").$Enums.AssessmentCategory;
             } | null;
             sessionActivity: {
                 id: string;
-                createdAt: Date;
                 name: string;
+                createdAt: Date;
+                academyId: string;
                 sortOrder: number;
                 trainingSessionId: string;
             } | null;
         } & {
             id: string;
+            academyId: string;
             remarks: string | null;
+            playerAssessmentId: string;
             criteriaId: string | null;
             sessionActivityId: string | null;
             ratingValue: Prisma.Decimal;
             ratingLabel: string | null;
-            playerAssessmentId: string;
         })[];
         template: {
             id: string;
-            createdAt: Date;
             name: string;
+            createdAt: Date;
             updatedAt: Date;
+            academyId: string;
             isActive: boolean;
             ageCategoryId: string | null;
             ratingScale: import(".prisma/client").$Enums.RatingScaleType;
@@ -304,16 +331,17 @@ export declare class AssessmentsService {
         id: string;
         createdAt: Date;
         updatedAt: Date;
+        academyId: string;
         deletedAt: Date | null;
         playerId: string;
         trainingSessionId: string | null;
         templateId: string | null;
         matchId: string | null;
+        assessedByCoachId: string;
+        assessmentDate: Date;
         strengths: string | null;
         areasForImprovement: string | null;
         developmentGoals: string | null;
-        assessedByCoachId: string;
-        assessmentDate: Date;
     }>;
     findRemarksForPlayer(playerId: string, user: RequestUser): Promise<({
         coach: {
@@ -324,9 +352,10 @@ export declare class AssessmentsService {
     } & {
         id: string;
         createdAt: Date;
+        academyId: string;
         context: string | null;
-        coachId: string;
         playerId: string;
+        coachId: string;
         remark: string;
     })[]>;
     createRemark(playerId: string, userId: string, dto: CreateCoachRemarkDto): Promise<{
@@ -338,9 +367,10 @@ export declare class AssessmentsService {
     } & {
         id: string;
         createdAt: Date;
+        academyId: string;
         context: string | null;
-        coachId: string;
         playerId: string;
+        coachId: string;
         remark: string;
     }>;
 }

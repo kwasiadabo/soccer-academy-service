@@ -1,5 +1,6 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
+import { TenantContextService } from '../../common/tenant-context/tenant-context.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { StorageService } from '../storage/storage.service';
 
@@ -20,6 +21,7 @@ export class PlayerOfTheWeekService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly storage: StorageService,
+    private readonly tenantContext: TenantContextService,
   ) {}
 
   // Runs every Saturday at 11:00 — after the 08:00-10:00 session has wrapped and coaches
@@ -28,10 +30,15 @@ export class PlayerOfTheWeekService {
   // activities. One award per team per Saturday session (unique on trainingSessionId).
   @Cron('0 11 * * 6')
   async handleWeeklyComputationCron() {
-    const result = await this.computeForAllTeams();
-    this.logger.log(
-      `Player of the Week: picked ${result.picked}, skipped ${result.skipped} (no session/marks/already picked).`,
-    );
+    const academies = await this.prisma.academy.findMany({ where: { status: 'ACTIVE' } });
+    for (const academy of academies) {
+      await this.tenantContext.run({ academyId: academy.id, slug: academy.slug }, async () => {
+        const result = await this.computeForAllTeams();
+        this.logger.log(
+          `Player of the Week (${academy.slug}): picked ${result.picked}, skipped ${result.skipped} (no session/marks/already picked).`,
+        );
+      });
+    }
   }
 
   async computeForAllTeams(): Promise<{ picked: number; skipped: number }> {

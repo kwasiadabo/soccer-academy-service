@@ -12,7 +12,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.AddFeeTypeItemDto = exports.UpdateFeeTypeDto = exports.CreateFeeTypeDto = void 0;
 const swagger_1 = require("@nestjs/swagger");
 const class_validator_1 = require("class-validator");
-const client_1 = require("@prisma/client");
 class CreateFeeTypeDto {
 }
 exports.CreateFeeTypeDto = CreateFeeTypeDto;
@@ -21,11 +20,6 @@ __decorate([
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
 ], CreateFeeTypeDto.prototype, "name", void 0);
-__decorate([
-    (0, swagger_1.ApiProperty)({ enum: client_1.FeeCategory }),
-    (0, class_validator_1.IsEnum)(client_1.FeeCategory),
-    __metadata("design:type", String)
-], CreateFeeTypeDto.prototype, "category", void 0);
 __decorate([
     (0, swagger_1.ApiProperty)({ required: false }),
     (0, class_validator_1.IsOptional)(),
@@ -38,6 +32,12 @@ __decorate([
     (0, class_validator_1.IsBoolean)(),
     __metadata("design:type", Boolean)
 ], CreateFeeTypeDto.prototype, "isRecurring", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ required: false, default: false }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsBoolean)(),
+    __metadata("design:type", Boolean)
+], CreateFeeTypeDto.prototype, "isRegistrationFee", void 0);
 class UpdateFeeTypeDto {
 }
 exports.UpdateFeeTypeDto = UpdateFeeTypeDto;
@@ -73,4 +73,10 @@ __decorate([
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
 ], AddFeeTypeItemDto.prototype, "feeItemId", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)(),
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.Min)(0),
+    __metadata("design:type", Number)
+], AddFeeTypeItemDto.prototype, "amount", void 0);
 //# sourceMappingURL=fee-type.dto.js.map

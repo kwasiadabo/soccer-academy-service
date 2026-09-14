@@ -88,7 +88,7 @@ export class FinanceController {
   @ApiOperation({ summary: 'Add a fee item to a fee type.' })
   @ApiCreatedResponse({ description: 'Fee item added.' })
   addFeeTypeItem(@Param('id') id: string, @Body() dto: AddFeeTypeItemDto) {
-    return this.financeService.addFeeTypeItem(id, dto.feeItemId);
+    return this.financeService.addFeeTypeItem(id, dto.feeItemId, dto.amount);
   }
 
   @Delete('fee-types/:id/items/:feeItemId')

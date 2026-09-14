@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import { Request } from 'express';
 import { ExtractJwt, Strategy } from 'passport-jwt';
+import { TenantContextService } from '../../../common/tenant-context/tenant-context.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { JwtPayload, RequestUser } from '../types';
 
@@ -19,6 +20,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(
     config: ConfigService,
     private readonly prisma: PrismaService,
+    private readonly tenantContext: TenantContextService,
   ) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
@@ -29,6 +31,14 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   async validate(req: Request, payload: JwtPayload): Promise<RequestUser> {
+    // A JWT minted for one academy's subdomain must never authenticate a request
+    // resolved to a different one — checked directly against the claim, independent
+    // of (defense-in-depth alongside) row-level security already scoping the lookup
+    // below to the current tenant.
+    if (payload.academyId !== this.tenantContext.getAcademyId()) {
+      throw new UnauthorizedException('Token does not belong to this academy');
+    }
+
     const user = await this.prisma.user.findUnique({ where: { id: payload.sub } });
     if (!user || user.deletedAt || user.status !== 'ACTIVE') {
       throw new UnauthorizedException('User is no longer active');
@@ -40,6 +50,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
     return {
       userId: payload.sub,
+      academyId: payload.academyId,
       email: payload.email,
       roles: payload.roles,
       permissions: payload.permissions,

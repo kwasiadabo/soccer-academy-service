@@ -12,14 +12,16 @@ export declare class ProductsService {
         images: {
             id: string;
             createdAt: Date;
+            academyId: string;
             sortOrder: number;
-            productId: string;
             documentId: string;
+            productId: string;
         }[];
         variants: {
             id: string;
             createdAt: Date;
             updatedAt: Date;
+            academyId: string;
             isActive: boolean;
             productId: string;
             sizeLabel: string;
@@ -28,10 +30,11 @@ export declare class ProductsService {
         }[];
     } & {
         id: string;
-        description: string | null;
-        createdAt: Date;
         name: string;
+        createdAt: Date;
         updatedAt: Date;
+        description: string | null;
+        academyId: string;
         deletedAt: Date | null;
         isActive: boolean;
         category: import(".prisma/client").$Enums.ProductCategory;
@@ -41,14 +44,16 @@ export declare class ProductsService {
         images: {
             id: string;
             createdAt: Date;
+            academyId: string;
             sortOrder: number;
-            productId: string;
             documentId: string;
+            productId: string;
         }[];
         variants: {
             id: string;
             createdAt: Date;
             updatedAt: Date;
+            academyId: string;
             isActive: boolean;
             productId: string;
             sizeLabel: string;
@@ -57,10 +62,11 @@ export declare class ProductsService {
         }[];
     } & {
         id: string;
-        description: string | null;
-        createdAt: Date;
         name: string;
+        createdAt: Date;
         updatedAt: Date;
+        description: string | null;
+        academyId: string;
         deletedAt: Date | null;
         isActive: boolean;
         category: import(".prisma/client").$Enums.ProductCategory;
@@ -70,14 +76,16 @@ export declare class ProductsService {
         images: {
             id: string;
             createdAt: Date;
+            academyId: string;
             sortOrder: number;
-            productId: string;
             documentId: string;
+            productId: string;
         }[];
         variants: {
             id: string;
             createdAt: Date;
             updatedAt: Date;
+            academyId: string;
             isActive: boolean;
             productId: string;
             sizeLabel: string;
@@ -86,10 +94,11 @@ export declare class ProductsService {
         }[];
     } & {
         id: string;
-        description: string | null;
-        createdAt: Date;
         name: string;
+        createdAt: Date;
         updatedAt: Date;
+        description: string | null;
+        academyId: string;
         deletedAt: Date | null;
         isActive: boolean;
         category: import(".prisma/client").$Enums.ProductCategory;
@@ -99,14 +108,16 @@ export declare class ProductsService {
         images: {
             id: string;
             createdAt: Date;
+            academyId: string;
             sortOrder: number;
-            productId: string;
             documentId: string;
+            productId: string;
         }[];
         variants: {
             id: string;
             createdAt: Date;
             updatedAt: Date;
+            academyId: string;
             isActive: boolean;
             productId: string;
             sizeLabel: string;
@@ -115,10 +126,11 @@ export declare class ProductsService {
         }[];
     } & {
         id: string;
-        description: string | null;
-        createdAt: Date;
         name: string;
+        createdAt: Date;
         updatedAt: Date;
+        description: string | null;
+        academyId: string;
         deletedAt: Date | null;
         isActive: boolean;
         category: import(".prisma/client").$Enums.ProductCategory;
@@ -128,14 +140,16 @@ export declare class ProductsService {
         images: {
             id: string;
             createdAt: Date;
+            academyId: string;
             sortOrder: number;
-            productId: string;
             documentId: string;
+            productId: string;
         }[];
         variants: {
             id: string;
             createdAt: Date;
             updatedAt: Date;
+            academyId: string;
             isActive: boolean;
             productId: string;
             sizeLabel: string;
@@ -144,10 +158,11 @@ export declare class ProductsService {
         }[];
     } & {
         id: string;
-        description: string | null;
-        createdAt: Date;
         name: string;
+        createdAt: Date;
         updatedAt: Date;
+        description: string | null;
+        academyId: string;
         deletedAt: Date | null;
         isActive: boolean;
         category: import(".prisma/client").$Enums.ProductCategory;
@@ -157,14 +172,16 @@ export declare class ProductsService {
         images: {
             id: string;
             createdAt: Date;
+            academyId: string;
             sortOrder: number;
-            productId: string;
             documentId: string;
+            productId: string;
         }[];
         variants: {
             id: string;
             createdAt: Date;
             updatedAt: Date;
+            academyId: string;
             isActive: boolean;
             productId: string;
             sizeLabel: string;
@@ -173,10 +190,11 @@ export declare class ProductsService {
         }[];
     } & {
         id: string;
-        description: string | null;
-        createdAt: Date;
         name: string;
+        createdAt: Date;
         updatedAt: Date;
+        description: string | null;
+        academyId: string;
         deletedAt: Date | null;
         isActive: boolean;
         category: import(".prisma/client").$Enums.ProductCategory;
@@ -186,14 +204,16 @@ export declare class ProductsService {
         images: {
             id: string;
             createdAt: Date;
+            academyId: string;
             sortOrder: number;
-            productId: string;
             documentId: string;
+            productId: string;
         }[];
         variants: {
             id: string;
             createdAt: Date;
             updatedAt: Date;
+            academyId: string;
             isActive: boolean;
             productId: string;
             sizeLabel: string;
@@ -202,10 +222,11 @@ export declare class ProductsService {
         }[];
     } & {
         id: string;
-        description: string | null;
-        createdAt: Date;
         name: string;
+        createdAt: Date;
         updatedAt: Date;
+        description: string | null;
+        academyId: string;
         deletedAt: Date | null;
         isActive: boolean;
         category: import(".prisma/client").$Enums.ProductCategory;
@@ -215,14 +236,16 @@ export declare class ProductsService {
         images: {
             id: string;
             createdAt: Date;
+            academyId: string;
             sortOrder: number;
-            productId: string;
             documentId: string;
+            productId: string;
         }[];
         variants: {
             id: string;
             createdAt: Date;
             updatedAt: Date;
+            academyId: string;
             isActive: boolean;
             productId: string;
             sizeLabel: string;
@@ -231,10 +254,11 @@ export declare class ProductsService {
         }[];
     } & {
         id: string;
-        description: string | null;
-        createdAt: Date;
         name: string;
+        createdAt: Date;
         updatedAt: Date;
+        description: string | null;
+        academyId: string;
         deletedAt: Date | null;
         isActive: boolean;
         category: import(".prisma/client").$Enums.ProductCategory;

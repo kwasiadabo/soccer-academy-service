@@ -13,6 +13,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.PlayerOfTheWeekService = void 0;
 const common_1 = require("@nestjs/common");
 const schedule_1 = require("@nestjs/schedule");
+const tenant_context_service_1 = require("../../common/tenant-context/tenant-context.service");
 const prisma_service_1 = require("../prisma/prisma.service");
 const storage_service_1 = require("../storage/storage.service");
 function resolveSaturday() {
@@ -22,14 +23,20 @@ function resolveSaturday() {
     return new Date(Date.UTC(base.getUTCFullYear(), base.getUTCMonth(), base.getUTCDate() - daysSinceSaturday));
 }
 let PlayerOfTheWeekService = PlayerOfTheWeekService_1 = class PlayerOfTheWeekService {
-    constructor(prisma, storage) {
+    constructor(prisma, storage, tenantContext) {
         this.prisma = prisma;
         this.storage = storage;
+        this.tenantContext = tenantContext;
         this.logger = new common_1.Logger(PlayerOfTheWeekService_1.name);
     }
     async handleWeeklyComputationCron() {
-        const result = await this.computeForAllTeams();
-        this.logger.log(`Player of the Week: picked ${result.picked}, skipped ${result.skipped} (no session/marks/already picked).`);
+        const academies = await this.prisma.academy.findMany({ where: { status: 'ACTIVE' } });
+        for (const academy of academies) {
+            await this.tenantContext.run({ academyId: academy.id, slug: academy.slug }, async () => {
+                const result = await this.computeForAllTeams();
+                this.logger.log(`Player of the Week (${academy.slug}): picked ${result.picked}, skipped ${result.skipped} (no session/marks/already picked).`);
+            });
+        }
     }
     async computeForAllTeams() {
         const weekOf = resolveSaturday();
@@ -133,6 +140,7 @@ __decorate([
 exports.PlayerOfTheWeekService = PlayerOfTheWeekService = PlayerOfTheWeekService_1 = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [prisma_service_1.PrismaService,
-        storage_service_1.StorageService])
+        storage_service_1.StorageService,
+        tenant_context_service_1.TenantContextService])
 ], PlayerOfTheWeekService);
 //# sourceMappingURL=player-of-the-week.service.js.map

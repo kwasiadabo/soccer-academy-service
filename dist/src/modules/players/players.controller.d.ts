@@ -6,6 +6,7 @@ import { UpdatePlayerDto } from './dto/update-player.dto';
 import { UpdatePlayerTeamAssignmentDto } from './dto/player-team-assignment.dto';
 import { UpdatePlayerStatusDto } from './dto/player-status.dto';
 import { AddGuardianDto } from './dto/add-guardian.dto';
+import { ApproveRegistrationDto } from './dto/approve-registration.dto';
 import { ConfirmRegistrationPaymentDto } from './dto/confirm-payment.dto';
 import { InitiatePaystackChargeDto, VerifyPaystackChargeDto } from './dto/paystack-charge.dto';
 export declare class PlayersController {
@@ -14,21 +15,23 @@ export declare class PlayersController {
     findAll(user: RequestUser, status?: string, search?: string, teamId?: string): Promise<({
         ageCategory: {
             id: string;
-            createdAt: Date;
             name: string;
+            createdAt: Date;
             updatedAt: Date;
+            academyId: string;
+            sortOrder: number;
             branchId: string | null;
             isActive: boolean;
             code: string;
             minAge: number;
             maxAge: number;
-            sortOrder: number;
         } | null;
         team: {
             id: string;
-            createdAt: Date;
             name: string;
+            createdAt: Date;
             updatedAt: Date;
+            academyId: string;
             branchId: string | null;
             isActive: boolean;
             ageCategoryId: string;
@@ -37,9 +40,10 @@ export declare class PlayersController {
         } | null;
         trainingGroup: {
             id: string;
-            createdAt: Date;
             name: string;
+            createdAt: Date;
             updatedAt: Date;
+            academyId: string;
             branchId: string | null;
             isActive: boolean;
             teamId: string;
@@ -47,17 +51,15 @@ export declare class PlayersController {
         } | null;
     } & {
         id: string;
+        status: import(".prisma/client").$Enums.PlayerStatus;
         createdAt: Date;
         updatedAt: Date;
         firstName: string;
         lastName: string;
-        status: import(".prisma/client").$Enums.PlayerStatus;
+        academyId: string;
         deletedAt: Date | null;
         ageCategoryId: string | null;
-        teamId: string | null;
-        primaryCoachId: string | null;
         middleName: string | null;
-        trainingGroupId: string | null;
         playerCode: string | null;
         dateOfBirth: Date;
         gender: import(".prisma/client").$Enums.Gender;
@@ -70,6 +72,9 @@ export declare class PlayersController {
         dominantFoot: import(".prisma/client").$Enums.DominantFoot | null;
         emergencyContactName: string | null;
         emergencyContactPhone: string | null;
+        teamId: string | null;
+        trainingGroupId: string | null;
+        primaryCoachId: string | null;
     })[]>;
     listBirthdays(withinDays?: string): Promise<{
         daysUntil: number;
@@ -80,23 +85,48 @@ export declare class PlayersController {
         dateOfBirth: Date;
     }[]>;
     findOne(id: string): Promise<{
-        ageCategory: {
+        guardians: ({
+            guardian: {
+                id: string;
+                createdAt: Date;
+                updatedAt: Date;
+                email: string | null;
+                firstName: string;
+                lastName: string;
+                academyId: string;
+                phone: string;
+                deletedAt: Date | null;
+                userId: string | null;
+                address: string | null;
+            };
+        } & {
             id: string;
             createdAt: Date;
+            academyId: string;
+            playerId: string;
+            guardianId: string;
+            relationship: import(".prisma/client").$Enums.GuardianRelationship;
+            isPrimary: boolean;
+        })[];
+        ageCategory: {
+            id: string;
             name: string;
+            createdAt: Date;
             updatedAt: Date;
+            academyId: string;
+            sortOrder: number;
             branchId: string | null;
             isActive: boolean;
             code: string;
             minAge: number;
             maxAge: number;
-            sortOrder: number;
         } | null;
         team: {
             id: string;
-            createdAt: Date;
             name: string;
+            createdAt: Date;
             updatedAt: Date;
+            academyId: string;
             branchId: string | null;
             isActive: boolean;
             ageCategoryId: string;
@@ -105,9 +135,10 @@ export declare class PlayersController {
         } | null;
         trainingGroup: {
             id: string;
-            createdAt: Date;
             name: string;
+            createdAt: Date;
             updatedAt: Date;
+            academyId: string;
             branchId: string | null;
             isActive: boolean;
             teamId: string;
@@ -117,10 +148,11 @@ export declare class PlayersController {
             id: string;
             createdAt: Date;
             updatedAt: Date;
-            role: import(".prisma/client").$Enums.StaffRole;
             email: string | null;
             firstName: string;
             lastName: string;
+            role: import(".prisma/client").$Enums.StaffRole;
+            academyId: string;
             phone: string | null;
             deletedAt: Date | null;
             userId: string | null;
@@ -128,32 +160,12 @@ export declare class PlayersController {
             middleName: string | null;
             bio: string | null;
         } | null;
-        guardians: ({
-            guardian: {
-                id: string;
-                createdAt: Date;
-                updatedAt: Date;
-                email: string | null;
-                firstName: string;
-                lastName: string;
-                phone: string;
-                deletedAt: Date | null;
-                userId: string | null;
-                address: string | null;
-            };
-        } & {
-            id: string;
-            createdAt: Date;
-            playerId: string;
-            guardianId: string;
-            relationship: import(".prisma/client").$Enums.GuardianRelationship;
-            isPrimary: boolean;
-        })[];
         registrations: {
             id: string;
+            status: import(".prisma/client").$Enums.PlayerStatus;
             createdAt: Date;
             updatedAt: Date;
-            status: import(".prisma/client").$Enums.PlayerStatus;
+            academyId: string;
             playerId: string;
             invitationToken: string | null;
             invitedByUserId: string | null;
@@ -165,17 +177,15 @@ export declare class PlayersController {
         }[];
     } & {
         id: string;
+        status: import(".prisma/client").$Enums.PlayerStatus;
         createdAt: Date;
         updatedAt: Date;
         firstName: string;
         lastName: string;
-        status: import(".prisma/client").$Enums.PlayerStatus;
+        academyId: string;
         deletedAt: Date | null;
         ageCategoryId: string | null;
-        teamId: string | null;
-        primaryCoachId: string | null;
         middleName: string | null;
-        trainingGroupId: string | null;
         playerCode: string | null;
         dateOfBirth: Date;
         gender: import(".prisma/client").$Enums.Gender;
@@ -188,26 +198,54 @@ export declare class PlayersController {
         dominantFoot: import(".prisma/client").$Enums.DominantFoot | null;
         emergencyContactName: string | null;
         emergencyContactPhone: string | null;
+        teamId: string | null;
+        trainingGroupId: string | null;
+        primaryCoachId: string | null;
     }>;
     getPhoto(id: string, res: Response): Promise<void>;
     create(dto: CreatePlayerDto): Promise<{
-        ageCategory: {
+        guardians: ({
+            guardian: {
+                id: string;
+                createdAt: Date;
+                updatedAt: Date;
+                email: string | null;
+                firstName: string;
+                lastName: string;
+                academyId: string;
+                phone: string;
+                deletedAt: Date | null;
+                userId: string | null;
+                address: string | null;
+            };
+        } & {
             id: string;
             createdAt: Date;
+            academyId: string;
+            playerId: string;
+            guardianId: string;
+            relationship: import(".prisma/client").$Enums.GuardianRelationship;
+            isPrimary: boolean;
+        })[];
+        ageCategory: {
+            id: string;
             name: string;
+            createdAt: Date;
             updatedAt: Date;
+            academyId: string;
+            sortOrder: number;
             branchId: string | null;
             isActive: boolean;
             code: string;
             minAge: number;
             maxAge: number;
-            sortOrder: number;
         } | null;
         team: {
             id: string;
-            createdAt: Date;
             name: string;
+            createdAt: Date;
             updatedAt: Date;
+            academyId: string;
             branchId: string | null;
             isActive: boolean;
             ageCategoryId: string;
@@ -216,9 +254,10 @@ export declare class PlayersController {
         } | null;
         trainingGroup: {
             id: string;
-            createdAt: Date;
             name: string;
+            createdAt: Date;
             updatedAt: Date;
+            academyId: string;
             branchId: string | null;
             isActive: boolean;
             teamId: string;
@@ -228,10 +267,11 @@ export declare class PlayersController {
             id: string;
             createdAt: Date;
             updatedAt: Date;
-            role: import(".prisma/client").$Enums.StaffRole;
             email: string | null;
             firstName: string;
             lastName: string;
+            role: import(".prisma/client").$Enums.StaffRole;
+            academyId: string;
             phone: string | null;
             deletedAt: Date | null;
             userId: string | null;
@@ -239,32 +279,12 @@ export declare class PlayersController {
             middleName: string | null;
             bio: string | null;
         } | null;
-        guardians: ({
-            guardian: {
-                id: string;
-                createdAt: Date;
-                updatedAt: Date;
-                email: string | null;
-                firstName: string;
-                lastName: string;
-                phone: string;
-                deletedAt: Date | null;
-                userId: string | null;
-                address: string | null;
-            };
-        } & {
-            id: string;
-            createdAt: Date;
-            playerId: string;
-            guardianId: string;
-            relationship: import(".prisma/client").$Enums.GuardianRelationship;
-            isPrimary: boolean;
-        })[];
         registrations: {
             id: string;
+            status: import(".prisma/client").$Enums.PlayerStatus;
             createdAt: Date;
             updatedAt: Date;
-            status: import(".prisma/client").$Enums.PlayerStatus;
+            academyId: string;
             playerId: string;
             invitationToken: string | null;
             invitedByUserId: string | null;
@@ -276,17 +296,15 @@ export declare class PlayersController {
         }[];
     } & {
         id: string;
+        status: import(".prisma/client").$Enums.PlayerStatus;
         createdAt: Date;
         updatedAt: Date;
         firstName: string;
         lastName: string;
-        status: import(".prisma/client").$Enums.PlayerStatus;
+        academyId: string;
         deletedAt: Date | null;
         ageCategoryId: string | null;
-        teamId: string | null;
-        primaryCoachId: string | null;
         middleName: string | null;
-        trainingGroupId: string | null;
         playerCode: string | null;
         dateOfBirth: Date;
         gender: import(".prisma/client").$Enums.Gender;
@@ -299,25 +317,53 @@ export declare class PlayersController {
         dominantFoot: import(".prisma/client").$Enums.DominantFoot | null;
         emergencyContactName: string | null;
         emergencyContactPhone: string | null;
+        teamId: string | null;
+        trainingGroupId: string | null;
+        primaryCoachId: string | null;
     }>;
     update(id: string, dto: UpdatePlayerDto): Promise<{
-        ageCategory: {
+        guardians: ({
+            guardian: {
+                id: string;
+                createdAt: Date;
+                updatedAt: Date;
+                email: string | null;
+                firstName: string;
+                lastName: string;
+                academyId: string;
+                phone: string;
+                deletedAt: Date | null;
+                userId: string | null;
+                address: string | null;
+            };
+        } & {
             id: string;
             createdAt: Date;
+            academyId: string;
+            playerId: string;
+            guardianId: string;
+            relationship: import(".prisma/client").$Enums.GuardianRelationship;
+            isPrimary: boolean;
+        })[];
+        ageCategory: {
+            id: string;
             name: string;
+            createdAt: Date;
             updatedAt: Date;
+            academyId: string;
+            sortOrder: number;
             branchId: string | null;
             isActive: boolean;
             code: string;
             minAge: number;
             maxAge: number;
-            sortOrder: number;
         } | null;
         team: {
             id: string;
-            createdAt: Date;
             name: string;
+            createdAt: Date;
             updatedAt: Date;
+            academyId: string;
             branchId: string | null;
             isActive: boolean;
             ageCategoryId: string;
@@ -326,9 +372,10 @@ export declare class PlayersController {
         } | null;
         trainingGroup: {
             id: string;
-            createdAt: Date;
             name: string;
+            createdAt: Date;
             updatedAt: Date;
+            academyId: string;
             branchId: string | null;
             isActive: boolean;
             teamId: string;
@@ -338,10 +385,11 @@ export declare class PlayersController {
             id: string;
             createdAt: Date;
             updatedAt: Date;
-            role: import(".prisma/client").$Enums.StaffRole;
             email: string | null;
             firstName: string;
             lastName: string;
+            role: import(".prisma/client").$Enums.StaffRole;
+            academyId: string;
             phone: string | null;
             deletedAt: Date | null;
             userId: string | null;
@@ -349,32 +397,12 @@ export declare class PlayersController {
             middleName: string | null;
             bio: string | null;
         } | null;
-        guardians: ({
-            guardian: {
-                id: string;
-                createdAt: Date;
-                updatedAt: Date;
-                email: string | null;
-                firstName: string;
-                lastName: string;
-                phone: string;
-                deletedAt: Date | null;
-                userId: string | null;
-                address: string | null;
-            };
-        } & {
-            id: string;
-            createdAt: Date;
-            playerId: string;
-            guardianId: string;
-            relationship: import(".prisma/client").$Enums.GuardianRelationship;
-            isPrimary: boolean;
-        })[];
         registrations: {
             id: string;
+            status: import(".prisma/client").$Enums.PlayerStatus;
             createdAt: Date;
             updatedAt: Date;
-            status: import(".prisma/client").$Enums.PlayerStatus;
+            academyId: string;
             playerId: string;
             invitationToken: string | null;
             invitedByUserId: string | null;
@@ -386,17 +414,15 @@ export declare class PlayersController {
         }[];
     } & {
         id: string;
+        status: import(".prisma/client").$Enums.PlayerStatus;
         createdAt: Date;
         updatedAt: Date;
         firstName: string;
         lastName: string;
-        status: import(".prisma/client").$Enums.PlayerStatus;
+        academyId: string;
         deletedAt: Date | null;
         ageCategoryId: string | null;
-        teamId: string | null;
-        primaryCoachId: string | null;
         middleName: string | null;
-        trainingGroupId: string | null;
         playerCode: string | null;
         dateOfBirth: Date;
         gender: import(".prisma/client").$Enums.Gender;
@@ -409,25 +435,53 @@ export declare class PlayersController {
         dominantFoot: import(".prisma/client").$Enums.DominantFoot | null;
         emergencyContactName: string | null;
         emergencyContactPhone: string | null;
+        teamId: string | null;
+        trainingGroupId: string | null;
+        primaryCoachId: string | null;
     }>;
     updateTeamAssignment(id: string, dto: UpdatePlayerTeamAssignmentDto): Promise<{
-        ageCategory: {
+        guardians: ({
+            guardian: {
+                id: string;
+                createdAt: Date;
+                updatedAt: Date;
+                email: string | null;
+                firstName: string;
+                lastName: string;
+                academyId: string;
+                phone: string;
+                deletedAt: Date | null;
+                userId: string | null;
+                address: string | null;
+            };
+        } & {
             id: string;
             createdAt: Date;
+            academyId: string;
+            playerId: string;
+            guardianId: string;
+            relationship: import(".prisma/client").$Enums.GuardianRelationship;
+            isPrimary: boolean;
+        })[];
+        ageCategory: {
+            id: string;
             name: string;
+            createdAt: Date;
             updatedAt: Date;
+            academyId: string;
+            sortOrder: number;
             branchId: string | null;
             isActive: boolean;
             code: string;
             minAge: number;
             maxAge: number;
-            sortOrder: number;
         } | null;
         team: {
             id: string;
-            createdAt: Date;
             name: string;
+            createdAt: Date;
             updatedAt: Date;
+            academyId: string;
             branchId: string | null;
             isActive: boolean;
             ageCategoryId: string;
@@ -436,9 +490,10 @@ export declare class PlayersController {
         } | null;
         trainingGroup: {
             id: string;
-            createdAt: Date;
             name: string;
+            createdAt: Date;
             updatedAt: Date;
+            academyId: string;
             branchId: string | null;
             isActive: boolean;
             teamId: string;
@@ -448,10 +503,11 @@ export declare class PlayersController {
             id: string;
             createdAt: Date;
             updatedAt: Date;
-            role: import(".prisma/client").$Enums.StaffRole;
             email: string | null;
             firstName: string;
             lastName: string;
+            role: import(".prisma/client").$Enums.StaffRole;
+            academyId: string;
             phone: string | null;
             deletedAt: Date | null;
             userId: string | null;
@@ -459,32 +515,12 @@ export declare class PlayersController {
             middleName: string | null;
             bio: string | null;
         } | null;
-        guardians: ({
-            guardian: {
-                id: string;
-                createdAt: Date;
-                updatedAt: Date;
-                email: string | null;
-                firstName: string;
-                lastName: string;
-                phone: string;
-                deletedAt: Date | null;
-                userId: string | null;
-                address: string | null;
-            };
-        } & {
-            id: string;
-            createdAt: Date;
-            playerId: string;
-            guardianId: string;
-            relationship: import(".prisma/client").$Enums.GuardianRelationship;
-            isPrimary: boolean;
-        })[];
         registrations: {
             id: string;
+            status: import(".prisma/client").$Enums.PlayerStatus;
             createdAt: Date;
             updatedAt: Date;
-            status: import(".prisma/client").$Enums.PlayerStatus;
+            academyId: string;
             playerId: string;
             invitationToken: string | null;
             invitedByUserId: string | null;
@@ -496,17 +532,15 @@ export declare class PlayersController {
         }[];
     } & {
         id: string;
+        status: import(".prisma/client").$Enums.PlayerStatus;
         createdAt: Date;
         updatedAt: Date;
         firstName: string;
         lastName: string;
-        status: import(".prisma/client").$Enums.PlayerStatus;
+        academyId: string;
         deletedAt: Date | null;
         ageCategoryId: string | null;
-        teamId: string | null;
-        primaryCoachId: string | null;
         middleName: string | null;
-        trainingGroupId: string | null;
         playerCode: string | null;
         dateOfBirth: Date;
         gender: import(".prisma/client").$Enums.Gender;
@@ -519,25 +553,53 @@ export declare class PlayersController {
         dominantFoot: import(".prisma/client").$Enums.DominantFoot | null;
         emergencyContactName: string | null;
         emergencyContactPhone: string | null;
+        teamId: string | null;
+        trainingGroupId: string | null;
+        primaryCoachId: string | null;
     }>;
     updateStatus(id: string, dto: UpdatePlayerStatusDto): Promise<{
-        ageCategory: {
+        guardians: ({
+            guardian: {
+                id: string;
+                createdAt: Date;
+                updatedAt: Date;
+                email: string | null;
+                firstName: string;
+                lastName: string;
+                academyId: string;
+                phone: string;
+                deletedAt: Date | null;
+                userId: string | null;
+                address: string | null;
+            };
+        } & {
             id: string;
             createdAt: Date;
+            academyId: string;
+            playerId: string;
+            guardianId: string;
+            relationship: import(".prisma/client").$Enums.GuardianRelationship;
+            isPrimary: boolean;
+        })[];
+        ageCategory: {
+            id: string;
             name: string;
+            createdAt: Date;
             updatedAt: Date;
+            academyId: string;
+            sortOrder: number;
             branchId: string | null;
             isActive: boolean;
             code: string;
             minAge: number;
             maxAge: number;
-            sortOrder: number;
         } | null;
         team: {
             id: string;
-            createdAt: Date;
             name: string;
+            createdAt: Date;
             updatedAt: Date;
+            academyId: string;
             branchId: string | null;
             isActive: boolean;
             ageCategoryId: string;
@@ -546,9 +608,10 @@ export declare class PlayersController {
         } | null;
         trainingGroup: {
             id: string;
-            createdAt: Date;
             name: string;
+            createdAt: Date;
             updatedAt: Date;
+            academyId: string;
             branchId: string | null;
             isActive: boolean;
             teamId: string;
@@ -558,10 +621,11 @@ export declare class PlayersController {
             id: string;
             createdAt: Date;
             updatedAt: Date;
-            role: import(".prisma/client").$Enums.StaffRole;
             email: string | null;
             firstName: string;
             lastName: string;
+            role: import(".prisma/client").$Enums.StaffRole;
+            academyId: string;
             phone: string | null;
             deletedAt: Date | null;
             userId: string | null;
@@ -569,32 +633,12 @@ export declare class PlayersController {
             middleName: string | null;
             bio: string | null;
         } | null;
-        guardians: ({
-            guardian: {
-                id: string;
-                createdAt: Date;
-                updatedAt: Date;
-                email: string | null;
-                firstName: string;
-                lastName: string;
-                phone: string;
-                deletedAt: Date | null;
-                userId: string | null;
-                address: string | null;
-            };
-        } & {
-            id: string;
-            createdAt: Date;
-            playerId: string;
-            guardianId: string;
-            relationship: import(".prisma/client").$Enums.GuardianRelationship;
-            isPrimary: boolean;
-        })[];
         registrations: {
             id: string;
+            status: import(".prisma/client").$Enums.PlayerStatus;
             createdAt: Date;
             updatedAt: Date;
-            status: import(".prisma/client").$Enums.PlayerStatus;
+            academyId: string;
             playerId: string;
             invitationToken: string | null;
             invitedByUserId: string | null;
@@ -606,17 +650,15 @@ export declare class PlayersController {
         }[];
     } & {
         id: string;
+        status: import(".prisma/client").$Enums.PlayerStatus;
         createdAt: Date;
         updatedAt: Date;
         firstName: string;
         lastName: string;
-        status: import(".prisma/client").$Enums.PlayerStatus;
+        academyId: string;
         deletedAt: Date | null;
         ageCategoryId: string | null;
-        teamId: string | null;
-        primaryCoachId: string | null;
         middleName: string | null;
-        trainingGroupId: string | null;
         playerCode: string | null;
         dateOfBirth: Date;
         gender: import(".prisma/client").$Enums.Gender;
@@ -629,25 +671,53 @@ export declare class PlayersController {
         dominantFoot: import(".prisma/client").$Enums.DominantFoot | null;
         emergencyContactName: string | null;
         emergencyContactPhone: string | null;
+        teamId: string | null;
+        trainingGroupId: string | null;
+        primaryCoachId: string | null;
     }>;
     addGuardian(id: string, dto: AddGuardianDto): Promise<{
-        ageCategory: {
+        guardians: ({
+            guardian: {
+                id: string;
+                createdAt: Date;
+                updatedAt: Date;
+                email: string | null;
+                firstName: string;
+                lastName: string;
+                academyId: string;
+                phone: string;
+                deletedAt: Date | null;
+                userId: string | null;
+                address: string | null;
+            };
+        } & {
             id: string;
             createdAt: Date;
+            academyId: string;
+            playerId: string;
+            guardianId: string;
+            relationship: import(".prisma/client").$Enums.GuardianRelationship;
+            isPrimary: boolean;
+        })[];
+        ageCategory: {
+            id: string;
             name: string;
+            createdAt: Date;
             updatedAt: Date;
+            academyId: string;
+            sortOrder: number;
             branchId: string | null;
             isActive: boolean;
             code: string;
             minAge: number;
             maxAge: number;
-            sortOrder: number;
         } | null;
         team: {
             id: string;
-            createdAt: Date;
             name: string;
+            createdAt: Date;
             updatedAt: Date;
+            academyId: string;
             branchId: string | null;
             isActive: boolean;
             ageCategoryId: string;
@@ -656,9 +726,10 @@ export declare class PlayersController {
         } | null;
         trainingGroup: {
             id: string;
-            createdAt: Date;
             name: string;
+            createdAt: Date;
             updatedAt: Date;
+            academyId: string;
             branchId: string | null;
             isActive: boolean;
             teamId: string;
@@ -668,10 +739,11 @@ export declare class PlayersController {
             id: string;
             createdAt: Date;
             updatedAt: Date;
-            role: import(".prisma/client").$Enums.StaffRole;
             email: string | null;
             firstName: string;
             lastName: string;
+            role: import(".prisma/client").$Enums.StaffRole;
+            academyId: string;
             phone: string | null;
             deletedAt: Date | null;
             userId: string | null;
@@ -679,32 +751,12 @@ export declare class PlayersController {
             middleName: string | null;
             bio: string | null;
         } | null;
-        guardians: ({
-            guardian: {
-                id: string;
-                createdAt: Date;
-                updatedAt: Date;
-                email: string | null;
-                firstName: string;
-                lastName: string;
-                phone: string;
-                deletedAt: Date | null;
-                userId: string | null;
-                address: string | null;
-            };
-        } & {
-            id: string;
-            createdAt: Date;
-            playerId: string;
-            guardianId: string;
-            relationship: import(".prisma/client").$Enums.GuardianRelationship;
-            isPrimary: boolean;
-        })[];
         registrations: {
             id: string;
+            status: import(".prisma/client").$Enums.PlayerStatus;
             createdAt: Date;
             updatedAt: Date;
-            status: import(".prisma/client").$Enums.PlayerStatus;
+            academyId: string;
             playerId: string;
             invitationToken: string | null;
             invitedByUserId: string | null;
@@ -716,17 +768,15 @@ export declare class PlayersController {
         }[];
     } & {
         id: string;
+        status: import(".prisma/client").$Enums.PlayerStatus;
         createdAt: Date;
         updatedAt: Date;
         firstName: string;
         lastName: string;
-        status: import(".prisma/client").$Enums.PlayerStatus;
+        academyId: string;
         deletedAt: Date | null;
         ageCategoryId: string | null;
-        teamId: string | null;
-        primaryCoachId: string | null;
         middleName: string | null;
-        trainingGroupId: string | null;
         playerCode: string | null;
         dateOfBirth: Date;
         gender: import(".prisma/client").$Enums.Gender;
@@ -739,25 +789,53 @@ export declare class PlayersController {
         dominantFoot: import(".prisma/client").$Enums.DominantFoot | null;
         emergencyContactName: string | null;
         emergencyContactPhone: string | null;
+        teamId: string | null;
+        trainingGroupId: string | null;
+        primaryCoachId: string | null;
     }>;
     submit(id: string): Promise<{
-        ageCategory: {
+        guardians: ({
+            guardian: {
+                id: string;
+                createdAt: Date;
+                updatedAt: Date;
+                email: string | null;
+                firstName: string;
+                lastName: string;
+                academyId: string;
+                phone: string;
+                deletedAt: Date | null;
+                userId: string | null;
+                address: string | null;
+            };
+        } & {
             id: string;
             createdAt: Date;
+            academyId: string;
+            playerId: string;
+            guardianId: string;
+            relationship: import(".prisma/client").$Enums.GuardianRelationship;
+            isPrimary: boolean;
+        })[];
+        ageCategory: {
+            id: string;
             name: string;
+            createdAt: Date;
             updatedAt: Date;
+            academyId: string;
+            sortOrder: number;
             branchId: string | null;
             isActive: boolean;
             code: string;
             minAge: number;
             maxAge: number;
-            sortOrder: number;
         } | null;
         team: {
             id: string;
-            createdAt: Date;
             name: string;
+            createdAt: Date;
             updatedAt: Date;
+            academyId: string;
             branchId: string | null;
             isActive: boolean;
             ageCategoryId: string;
@@ -766,9 +844,10 @@ export declare class PlayersController {
         } | null;
         trainingGroup: {
             id: string;
-            createdAt: Date;
             name: string;
+            createdAt: Date;
             updatedAt: Date;
+            academyId: string;
             branchId: string | null;
             isActive: boolean;
             teamId: string;
@@ -778,10 +857,11 @@ export declare class PlayersController {
             id: string;
             createdAt: Date;
             updatedAt: Date;
-            role: import(".prisma/client").$Enums.StaffRole;
             email: string | null;
             firstName: string;
             lastName: string;
+            role: import(".prisma/client").$Enums.StaffRole;
+            academyId: string;
             phone: string | null;
             deletedAt: Date | null;
             userId: string | null;
@@ -789,32 +869,12 @@ export declare class PlayersController {
             middleName: string | null;
             bio: string | null;
         } | null;
-        guardians: ({
-            guardian: {
-                id: string;
-                createdAt: Date;
-                updatedAt: Date;
-                email: string | null;
-                firstName: string;
-                lastName: string;
-                phone: string;
-                deletedAt: Date | null;
-                userId: string | null;
-                address: string | null;
-            };
-        } & {
-            id: string;
-            createdAt: Date;
-            playerId: string;
-            guardianId: string;
-            relationship: import(".prisma/client").$Enums.GuardianRelationship;
-            isPrimary: boolean;
-        })[];
         registrations: {
             id: string;
+            status: import(".prisma/client").$Enums.PlayerStatus;
             createdAt: Date;
             updatedAt: Date;
-            status: import(".prisma/client").$Enums.PlayerStatus;
+            academyId: string;
             playerId: string;
             invitationToken: string | null;
             invitedByUserId: string | null;
@@ -826,17 +886,15 @@ export declare class PlayersController {
         }[];
     } & {
         id: string;
+        status: import(".prisma/client").$Enums.PlayerStatus;
         createdAt: Date;
         updatedAt: Date;
         firstName: string;
         lastName: string;
-        status: import(".prisma/client").$Enums.PlayerStatus;
+        academyId: string;
         deletedAt: Date | null;
         ageCategoryId: string | null;
-        teamId: string | null;
-        primaryCoachId: string | null;
         middleName: string | null;
-        trainingGroupId: string | null;
         playerCode: string | null;
         dateOfBirth: Date;
         gender: import(".prisma/client").$Enums.Gender;
@@ -849,25 +907,53 @@ export declare class PlayersController {
         dominantFoot: import(".prisma/client").$Enums.DominantFoot | null;
         emergencyContactName: string | null;
         emergencyContactPhone: string | null;
+        teamId: string | null;
+        trainingGroupId: string | null;
+        primaryCoachId: string | null;
     }>;
-    approve(id: string, user: RequestUser): Promise<{
-        ageCategory: {
+    approve(id: string, dto: ApproveRegistrationDto, user: RequestUser): Promise<{
+        guardians: ({
+            guardian: {
+                id: string;
+                createdAt: Date;
+                updatedAt: Date;
+                email: string | null;
+                firstName: string;
+                lastName: string;
+                academyId: string;
+                phone: string;
+                deletedAt: Date | null;
+                userId: string | null;
+                address: string | null;
+            };
+        } & {
             id: string;
             createdAt: Date;
+            academyId: string;
+            playerId: string;
+            guardianId: string;
+            relationship: import(".prisma/client").$Enums.GuardianRelationship;
+            isPrimary: boolean;
+        })[];
+        ageCategory: {
+            id: string;
             name: string;
+            createdAt: Date;
             updatedAt: Date;
+            academyId: string;
+            sortOrder: number;
             branchId: string | null;
             isActive: boolean;
             code: string;
             minAge: number;
             maxAge: number;
-            sortOrder: number;
         } | null;
         team: {
             id: string;
-            createdAt: Date;
             name: string;
+            createdAt: Date;
             updatedAt: Date;
+            academyId: string;
             branchId: string | null;
             isActive: boolean;
             ageCategoryId: string;
@@ -876,9 +962,10 @@ export declare class PlayersController {
         } | null;
         trainingGroup: {
             id: string;
-            createdAt: Date;
             name: string;
+            createdAt: Date;
             updatedAt: Date;
+            academyId: string;
             branchId: string | null;
             isActive: boolean;
             teamId: string;
@@ -888,10 +975,11 @@ export declare class PlayersController {
             id: string;
             createdAt: Date;
             updatedAt: Date;
-            role: import(".prisma/client").$Enums.StaffRole;
             email: string | null;
             firstName: string;
             lastName: string;
+            role: import(".prisma/client").$Enums.StaffRole;
+            academyId: string;
             phone: string | null;
             deletedAt: Date | null;
             userId: string | null;
@@ -899,32 +987,12 @@ export declare class PlayersController {
             middleName: string | null;
             bio: string | null;
         } | null;
-        guardians: ({
-            guardian: {
-                id: string;
-                createdAt: Date;
-                updatedAt: Date;
-                email: string | null;
-                firstName: string;
-                lastName: string;
-                phone: string;
-                deletedAt: Date | null;
-                userId: string | null;
-                address: string | null;
-            };
-        } & {
-            id: string;
-            createdAt: Date;
-            playerId: string;
-            guardianId: string;
-            relationship: import(".prisma/client").$Enums.GuardianRelationship;
-            isPrimary: boolean;
-        })[];
         registrations: {
             id: string;
+            status: import(".prisma/client").$Enums.PlayerStatus;
             createdAt: Date;
             updatedAt: Date;
-            status: import(".prisma/client").$Enums.PlayerStatus;
+            academyId: string;
             playerId: string;
             invitationToken: string | null;
             invitedByUserId: string | null;
@@ -936,17 +1004,15 @@ export declare class PlayersController {
         }[];
     } & {
         id: string;
+        status: import(".prisma/client").$Enums.PlayerStatus;
         createdAt: Date;
         updatedAt: Date;
         firstName: string;
         lastName: string;
-        status: import(".prisma/client").$Enums.PlayerStatus;
+        academyId: string;
         deletedAt: Date | null;
         ageCategoryId: string | null;
-        teamId: string | null;
-        primaryCoachId: string | null;
         middleName: string | null;
-        trainingGroupId: string | null;
         playerCode: string | null;
         dateOfBirth: Date;
         gender: import(".prisma/client").$Enums.Gender;
@@ -959,26 +1025,54 @@ export declare class PlayersController {
         dominantFoot: import(".prisma/client").$Enums.DominantFoot | null;
         emergencyContactName: string | null;
         emergencyContactPhone: string | null;
+        teamId: string | null;
+        trainingGroupId: string | null;
+        primaryCoachId: string | null;
     }>;
     confirmPayment(id: string, dto: ConfirmRegistrationPaymentDto, user: RequestUser): Promise<{
         player: {
-            ageCategory: {
+            guardians: ({
+                guardian: {
+                    id: string;
+                    createdAt: Date;
+                    updatedAt: Date;
+                    email: string | null;
+                    firstName: string;
+                    lastName: string;
+                    academyId: string;
+                    phone: string;
+                    deletedAt: Date | null;
+                    userId: string | null;
+                    address: string | null;
+                };
+            } & {
                 id: string;
                 createdAt: Date;
+                academyId: string;
+                playerId: string;
+                guardianId: string;
+                relationship: import(".prisma/client").$Enums.GuardianRelationship;
+                isPrimary: boolean;
+            })[];
+            ageCategory: {
+                id: string;
                 name: string;
+                createdAt: Date;
                 updatedAt: Date;
+                academyId: string;
+                sortOrder: number;
                 branchId: string | null;
                 isActive: boolean;
                 code: string;
                 minAge: number;
                 maxAge: number;
-                sortOrder: number;
             } | null;
             team: {
                 id: string;
-                createdAt: Date;
                 name: string;
+                createdAt: Date;
                 updatedAt: Date;
+                academyId: string;
                 branchId: string | null;
                 isActive: boolean;
                 ageCategoryId: string;
@@ -987,9 +1081,10 @@ export declare class PlayersController {
             } | null;
             trainingGroup: {
                 id: string;
-                createdAt: Date;
                 name: string;
+                createdAt: Date;
                 updatedAt: Date;
+                academyId: string;
                 branchId: string | null;
                 isActive: boolean;
                 teamId: string;
@@ -999,10 +1094,11 @@ export declare class PlayersController {
                 id: string;
                 createdAt: Date;
                 updatedAt: Date;
-                role: import(".prisma/client").$Enums.StaffRole;
                 email: string | null;
                 firstName: string;
                 lastName: string;
+                role: import(".prisma/client").$Enums.StaffRole;
+                academyId: string;
                 phone: string | null;
                 deletedAt: Date | null;
                 userId: string | null;
@@ -1010,32 +1106,12 @@ export declare class PlayersController {
                 middleName: string | null;
                 bio: string | null;
             } | null;
-            guardians: ({
-                guardian: {
-                    id: string;
-                    createdAt: Date;
-                    updatedAt: Date;
-                    email: string | null;
-                    firstName: string;
-                    lastName: string;
-                    phone: string;
-                    deletedAt: Date | null;
-                    userId: string | null;
-                    address: string | null;
-                };
-            } & {
-                id: string;
-                createdAt: Date;
-                playerId: string;
-                guardianId: string;
-                relationship: import(".prisma/client").$Enums.GuardianRelationship;
-                isPrimary: boolean;
-            })[];
             registrations: {
                 id: string;
+                status: import(".prisma/client").$Enums.PlayerStatus;
                 createdAt: Date;
                 updatedAt: Date;
-                status: import(".prisma/client").$Enums.PlayerStatus;
+                academyId: string;
                 playerId: string;
                 invitationToken: string | null;
                 invitedByUserId: string | null;
@@ -1047,17 +1123,15 @@ export declare class PlayersController {
             }[];
         } & {
             id: string;
+            status: import(".prisma/client").$Enums.PlayerStatus;
             createdAt: Date;
             updatedAt: Date;
             firstName: string;
             lastName: string;
-            status: import(".prisma/client").$Enums.PlayerStatus;
+            academyId: string;
             deletedAt: Date | null;
             ageCategoryId: string | null;
-            teamId: string | null;
-            primaryCoachId: string | null;
             middleName: string | null;
-            trainingGroupId: string | null;
             playerCode: string | null;
             dateOfBirth: Date;
             gender: import(".prisma/client").$Enums.Gender;
@@ -1070,17 +1144,21 @@ export declare class PlayersController {
             dominantFoot: import(".prisma/client").$Enums.DominantFoot | null;
             emergencyContactName: string | null;
             emergencyContactPhone: string | null;
+            teamId: string | null;
+            trainingGroupId: string | null;
+            primaryCoachId: string | null;
         };
         payment: {
             id: string;
+            status: import(".prisma/client").$Enums.PaymentStatus;
             createdAt: Date;
             updatedAt: Date;
-            status: import(".prisma/client").$Enums.PaymentStatus;
-            method: import(".prisma/client").$Enums.PaymentMethod;
-            reference: string | null;
+            academyId: string;
+            playerId: string;
             amount: import("@prisma/client/runtime/library").Decimal;
             receiptNumber: string;
-            playerId: string;
+            method: import(".prisma/client").$Enums.PaymentMethod;
+            reference: string | null;
             receivedByUserId: string;
             reversedByUserId: string | null;
             reversedAt: Date | null;
@@ -1094,23 +1172,48 @@ export declare class PlayersController {
         status: string;
     } | {
         player: {
-            ageCategory: {
+            guardians: ({
+                guardian: {
+                    id: string;
+                    createdAt: Date;
+                    updatedAt: Date;
+                    email: string | null;
+                    firstName: string;
+                    lastName: string;
+                    academyId: string;
+                    phone: string;
+                    deletedAt: Date | null;
+                    userId: string | null;
+                    address: string | null;
+                };
+            } & {
                 id: string;
                 createdAt: Date;
+                academyId: string;
+                playerId: string;
+                guardianId: string;
+                relationship: import(".prisma/client").$Enums.GuardianRelationship;
+                isPrimary: boolean;
+            })[];
+            ageCategory: {
+                id: string;
                 name: string;
+                createdAt: Date;
                 updatedAt: Date;
+                academyId: string;
+                sortOrder: number;
                 branchId: string | null;
                 isActive: boolean;
                 code: string;
                 minAge: number;
                 maxAge: number;
-                sortOrder: number;
             } | null;
             team: {
                 id: string;
-                createdAt: Date;
                 name: string;
+                createdAt: Date;
                 updatedAt: Date;
+                academyId: string;
                 branchId: string | null;
                 isActive: boolean;
                 ageCategoryId: string;
@@ -1119,9 +1222,10 @@ export declare class PlayersController {
             } | null;
             trainingGroup: {
                 id: string;
-                createdAt: Date;
                 name: string;
+                createdAt: Date;
                 updatedAt: Date;
+                academyId: string;
                 branchId: string | null;
                 isActive: boolean;
                 teamId: string;
@@ -1131,10 +1235,11 @@ export declare class PlayersController {
                 id: string;
                 createdAt: Date;
                 updatedAt: Date;
-                role: import(".prisma/client").$Enums.StaffRole;
                 email: string | null;
                 firstName: string;
                 lastName: string;
+                role: import(".prisma/client").$Enums.StaffRole;
+                academyId: string;
                 phone: string | null;
                 deletedAt: Date | null;
                 userId: string | null;
@@ -1142,32 +1247,12 @@ export declare class PlayersController {
                 middleName: string | null;
                 bio: string | null;
             } | null;
-            guardians: ({
-                guardian: {
-                    id: string;
-                    createdAt: Date;
-                    updatedAt: Date;
-                    email: string | null;
-                    firstName: string;
-                    lastName: string;
-                    phone: string;
-                    deletedAt: Date | null;
-                    userId: string | null;
-                    address: string | null;
-                };
-            } & {
-                id: string;
-                createdAt: Date;
-                playerId: string;
-                guardianId: string;
-                relationship: import(".prisma/client").$Enums.GuardianRelationship;
-                isPrimary: boolean;
-            })[];
             registrations: {
                 id: string;
+                status: import(".prisma/client").$Enums.PlayerStatus;
                 createdAt: Date;
                 updatedAt: Date;
-                status: import(".prisma/client").$Enums.PlayerStatus;
+                academyId: string;
                 playerId: string;
                 invitationToken: string | null;
                 invitedByUserId: string | null;
@@ -1179,17 +1264,15 @@ export declare class PlayersController {
             }[];
         } & {
             id: string;
+            status: import(".prisma/client").$Enums.PlayerStatus;
             createdAt: Date;
             updatedAt: Date;
             firstName: string;
             lastName: string;
-            status: import(".prisma/client").$Enums.PlayerStatus;
+            academyId: string;
             deletedAt: Date | null;
             ageCategoryId: string | null;
-            teamId: string | null;
-            primaryCoachId: string | null;
             middleName: string | null;
-            trainingGroupId: string | null;
             playerCode: string | null;
             dateOfBirth: Date;
             gender: import(".prisma/client").$Enums.Gender;
@@ -1202,17 +1285,21 @@ export declare class PlayersController {
             dominantFoot: import(".prisma/client").$Enums.DominantFoot | null;
             emergencyContactName: string | null;
             emergencyContactPhone: string | null;
+            teamId: string | null;
+            trainingGroupId: string | null;
+            primaryCoachId: string | null;
         };
         payment: {
             id: string;
+            status: import(".prisma/client").$Enums.PaymentStatus;
             createdAt: Date;
             updatedAt: Date;
-            status: import(".prisma/client").$Enums.PaymentStatus;
-            method: import(".prisma/client").$Enums.PaymentMethod;
-            reference: string | null;
+            academyId: string;
+            playerId: string;
             amount: import("@prisma/client/runtime/library").Decimal;
             receiptNumber: string;
-            playerId: string;
+            method: import(".prisma/client").$Enums.PaymentMethod;
+            reference: string | null;
             receivedByUserId: string;
             reversedByUserId: string | null;
             reversedAt: Date | null;
@@ -1223,23 +1310,48 @@ export declare class PlayersController {
         status: string;
     }>;
     uploadPhoto(id: string, file: Express.Multer.File, user: RequestUser): Promise<{
-        ageCategory: {
+        guardians: ({
+            guardian: {
+                id: string;
+                createdAt: Date;
+                updatedAt: Date;
+                email: string | null;
+                firstName: string;
+                lastName: string;
+                academyId: string;
+                phone: string;
+                deletedAt: Date | null;
+                userId: string | null;
+                address: string | null;
+            };
+        } & {
             id: string;
             createdAt: Date;
+            academyId: string;
+            playerId: string;
+            guardianId: string;
+            relationship: import(".prisma/client").$Enums.GuardianRelationship;
+            isPrimary: boolean;
+        })[];
+        ageCategory: {
+            id: string;
             name: string;
+            createdAt: Date;
             updatedAt: Date;
+            academyId: string;
+            sortOrder: number;
             branchId: string | null;
             isActive: boolean;
             code: string;
             minAge: number;
             maxAge: number;
-            sortOrder: number;
         } | null;
         team: {
             id: string;
-            createdAt: Date;
             name: string;
+            createdAt: Date;
             updatedAt: Date;
+            academyId: string;
             branchId: string | null;
             isActive: boolean;
             ageCategoryId: string;
@@ -1248,9 +1360,10 @@ export declare class PlayersController {
         } | null;
         trainingGroup: {
             id: string;
-            createdAt: Date;
             name: string;
+            createdAt: Date;
             updatedAt: Date;
+            academyId: string;
             branchId: string | null;
             isActive: boolean;
             teamId: string;
@@ -1260,10 +1373,11 @@ export declare class PlayersController {
             id: string;
             createdAt: Date;
             updatedAt: Date;
-            role: import(".prisma/client").$Enums.StaffRole;
             email: string | null;
             firstName: string;
             lastName: string;
+            role: import(".prisma/client").$Enums.StaffRole;
+            academyId: string;
             phone: string | null;
             deletedAt: Date | null;
             userId: string | null;
@@ -1271,32 +1385,12 @@ export declare class PlayersController {
             middleName: string | null;
             bio: string | null;
         } | null;
-        guardians: ({
-            guardian: {
-                id: string;
-                createdAt: Date;
-                updatedAt: Date;
-                email: string | null;
-                firstName: string;
-                lastName: string;
-                phone: string;
-                deletedAt: Date | null;
-                userId: string | null;
-                address: string | null;
-            };
-        } & {
-            id: string;
-            createdAt: Date;
-            playerId: string;
-            guardianId: string;
-            relationship: import(".prisma/client").$Enums.GuardianRelationship;
-            isPrimary: boolean;
-        })[];
         registrations: {
             id: string;
+            status: import(".prisma/client").$Enums.PlayerStatus;
             createdAt: Date;
             updatedAt: Date;
-            status: import(".prisma/client").$Enums.PlayerStatus;
+            academyId: string;
             playerId: string;
             invitationToken: string | null;
             invitedByUserId: string | null;
@@ -1308,17 +1402,15 @@ export declare class PlayersController {
         }[];
     } & {
         id: string;
+        status: import(".prisma/client").$Enums.PlayerStatus;
         createdAt: Date;
         updatedAt: Date;
         firstName: string;
         lastName: string;
-        status: import(".prisma/client").$Enums.PlayerStatus;
+        academyId: string;
         deletedAt: Date | null;
         ageCategoryId: string | null;
-        teamId: string | null;
-        primaryCoachId: string | null;
         middleName: string | null;
-        trainingGroupId: string | null;
         playerCode: string | null;
         dateOfBirth: Date;
         gender: import(".prisma/client").$Enums.Gender;
@@ -1331,5 +1423,8 @@ export declare class PlayersController {
         dominantFoot: import(".prisma/client").$Enums.DominantFoot | null;
         emergencyContactName: string | null;
         emergencyContactPhone: string | null;
+        teamId: string | null;
+        trainingGroupId: string | null;
+        primaryCoachId: string | null;
     }>;
 }

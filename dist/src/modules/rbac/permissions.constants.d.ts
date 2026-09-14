@@ -9,6 +9,8 @@ export declare const PERMISSIONS: {
     readonly TRAINING_MANAGE_OWN: "training:manage-own";
     readonly TRAINING_APPROVE: "training:approve";
     readonly TRAINING_ATTENDANCE_RECORD: "training:attendance-record";
+    readonly TRAINING_SESSIONS_MANAGE: "training:sessions-manage";
+    readonly TRAINING_SCHEDULE_MANAGE: "training:schedule-manage";
     readonly ASSESSMENTS_MANAGE_OWN: "assessments:manage-own";
     readonly ASSESSMENTS_VIEW: "assessments:view";
     readonly ASSESSMENTS_MANAGE_TEMPLATES: "assessments:manage-templates";
@@ -22,6 +24,7 @@ export declare const PERMISSIONS: {
     readonly ISSUES_MANAGE: "issues:manage";
     readonly ORDERS_MANAGE: "orders:manage";
     readonly GALLERY_MANAGE: "gallery:manage";
+    readonly BILLING_MANAGE: "billing:manage";
 };
 export type PermissionKey = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
 export declare const ROLE_NAMES: {

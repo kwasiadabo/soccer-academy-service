@@ -1,18 +1,13 @@
-import { ConfigService } from '@nestjs/config';
+import { TenantContextService } from '../../common/tenant-context/tenant-context.service';
+import { PrismaService } from '../prisma/prisma.service';
 export declare class EmailService {
-    private readonly config;
+    private readonly prisma;
+    private readonly tenantContext;
     private readonly logger;
-    private readonly transporter;
-    private readonly fromAddress?;
-    constructor(config: ConfigService);
+    constructor(prisma: PrismaService, tenantContext: TenantContextService);
     send(params: {
         to: string;
         subject: string;
         html: string;
-        attachments?: {
-            filename: string;
-            path: string;
-            cid: string;
-        }[];
     }): Promise<boolean>;
 }

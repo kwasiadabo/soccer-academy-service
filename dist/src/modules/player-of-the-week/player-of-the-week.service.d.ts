@@ -1,10 +1,12 @@
+import { TenantContextService } from '../../common/tenant-context/tenant-context.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { StorageService } from '../storage/storage.service';
 export declare class PlayerOfTheWeekService {
     private readonly prisma;
     private readonly storage;
+    private readonly tenantContext;
     private readonly logger;
-    constructor(prisma: PrismaService, storage: StorageService);
+    constructor(prisma: PrismaService, storage: StorageService, tenantContext: TenantContextService);
     handleWeeklyComputationCron(): Promise<void>;
     computeForAllTeams(): Promise<{
         picked: number;

@@ -2,7 +2,6 @@ import { BadRequestException, ConflictException, Injectable, NotFoundException }
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuthService } from '../auth/auth.service';
-import { ROLE_NAMES } from '../rbac/permissions.constants';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { ResetUserPasswordDto } from './dto/reset-user-password.dto';
@@ -57,30 +56,50 @@ export class UsersService {
     return roles;
   }
 
+  // Every account created here must belong to an already-registered staff
+  // member (see CreateUserDto) — firstName/lastName/phone always come from
+  // that Coach record, never freely typed, so the two never drift apart.
   async create(dto: CreateUserDto) {
-    const existing = await this.prisma.user.findUnique({ where: { email: dto.email } });
+    const coach = await this.prisma.coach.findFirst({ where: { id: dto.coachId, deletedAt: null } });
+    if (!coach) {
+      throw new NotFoundException('Staff member not found');
+    }
+    if (coach.userId) {
+      throw new BadRequestException('This staff member already has a user account');
+    }
+
+    const existing = await this.prisma.user.findFirst({ where: { email: dto.email } });
     if (existing) {
       throw new ConflictException('A user with this email already exists');
     }
 
     const roles = await this.resolveRoles(dto.roleNames);
-    const mustChangePassword = dto.mustChangePassword ?? dto.roleNames.includes(ROLE_NAMES.PARENT);
+    const mustChangePassword = dto.mustChangePassword ?? true;
 
+    // Two separate top-level calls, not one hand-rolled $transaction: each
+    // tenant-scoped model call is already individually wrapped with its own
+    // SET LOCAL by PrismaService's tenant-scoping extension (see its
+    // $allOperations hook) — a manual `$transaction(async (tx) => ...)`
+    // callback runs against a bare, un-extended `tx` client that bypasses
+    // that wrapping entirely, which is exactly what caused the RLS
+    // foreign-key violation this comment replaced. Same sequencing already
+    // used by CoachesService.grantPortalAccess's new-user branch.
     const passwordHash = await bcrypt.hash(dto.password, 10);
-    const user = await this.prisma.user.create({
+    const created = await this.prisma.user.create({
       data: {
         email: dto.email,
         passwordHash,
-        firstName: dto.firstName,
-        lastName: dto.lastName,
-        phone: dto.phone,
+        firstName: coach.firstName,
+        lastName: coach.lastName,
+        phone: coach.phone,
         mustChangePassword,
         roles: { create: roles.map((role) => ({ roleId: role.id })) },
       },
       select: userListSelect,
     });
+    await this.prisma.coach.update({ where: { id: coach.id }, data: { userId: created.id } });
 
-    return this.serialize(user);
+    return this.serialize(created);
   }
 
   async update(id: string, dto: UpdateUserDto) {
@@ -90,7 +109,7 @@ export class UsersService {
     }
 
     if (dto.email && dto.email !== existing.email) {
-      const emailTaken = await this.prisma.user.findUnique({ where: { email: dto.email } });
+      const emailTaken = await this.prisma.user.findFirst({ where: { email: dto.email } });
       if (emailTaken) {
         throw new ConflictException('A user with this email already exists');
       }

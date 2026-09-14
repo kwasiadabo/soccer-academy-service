@@ -9,6 +9,32 @@ import { CreateGuestOrderDto } from './dto/create-guest-order.dto';
 const MERCHANDISE_FEE_TYPE_ID = '00000000-0000-4000-8000-000000000004';
 const INVOICE_DUE_DAYS = 7;
 
+export type OrdersReportStatus = 'SOLD' | 'PENDING';
+
+export interface OrdersReportRow {
+  orderId: string;
+  invoiceNumber: string | null;
+  date: Date;
+  status: OrdersReportStatus;
+  player: { id: string; firstName: string; lastName: string; playerCode: string | null };
+  productName: string;
+  category: string;
+  sizeLabel: string;
+  quantity: number;
+  unitPriceAtOrder: number;
+  lineTotal: number;
+}
+
+export interface OrdersReport {
+  rows: OrdersReportRow[];
+  summary: {
+    totalAmount: number;
+    itemCount: number;
+    orderCount: number;
+    byProduct: { productName: string; quantity: number; total: number }[];
+  };
+}
+
 const PERSON_SELECT = { id: true, firstName: true, lastName: true } as const;
 
 const ORDER_INCLUDE = {
@@ -195,6 +221,140 @@ export class MerchandiseOrdersService {
 
   pendingCount() {
     return this.prisma.merchandiseOrder.count({ where: { status: 'PENDING' } });
+  }
+
+  // --- Orders report: items ordered within a date range, either already paid for ("sold")
+  // or still awaiting payment ("pending") ---
+  async getOrdersReport(from?: string, to?: string, status: OrdersReportStatus = 'SOLD'): Promise<OrdersReport> {
+    const rows = status === 'SOLD' ? await this.getSoldOrderRows(from, to) : await this.getPendingOrderRows(from, to);
+    rows.sort((a, b) => b.date.getTime() - a.date.getTime());
+
+    const byProductMap = new Map<string, { productName: string; quantity: number; total: number }>();
+    const orderIds = new Set<string>();
+    let totalAmount = 0;
+    let itemCount = 0;
+
+    for (const row of rows) {
+      totalAmount += row.lineTotal;
+      itemCount += row.quantity;
+      orderIds.add(row.orderId);
+
+      const productEntry = byProductMap.get(row.productName) ?? { productName: row.productName, quantity: 0, total: 0 };
+      productEntry.quantity += row.quantity;
+      productEntry.total += row.lineTotal;
+      byProductMap.set(row.productName, productEntry);
+    }
+
+    return {
+      rows,
+      summary: {
+        totalAmount,
+        itemCount,
+        orderCount: orderIds.size,
+        byProduct: Array.from(byProductMap.values()).sort((a, b) => b.total - a.total),
+      },
+    };
+  }
+
+  private buildDateFilter(from?: string, to?: string): Prisma.DateTimeFilter | undefined {
+    if (!from && !to) return undefined;
+    const filter: Prisma.DateTimeFilter = {};
+    if (from) filter.gte = new Date(from);
+    if (to) {
+      const end = new Date(to);
+      end.setHours(23, 59, 59, 999);
+      filter.lte = end;
+    }
+    return filter;
+  }
+
+  // Sold = invoice fully paid; the report date is when the last payment settling it landed.
+  private async getSoldOrderRows(from?: string, to?: string): Promise<OrdersReportRow[]> {
+    const paidAt = this.buildDateFilter(from, to);
+    const orders = await this.prisma.merchandiseOrder.findMany({
+      where: {
+        invoice: {
+          status: 'PAID',
+          allocations: { some: { payment: { status: 'COMPLETED', ...(paidAt ? { paidAt } : {}) } } },
+        },
+      },
+      include: {
+        player: { select: { id: true, firstName: true, lastName: true, playerCode: true } },
+        invoice: {
+          select: {
+            invoiceNumber: true,
+            allocations: {
+              where: { payment: { status: 'COMPLETED' } },
+              select: { payment: { select: { paidAt: true } } },
+            },
+          },
+        },
+        items: { include: { productVariant: { include: { product: true } } } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const rows: OrdersReportRow[] = [];
+    for (const order of orders) {
+      if (!order.invoice) continue;
+      // An invoice can settle across several payments — use the latest as "when this order was paid off".
+      const date = new Date(Math.max(...order.invoice.allocations.map((a) => a.payment.paidAt.getTime())));
+
+      for (const item of order.items) {
+        rows.push({
+          orderId: order.id,
+          invoiceNumber: order.invoice.invoiceNumber,
+          date,
+          status: 'SOLD',
+          player: order.player,
+          productName: item.productVariant.product.name,
+          category: item.productVariant.product.category,
+          sizeLabel: item.productVariant.sizeLabel,
+          quantity: item.quantity,
+          unitPriceAtOrder: Number(item.unitPriceAtOrder),
+          lineTotal: Number(item.lineTotal),
+        });
+      }
+    }
+    return rows;
+  }
+
+  // Pending = not yet fully paid (and not rejected/cancelled); the report date is when the order was placed.
+  private async getPendingOrderRows(from?: string, to?: string): Promise<OrdersReportRow[]> {
+    const createdAt = this.buildDateFilter(from, to);
+    const orders = await this.prisma.merchandiseOrder.findMany({
+      where: {
+        status: { notIn: ['REJECTED', 'CANCELLED'] },
+        OR: [{ invoiceId: null }, { invoice: { status: { not: 'PAID' } } }],
+        ...(createdAt ? { createdAt } : {}),
+      },
+      include: {
+        player: { select: { id: true, firstName: true, lastName: true, playerCode: true } },
+        invoice: { select: { invoiceNumber: true } },
+        items: { include: { productVariant: { include: { product: true } } } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const rows: OrdersReportRow[] = [];
+    for (const order of orders) {
+      for (const item of order.items) {
+        rows.push({
+          orderId: order.id,
+          invoiceNumber: order.invoice?.invoiceNumber ?? null,
+          date: order.createdAt,
+          status: 'PENDING',
+          player: order.player,
+          productName: item.productVariant.product.name,
+          category: item.productVariant.product.category,
+          sizeLabel: item.productVariant.sizeLabel,
+          quantity: item.quantity,
+          unitPriceAtOrder: Number(item.unitPriceAtOrder),
+          lineTotal: Number(item.lineTotal),
+        });
+      }
+    }
+    return rows;
   }
 
   async updateStatus(orderId: string, status: MerchandiseOrderStatus, staffNotes?: string) {

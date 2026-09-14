@@ -49,7 +49,7 @@ let FinanceController = class FinanceController {
         return this.financeService.updateFeeType(id, dto);
     }
     addFeeTypeItem(id, dto) {
-        return this.financeService.addFeeTypeItem(id, dto.feeItemId);
+        return this.financeService.addFeeTypeItem(id, dto.feeItemId, dto.amount);
     }
     removeFeeTypeItem(id, feeItemId) {
         return this.financeService.removeFeeTypeItem(id, feeItemId);

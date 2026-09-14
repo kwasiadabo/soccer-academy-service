@@ -107,7 +107,7 @@ let CoachesService = class CoachesService {
         if (coach.userId) {
             throw new common_1.BadRequestException('This coach already has portal access');
         }
-        let user = await this.prisma.user.findUnique({ where: { email: dto.email } });
+        let user = await this.prisma.user.findFirst({ where: { email: dto.email } });
         if (user) {
             const alreadyLinked = await this.prisma.coach.findFirst({ where: { userId: user.id } });
             const linkedGuardian = await this.prisma.guardian.findFirst({ where: { userId: user.id } });

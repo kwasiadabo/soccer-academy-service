@@ -15,6 +15,14 @@ export class CoachContextService {
     return coach.id;
   }
 
+  // Same lookup as resolveCoachId, but for callers like Head Coach/Admin who can act on
+  // sessions/plans without a personal Coach profile — null (rather than a thrown
+  // ForbiddenException) just means "not personally attributed to a coach."
+  async resolveOptionalCoachId(userId: string): Promise<string | null> {
+    const coach = await this.prisma.coach.findFirst({ where: { userId, deletedAt: null } });
+    return coach?.id ?? null;
+  }
+
   async assertOwnsTeam(coachId: string, teamId: string): Promise<void> {
     const assignment = await this.prisma.coachAssignment.findFirst({
       where: { coachId, teamId, effectiveTo: null },

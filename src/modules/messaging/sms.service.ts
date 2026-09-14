@@ -1,5 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { TenantContextService } from '../../common/tenant-context/tenant-context.service';
+import { PrismaService } from '../prisma/prisma.service';
 
 function toGhanaMsisdn(phone: string): string {
   const digits = phone.replace(/[^\d+]/g, '');
@@ -9,16 +11,19 @@ function toGhanaMsisdn(phone: string): string {
   return digits;
 }
 
+// Each academy brings its own Nalo API key and sender ID (stored in
+// AcademySettings), resolved per call from the current tenant. The endpoint
+// itself is shared platform config, not per-academy.
 @Injectable()
 export class SmsService {
   private readonly logger = new Logger(SmsService.name);
-  private readonly apiKey?: string;
-  private readonly senderId: string;
   private readonly endpoint: string;
 
-  constructor(private readonly config: ConfigService) {
-    this.apiKey = this.config.get<string>('NALO_API_KEY');
-    this.senderId = this.config.get<string>('NALO_SENDER_ID') ?? 'Kapikids';
+  constructor(
+    private readonly config: ConfigService,
+    private readonly prisma: PrismaService,
+    private readonly tenantContext: TenantContextService,
+  ) {
     this.endpoint =
       this.config.get<string>('NALO_ENDPOINT') ??
       'https://sms.nalosolutions.com/smsbackend/Resl_Nalo/send-message/';
@@ -26,8 +31,10 @@ export class SmsService {
 
   // Never throws — a notification failure must not roll back a real payment.
   async send(phone: string, message: string): Promise<boolean> {
-    if (!this.apiKey) {
-      this.logger.warn('SMS not configured (NALO_API_KEY missing) — skipping send');
+    const academyId = this.tenantContext.getAcademyId();
+    const settings = await this.prisma.academySettings.findUnique({ where: { academyId } });
+    if (!settings?.smsApiKey) {
+      this.logger.warn(`SMS not configured for academy ${academyId} — skipping send`);
       return false;
     }
     try {
@@ -35,10 +42,10 @@ export class SmsService {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          key: this.apiKey,
+          key: settings.smsApiKey,
           msisdn: toGhanaMsisdn(phone),
           message,
-          sender_id: this.senderId,
+          sender_id: settings.smsSenderId ?? settings.brandName,
           type: '0',
         }),
       });

@@ -9,6 +9,8 @@ exports.envSchema = zod_1.z.object({
     JWT_ACCESS_TTL: zod_1.z.string().default('15m'),
     JWT_REFRESH_SECRET: zod_1.z.string().min(16),
     JWT_REFRESH_TTL: zod_1.z.string().default('7d'),
+    JWT_PLATFORM_ADMIN_SECRET: zod_1.z.string().min(16),
+    JWT_PLATFORM_ADMIN_TTL: zod_1.z.string().default('12h'),
     PORT: zod_1.z.coerce.number().default(3000),
     NODE_ENV: zod_1.z.enum(['development', 'test', 'production']).default('development'),
     CORS_ORIGIN: zod_1.z.string().default('http://localhost:5173'),

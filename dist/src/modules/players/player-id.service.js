@@ -28,7 +28,7 @@ let PlayerIdService = class PlayerIdService {
         return `${prefix}${String(existingCount + 1).padStart(5, '0')}`;
     }
     async getAcademyCode() {
-        const setting = await this.prisma.configurationSetting.findUnique({
+        const setting = await this.prisma.configurationSetting.findFirst({
             where: { key: ACADEMY_CODE_SETTING_KEY },
         });
         if (setting && typeof setting.value === 'string') {

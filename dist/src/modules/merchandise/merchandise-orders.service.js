@@ -167,6 +167,127 @@ let MerchandiseOrdersService = class MerchandiseOrdersService {
     pendingCount() {
         return this.prisma.merchandiseOrder.count({ where: { status: 'PENDING' } });
     }
+    async getOrdersReport(from, to, status = 'SOLD') {
+        const rows = status === 'SOLD' ? await this.getSoldOrderRows(from, to) : await this.getPendingOrderRows(from, to);
+        rows.sort((a, b) => b.date.getTime() - a.date.getTime());
+        const byProductMap = new Map();
+        const orderIds = new Set();
+        let totalAmount = 0;
+        let itemCount = 0;
+        for (const row of rows) {
+            totalAmount += row.lineTotal;
+            itemCount += row.quantity;
+            orderIds.add(row.orderId);
+            const productEntry = byProductMap.get(row.productName) ?? { productName: row.productName, quantity: 0, total: 0 };
+            productEntry.quantity += row.quantity;
+            productEntry.total += row.lineTotal;
+            byProductMap.set(row.productName, productEntry);
+        }
+        return {
+            rows,
+            summary: {
+                totalAmount,
+                itemCount,
+                orderCount: orderIds.size,
+                byProduct: Array.from(byProductMap.values()).sort((a, b) => b.total - a.total),
+            },
+        };
+    }
+    buildDateFilter(from, to) {
+        if (!from && !to)
+            return undefined;
+        const filter = {};
+        if (from)
+            filter.gte = new Date(from);
+        if (to) {
+            const end = new Date(to);
+            end.setHours(23, 59, 59, 999);
+            filter.lte = end;
+        }
+        return filter;
+    }
+    async getSoldOrderRows(from, to) {
+        const paidAt = this.buildDateFilter(from, to);
+        const orders = await this.prisma.merchandiseOrder.findMany({
+            where: {
+                invoice: {
+                    status: 'PAID',
+                    allocations: { some: { payment: { status: 'COMPLETED', ...(paidAt ? { paidAt } : {}) } } },
+                },
+            },
+            include: {
+                player: { select: { id: true, firstName: true, lastName: true, playerCode: true } },
+                invoice: {
+                    select: {
+                        invoiceNumber: true,
+                        allocations: {
+                            where: { payment: { status: 'COMPLETED' } },
+                            select: { payment: { select: { paidAt: true } } },
+                        },
+                    },
+                },
+                items: { include: { productVariant: { include: { product: true } } } },
+            },
+            orderBy: { createdAt: 'desc' },
+        });
+        const rows = [];
+        for (const order of orders) {
+            if (!order.invoice)
+                continue;
+            const date = new Date(Math.max(...order.invoice.allocations.map((a) => a.payment.paidAt.getTime())));
+            for (const item of order.items) {
+                rows.push({
+                    orderId: order.id,
+                    invoiceNumber: order.invoice.invoiceNumber,
+                    date,
+                    status: 'SOLD',
+                    player: order.player,
+                    productName: item.productVariant.product.name,
+                    category: item.productVariant.product.category,
+                    sizeLabel: item.productVariant.sizeLabel,
+                    quantity: item.quantity,
+                    unitPriceAtOrder: Number(item.unitPriceAtOrder),
+                    lineTotal: Number(item.lineTotal),
+                });
+            }
+        }
+        return rows;
+    }
+    async getPendingOrderRows(from, to) {
+        const createdAt = this.buildDateFilter(from, to);
+        const orders = await this.prisma.merchandiseOrder.findMany({
+            where: {
+                status: { notIn: ['REJECTED', 'CANCELLED'] },
+                OR: [{ invoiceId: null }, { invoice: { status: { not: 'PAID' } } }],
+                ...(createdAt ? { createdAt } : {}),
+            },
+            include: {
+                player: { select: { id: true, firstName: true, lastName: true, playerCode: true } },
+                invoice: { select: { invoiceNumber: true } },
+                items: { include: { productVariant: { include: { product: true } } } },
+            },
+            orderBy: { createdAt: 'desc' },
+        });
+        const rows = [];
+        for (const order of orders) {
+            for (const item of order.items) {
+                rows.push({
+                    orderId: order.id,
+                    invoiceNumber: order.invoice?.invoiceNumber ?? null,
+                    date: order.createdAt,
+                    status: 'PENDING',
+                    player: order.player,
+                    productName: item.productVariant.product.name,
+                    category: item.productVariant.product.category,
+                    sizeLabel: item.productVariant.sizeLabel,
+                    quantity: item.quantity,
+                    unitPriceAtOrder: Number(item.unitPriceAtOrder),
+                    lineTotal: Number(item.lineTotal),
+                });
+            }
+        }
+        return rows;
+    }
     async updateStatus(orderId, status, staffNotes) {
         const order = await this.prisma.merchandiseOrder.findUnique({
             where: { id: orderId },

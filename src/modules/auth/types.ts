@@ -1,5 +1,6 @@
 export interface JwtPayload {
   sub: string;
+  academyId: string;
   email: string;
   roles: string[];
   permissions: string[];
@@ -7,6 +8,7 @@ export interface JwtPayload {
 
 export interface RequestUser {
   userId: string;
+  academyId: string;
   email: string;
   roles: string[];
   permissions: string[];

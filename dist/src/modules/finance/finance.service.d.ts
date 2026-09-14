@@ -1,4 +1,5 @@
 import { Prisma } from '@prisma/client';
+import { TenantContextService } from '../../common/tenant-context/tenant-context.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { PlayersService } from '../players/players.service';
 import { ReceiptsService } from '../receipts/receipts.service';
@@ -44,7 +45,6 @@ export interface PaymentReportRow {
     invoiceNumber: string;
     feeTypeId: string;
     feeTypeName: string;
-    feeTypeCategory: string;
     amount: number;
 }
 export interface PaymentReport {
@@ -95,59 +95,64 @@ export declare class FinanceService {
     private readonly prisma;
     private readonly playersService;
     private readonly receipts;
+    private readonly tenantContext;
     private readonly logger;
-    constructor(prisma: PrismaService, playersService: PlayersService, receipts: ReceiptsService);
+    constructor(prisma: PrismaService, playersService: PlayersService, receipts: ReceiptsService, tenantContext: TenantContextService);
     findAllFeeItems(includeInactive?: boolean): Prisma.PrismaPromise<{
         id: string;
-        description: string | null;
-        createdAt: Date;
         name: string;
+        createdAt: Date;
         updatedAt: Date;
+        description: string | null;
+        academyId: string;
         isActive: boolean;
-        defaultAmount: Prisma.Decimal;
     }[]>;
     createFeeItem(dto: CreateFeeItemDto): Prisma.Prisma__FeeItemClient<{
         id: string;
-        description: string | null;
-        createdAt: Date;
         name: string;
+        createdAt: Date;
         updatedAt: Date;
+        description: string | null;
+        academyId: string;
         isActive: boolean;
-        defaultAmount: Prisma.Decimal;
     }, never, import("@prisma/client/runtime/library").DefaultArgs>;
     updateFeeItem(id: string, dto: UpdateFeeItemDto): Promise<{
         id: string;
-        description: string | null;
-        createdAt: Date;
         name: string;
+        createdAt: Date;
         updatedAt: Date;
+        description: string | null;
+        academyId: string;
         isActive: boolean;
-        defaultAmount: Prisma.Decimal;
     }>;
     findAllFeeTypes(includeInactive?: boolean): Prisma.PrismaPromise<({
         items: ({
             feeItem: {
                 id: string;
-                description: string | null;
-                createdAt: Date;
                 name: string;
+                createdAt: Date;
                 updatedAt: Date;
+                description: string | null;
+                academyId: string;
                 isActive: boolean;
-                defaultAmount: Prisma.Decimal;
             };
         } & {
             createdAt: Date;
+            updatedAt: Date;
+            academyId: string;
             feeTypeId: string;
             feeItemId: string;
+            amount: Prisma.Decimal;
         })[];
     } & {
         id: string;
-        description: string | null;
-        createdAt: Date;
         name: string;
+        createdAt: Date;
         updatedAt: Date;
+        description: string | null;
+        academyId: string;
         isActive: boolean;
-        category: import(".prisma/client").$Enums.FeeCategory;
+        isRegistrationFee: boolean;
         isRecurring: boolean;
         defaultAmount: Prisma.Decimal;
     })[]>;
@@ -157,26 +162,30 @@ export declare class FinanceService {
         items: ({
             feeItem: {
                 id: string;
-                description: string | null;
-                createdAt: Date;
                 name: string;
+                createdAt: Date;
                 updatedAt: Date;
+                description: string | null;
+                academyId: string;
                 isActive: boolean;
-                defaultAmount: Prisma.Decimal;
             };
         } & {
             createdAt: Date;
+            updatedAt: Date;
+            academyId: string;
             feeTypeId: string;
             feeItemId: string;
+            amount: Prisma.Decimal;
         })[];
     } & {
         id: string;
-        description: string | null;
-        createdAt: Date;
         name: string;
+        createdAt: Date;
         updatedAt: Date;
+        description: string | null;
+        academyId: string;
         isActive: boolean;
-        category: import(".prisma/client").$Enums.FeeCategory;
+        isRegistrationFee: boolean;
         isRecurring: boolean;
         defaultAmount: Prisma.Decimal;
     }>;
@@ -184,53 +193,61 @@ export declare class FinanceService {
         items: ({
             feeItem: {
                 id: string;
-                description: string | null;
-                createdAt: Date;
                 name: string;
+                createdAt: Date;
                 updatedAt: Date;
+                description: string | null;
+                academyId: string;
                 isActive: boolean;
-                defaultAmount: Prisma.Decimal;
             };
         } & {
             createdAt: Date;
+            updatedAt: Date;
+            academyId: string;
             feeTypeId: string;
             feeItemId: string;
+            amount: Prisma.Decimal;
         })[];
     } & {
         id: string;
-        description: string | null;
-        createdAt: Date;
         name: string;
+        createdAt: Date;
         updatedAt: Date;
+        description: string | null;
+        academyId: string;
         isActive: boolean;
-        category: import(".prisma/client").$Enums.FeeCategory;
+        isRegistrationFee: boolean;
         isRecurring: boolean;
         defaultAmount: Prisma.Decimal;
     }>;
-    addFeeTypeItem(feeTypeId: string, feeItemId: string): Promise<{
+    addFeeTypeItem(feeTypeId: string, feeItemId: string, amount: number): Promise<{
         items: ({
             feeItem: {
                 id: string;
-                description: string | null;
-                createdAt: Date;
                 name: string;
+                createdAt: Date;
                 updatedAt: Date;
+                description: string | null;
+                academyId: string;
                 isActive: boolean;
-                defaultAmount: Prisma.Decimal;
             };
         } & {
             createdAt: Date;
+            updatedAt: Date;
+            academyId: string;
             feeTypeId: string;
             feeItemId: string;
+            amount: Prisma.Decimal;
         })[];
     } & {
         id: string;
-        description: string | null;
-        createdAt: Date;
         name: string;
+        createdAt: Date;
         updatedAt: Date;
+        description: string | null;
+        academyId: string;
         isActive: boolean;
-        category: import(".prisma/client").$Enums.FeeCategory;
+        isRegistrationFee: boolean;
         isRecurring: boolean;
         defaultAmount: Prisma.Decimal;
     }>;
@@ -238,26 +255,30 @@ export declare class FinanceService {
         items: ({
             feeItem: {
                 id: string;
-                description: string | null;
-                createdAt: Date;
                 name: string;
+                createdAt: Date;
                 updatedAt: Date;
+                description: string | null;
+                academyId: string;
                 isActive: boolean;
-                defaultAmount: Prisma.Decimal;
             };
         } & {
             createdAt: Date;
+            updatedAt: Date;
+            academyId: string;
             feeTypeId: string;
             feeItemId: string;
+            amount: Prisma.Decimal;
         })[];
     } & {
         id: string;
-        description: string | null;
-        createdAt: Date;
         name: string;
+        createdAt: Date;
         updatedAt: Date;
+        description: string | null;
+        academyId: string;
         isActive: boolean;
-        category: import(".prisma/client").$Enums.FeeCategory;
+        isRegistrationFee: boolean;
         isRecurring: boolean;
         defaultAmount: Prisma.Decimal;
     }>;
@@ -266,50 +287,56 @@ export declare class FinanceService {
             items: ({
                 feeItem: {
                     id: string;
-                    description: string | null;
-                    createdAt: Date;
                     name: string;
+                    createdAt: Date;
                     updatedAt: Date;
+                    description: string | null;
+                    academyId: string;
                     isActive: boolean;
-                    defaultAmount: Prisma.Decimal;
                 };
             } & {
                 createdAt: Date;
+                updatedAt: Date;
+                academyId: string;
                 feeTypeId: string;
                 feeItemId: string;
+                amount: Prisma.Decimal;
             })[];
         } & {
             id: string;
-            description: string | null;
-            createdAt: Date;
             name: string;
+            createdAt: Date;
             updatedAt: Date;
+            description: string | null;
+            academyId: string;
             isActive: boolean;
-            category: import(".prisma/client").$Enums.FeeCategory;
+            isRegistrationFee: boolean;
             isRecurring: boolean;
             defaultAmount: Prisma.Decimal;
         };
         allocations: {
             id: string;
             createdAt: Date;
+            academyId: string;
             amount: Prisma.Decimal;
             paymentId: string;
             invoiceId: string;
         }[];
     } & {
         id: string;
-        description: string | null;
+        status: import(".prisma/client").$Enums.InvoiceStatus;
         createdAt: Date;
         updatedAt: Date;
-        status: import(".prisma/client").$Enums.InvoiceStatus;
+        description: string | null;
+        academyId: string;
         deletedAt: Date | null;
-        amount: Prisma.Decimal;
         playerId: string;
-        invoiceNumber: string;
         feeTypeId: string;
+        amount: Prisma.Decimal;
+        gracePeriodDays: number;
+        invoiceNumber: string;
         discountAmount: Prisma.Decimal;
         dueDate: Date;
-        gracePeriodDays: number;
         issuedAt: Date;
         waivedAt: Date | null;
         waivedReason: string | null;
@@ -319,50 +346,56 @@ export declare class FinanceService {
             items: ({
                 feeItem: {
                     id: string;
-                    description: string | null;
-                    createdAt: Date;
                     name: string;
+                    createdAt: Date;
                     updatedAt: Date;
+                    description: string | null;
+                    academyId: string;
                     isActive: boolean;
-                    defaultAmount: Prisma.Decimal;
                 };
             } & {
                 createdAt: Date;
+                updatedAt: Date;
+                academyId: string;
                 feeTypeId: string;
                 feeItemId: string;
+                amount: Prisma.Decimal;
             })[];
         } & {
             id: string;
-            description: string | null;
-            createdAt: Date;
             name: string;
+            createdAt: Date;
             updatedAt: Date;
+            description: string | null;
+            academyId: string;
             isActive: boolean;
-            category: import(".prisma/client").$Enums.FeeCategory;
+            isRegistrationFee: boolean;
             isRecurring: boolean;
             defaultAmount: Prisma.Decimal;
         };
         allocations: {
             id: string;
             createdAt: Date;
+            academyId: string;
             amount: Prisma.Decimal;
             paymentId: string;
             invoiceId: string;
         }[];
     } & {
         id: string;
-        description: string | null;
+        status: import(".prisma/client").$Enums.InvoiceStatus;
         createdAt: Date;
         updatedAt: Date;
-        status: import(".prisma/client").$Enums.InvoiceStatus;
+        description: string | null;
+        academyId: string;
         deletedAt: Date | null;
-        amount: Prisma.Decimal;
         playerId: string;
-        invoiceNumber: string;
         feeTypeId: string;
+        amount: Prisma.Decimal;
+        gracePeriodDays: number;
+        invoiceNumber: string;
         discountAmount: Prisma.Decimal;
         dueDate: Date;
-        gracePeriodDays: number;
         issuedAt: Date;
         waivedAt: Date | null;
         waivedReason: string | null;
@@ -371,20 +404,22 @@ export declare class FinanceService {
         allocations: {
             id: string;
             createdAt: Date;
+            academyId: string;
             amount: Prisma.Decimal;
             paymentId: string;
             invoiceId: string;
         }[];
     } & {
         id: string;
+        status: import(".prisma/client").$Enums.PaymentStatus;
         createdAt: Date;
         updatedAt: Date;
-        status: import(".prisma/client").$Enums.PaymentStatus;
-        method: import(".prisma/client").$Enums.PaymentMethod;
-        reference: string | null;
+        academyId: string;
+        playerId: string;
         amount: Prisma.Decimal;
         receiptNumber: string;
-        playerId: string;
+        method: import(".prisma/client").$Enums.PaymentMethod;
+        reference: string | null;
         receivedByUserId: string;
         reversedByUserId: string | null;
         reversedAt: Date | null;

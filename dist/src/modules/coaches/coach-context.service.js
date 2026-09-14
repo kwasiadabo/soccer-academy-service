@@ -24,6 +24,10 @@ let CoachContextService = class CoachContextService {
         }
         return coach.id;
     }
+    async resolveOptionalCoachId(userId) {
+        const coach = await this.prisma.coach.findFirst({ where: { userId, deletedAt: null } });
+        return coach?.id ?? null;
+    }
     async assertOwnsTeam(coachId, teamId) {
         const assignment = await this.prisma.coachAssignment.findFirst({
             where: { coachId, teamId, effectiveTo: null },

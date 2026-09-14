@@ -1,6 +1,7 @@
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { AttendanceStatus, Prisma, TrainingApprovalStatus } from '@prisma/client';
+import { TenantContextService } from '../../common/tenant-context/tenant-context.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CoachContextService } from '../coaches/coach-context.service';
 import { EmailService } from '../messaging/email.service';
@@ -17,6 +18,7 @@ import { TrainingPlanDecisionDto } from './dto/training-decision.dto';
 import { CreateTrainingSessionDto, RecordAttendanceDto, UpdateTrainingSessionDto } from './dto/training-session.dto';
 import { UpsertActivityMarksDto } from './dto/training-activity-mark.dto';
 import { CreateSessionActivityDto } from './dto/training-session-activity.dto';
+import { UpdateTrainingScheduleDto } from './dto/training-schedule.dto';
 
 const EDITABLE_STATUSES: TrainingApprovalStatus[] = ['DRAFT', 'CHANGES_REQUESTED'];
 
@@ -42,10 +44,20 @@ const SESSION_INCLUDE = {
   sessionActivities: { orderBy: { sortOrder: 'asc' as const } },
 } satisfies Prisma.TrainingSessionInclude;
 
-// Training is a fixed academy-wide fixture — every Saturday, 08:00-10:00 — so sessions
-// are auto-provisioned per team rather than manually scheduled.
-const SATURDAY_START_TIME = '08:00';
-const SATURDAY_END_TIME = '10:00';
+// Training is a recurring academy-wide fixture — by default every Saturday, 08:00-10:00 —
+// so sessions are auto-provisioned per team rather than manually scheduled. The Head
+// Coach/Admin can change the day/time/location (see get/updateSchedule below); these are
+// only the fallback used if an academy somehow has no AcademySettings row.
+const DEFAULT_TRAINING_DAY_OF_WEEK = 6; // 0 = Sunday .. 6 = Saturday
+const DEFAULT_TRAINING_START_TIME = '08:00';
+const DEFAULT_TRAINING_END_TIME = '10:00';
+
+export interface TrainingSchedule {
+  dayOfWeek: number;
+  startTime: string;
+  endTime: string;
+  location: string | null;
+}
 
 @Injectable()
 export class TrainingService {
@@ -56,6 +68,7 @@ export class TrainingService {
     private readonly coachContext: CoachContextService,
     private readonly email: EmailService,
     private readonly sms: SmsService,
+    private readonly tenantContext: TenantContextService,
   ) {}
 
   private canApprove(user: RequestUser): boolean {
@@ -362,11 +375,16 @@ export class TrainingService {
     return session;
   }
 
-  private async assertOwnSession(id: string, userId: string) {
-    const coachId = await this.coachContext.resolveCoachId(userId);
+  // A plain Coach may only touch a session they personally created; Head Coach/Admin
+  // (via TRAINING_SESSIONS_MANAGE/TRAINING_MANAGE_OWN without being coach-only) can edit
+  // any session — same bypass pattern as assertCanManageSession below.
+  private async assertOwnSession(id: string, user: RequestUser) {
     const session = await this.getSessionOrThrow(id);
-    if (session.conductedByCoachId !== coachId) {
-      throw new ForbiddenException('You do not have access to this training session');
+    if (this.coachContext.isCoachOnly(user)) {
+      const coachId = await this.coachContext.resolveCoachId(user.userId);
+      if (session.conductedByCoachId !== coachId) {
+        throw new ForbiddenException('You do not have access to this training session');
+      }
     }
     return session;
   }
@@ -384,23 +402,59 @@ export class TrainingService {
     });
   }
 
-  // Every Saturday is a training day academy-wide — rather than wait for someone to hit
-  // quick-mark-attendance or the /sessions/saturday endpoint for a given team, materialize
-  // today's session for every relevant team up front so it already shows up in "my sessions"
-  // (coach dashboard, sessions list) the first time anyone looks, with nothing to schedule.
-  private async ensureTodaysSaturdaySessions(teamIds: string[]) {
-    if (new Date().getUTCDay() !== 6 /* Saturday */ || teamIds.length === 0) {
-      return;
-    }
-    await Promise.all(teamIds.map((teamId) => this.getOrCreateSaturdaySessionRecord(teamId)));
+  // Reads the academy's recurring weekly training fixture (falls back to the
+  // every-Saturday-08:00-10:00 defaults if this academy somehow has no settings row).
+  async getSchedule(): Promise<TrainingSchedule> {
+    const academyId = this.tenantContext.getAcademyId();
+    const settings = await this.prisma.academySettings.findUnique({ where: { academyId } });
+    return {
+      dayOfWeek: settings?.trainingDayOfWeek ?? DEFAULT_TRAINING_DAY_OF_WEEK,
+      startTime: settings?.trainingStartTime ?? DEFAULT_TRAINING_START_TIME,
+      endTime: settings?.trainingEndTime ?? DEFAULT_TRAINING_END_TIME,
+      location: settings?.trainingLocation ?? null,
+    };
   }
 
-  // Training is a shared academy-wide fixture (every Saturday), so Receptionist/Head Coach/
-  // Admin see every session — but a plain Coach is scoped to only their own team(s)/group(s).
+  async updateSchedule(dto: UpdateTrainingScheduleDto): Promise<TrainingSchedule> {
+    const current = await this.getSchedule();
+    const startTime = dto.startTime ?? current.startTime;
+    const endTime = dto.endTime ?? current.endTime;
+    if (startTime >= endTime) {
+      throw new BadRequestException('Start time must be before end time');
+    }
+
+    const academyId = this.tenantContext.getAcademyId();
+    await this.prisma.academySettings.update({
+      where: { academyId },
+      data: {
+        ...(dto.dayOfWeek !== undefined ? { trainingDayOfWeek: dto.dayOfWeek } : {}),
+        ...(dto.startTime ? { trainingStartTime: dto.startTime } : {}),
+        ...(dto.endTime ? { trainingEndTime: dto.endTime } : {}),
+        ...(dto.location !== undefined ? { trainingLocation: dto.location } : {}),
+      },
+    });
+    return this.getSchedule();
+  }
+
+  // The current week's fixture session should always be there to take attendance against —
+  // not just once the configured day actually arrives — so materialize it for every relevant
+  // team up front, any day of the week, rather than waiting for someone to hit
+  // quick-mark-attendance or the /sessions/saturday endpoint for a given team.
+  private async ensureThisWeeksWeeklySessions(teamIds: string[], schedule: TrainingSchedule) {
+    if (teamIds.length === 0) {
+      return;
+    }
+    await Promise.all(teamIds.map((teamId) => this.getOrCreateWeeklySessionRecord(teamId, schedule)));
+  }
+
+  // Training is a shared academy-wide fixture (every Saturday, by default), so Receptionist/
+  // Head Coach/Admin see every session — but a plain Coach is scoped to only their own
+  // team(s)/group(s).
   async findAllSessions(user: RequestUser) {
+    const schedule = await this.getSchedule();
     if (!this.coachContext.isCoachOnly(user)) {
       const allTeamIds = await this.prisma.team.findMany({ where: { isActive: true }, select: { id: true } });
-      await this.ensureTodaysSaturdaySessions(allTeamIds.map((t) => t.id));
+      await this.ensureThisWeeksWeeklySessions(allTeamIds.map((t) => t.id), schedule);
       return this.prisma.trainingSession.findMany({ include: SESSION_INCLUDE, orderBy: { date: 'desc' } });
     }
 
@@ -412,7 +466,7 @@ export class TrainingService {
     if (teamIds.length === 0 && trainingGroupIds.length === 0) {
       return [];
     }
-    await this.ensureTodaysSaturdaySessions(teamIds);
+    await this.ensureThisWeeksWeeklySessions(teamIds, schedule);
 
     return this.prisma.trainingSession.findMany({
       where: {
@@ -432,17 +486,21 @@ export class TrainingService {
     return { ...session, roster };
   }
 
-  async createSession(userId: string, dto: CreateTrainingSessionDto) {
-    const coachId = await this.coachContext.resolveCoachId(userId);
+  // A plain Coach must have a linked Coach profile (they're recorded as conducting the
+  // session); Head Coach/Admin can create a session without one — see resolveOptionalCoachId.
+  async createSession(user: RequestUser, dto: CreateTrainingSessionDto) {
+    const coachId = this.coachContext.isCoachOnly(user)
+      ? await this.coachContext.resolveCoachId(user.userId)
+      : await this.coachContext.resolveOptionalCoachId(user.userId);
     const { date, ...rest } = dto;
     return this.prisma.trainingSession.create({
-      data: { ...rest, date: new Date(date), conductedByCoachId: coachId, status: 'SCHEDULED' },
+      data: { ...rest, date: new Date(date), conductedByCoachId: coachId ?? undefined, status: 'SCHEDULED' },
       include: SESSION_INCLUDE,
     });
   }
 
-  async updateSession(id: string, userId: string, dto: UpdateTrainingSessionDto) {
-    await this.assertOwnSession(id, userId);
+  async updateSession(id: string, user: RequestUser, dto: UpdateTrainingSessionDto) {
+    await this.assertOwnSession(id, user);
     const { date, ...rest } = dto;
     await this.prisma.trainingSession.update({
       where: { id },
@@ -451,49 +509,68 @@ export class TrainingService {
     return this.getSessionOrThrow(id);
   }
 
-  // Rolls a date back to the Saturday of its week (today, if it's already Saturday).
-  private resolveSaturday(dateStr?: string): Date {
+  // Rolls a date back to the most recent occurrence of the fixture's configured day of
+  // week (today, if today already is that day).
+  private resolveFixtureDate(dayOfWeek: number, dateStr?: string): Date {
     const base = dateStr ? new Date(dateStr) : new Date();
-    const day = base.getUTCDay(); // 0 = Sunday .. 6 = Saturday
-    const daysSinceSaturday = (day + 1) % 7;
-    return new Date(Date.UTC(base.getUTCFullYear(), base.getUTCMonth(), base.getUTCDate() - daysSinceSaturday));
+    const day = base.getUTCDay();
+    const daysSince = (day - dayOfWeek + 7) % 7;
+    return new Date(Date.UTC(base.getUTCFullYear(), base.getUTCMonth(), base.getUTCDate() - daysSince));
   }
 
-  private async getOrCreateSaturdaySessionRecord(teamId: string, dateStr?: string) {
-    const date = this.resolveSaturday(dateStr);
+  private async getOrCreateWeeklySessionRecord(teamId: string, schedule: TrainingSchedule, dateStr?: string) {
+    const date = this.resolveFixtureDate(schedule.dayOfWeek, dateStr);
     const existing = await this.prisma.trainingSession.findFirst({ where: { teamId, date }, include: SESSION_INCLUDE });
     return (
       existing ??
       this.prisma.trainingSession.create({
-        data: { teamId, date, startTime: SATURDAY_START_TIME, endTime: SATURDAY_END_TIME, status: 'SCHEDULED' },
+        data: {
+          teamId,
+          date,
+          startTime: schedule.startTime,
+          endTime: schedule.endTime,
+          location: schedule.location ?? undefined,
+          status: 'SCHEDULED',
+        },
         include: SESSION_INCLUDE,
       })
     );
   }
 
-  // Finds (or creates) this team's fixed Saturday 08:00-10:00 session so staff never have
-  // to manually schedule the recurring weekly fixture — they just jump straight to marking
-  // attendance for it.
+  // Finds (or creates) this team's recurring weekly fixture session so staff never have to
+  // manually schedule it — they just jump straight to marking attendance for it. Route/DTO
+  // names kept as "Saturday" for API stability even though the day is now configurable.
   async getOrCreateSaturdaySession(teamId: string, dateStr?: string) {
-    const session = await this.getOrCreateSaturdaySessionRecord(teamId, dateStr);
+    const schedule = await this.getSchedule();
+    const session = await this.getOrCreateWeeklySessionRecord(teamId, schedule, dateStr);
     const roster = await this.rosterFor(session);
     return { ...session, roster };
   }
 
-  // Runs every Saturday at 06:00 — ahead of the 08:00 kickoff — so this week's session
-  // exists for every active team up front instead of waiting for the lazy get-or-create
-  // paths above to fire whenever someone happens to open the app.
-  @Cron('0 6 * * 6')
+  // Runs daily at 06:00 UTC and, for each academy, provisions this week's fixture session
+  // only on the day that academy has configured — ahead of kickoff so the session already
+  // exists when players/staff show up, whichever day of the week that is.
+  @Cron('0 6 * * *')
   async handleSaturdaySessionsCron() {
-    const result = await this.provisionSaturdaySessions();
-    this.logger.log(
-      `Saturday sessions cron: created ${result.created} session(s), skipped ${result.skipped} already existing.`,
-    );
+    const academies = await this.prisma.academy.findMany({ where: { status: 'ACTIVE' } });
+    for (const academy of academies) {
+      await this.tenantContext.run({ academyId: academy.id, slug: academy.slug }, async () => {
+        const result = await this.provisionSaturdaySessions();
+        this.logger.log(
+          `Weekly training sessions cron (${academy.slug}): created ${result.created} session(s), skipped ${result.skipped} already existing.`,
+        );
+      });
+    }
   }
 
   async provisionSaturdaySessions(): Promise<{ created: number; skipped: number }> {
+    const schedule = await this.getSchedule();
+    if (new Date().getUTCDay() !== schedule.dayOfWeek) {
+      return { created: 0, skipped: 0 };
+    }
+
     const teams = await this.prisma.team.findMany({ where: { isActive: true }, select: { id: true, name: true } });
-    const date = this.resolveSaturday();
+    const date = this.resolveFixtureDate(schedule.dayOfWeek);
     let created = 0;
     let skipped = 0;
 
@@ -505,7 +582,14 @@ export class TrainingService {
       }
 
       const session = await this.prisma.trainingSession.create({
-        data: { teamId: team.id, date, startTime: SATURDAY_START_TIME, endTime: SATURDAY_END_TIME, status: 'SCHEDULED' },
+        data: {
+          teamId: team.id,
+          date,
+          startTime: schedule.startTime,
+          endTime: schedule.endTime,
+          location: schedule.location ?? undefined,
+          status: 'SCHEDULED',
+        },
       });
       created++;
       await this.alertCoachesOfSaturdaySession(session, team.name);
@@ -558,9 +642,10 @@ export class TrainingService {
       year: 'numeric',
       timeZone: 'UTC',
     });
-    const timeLabel = `${session.startTime ?? SATURDAY_START_TIME}–${session.endTime ?? SATURDAY_END_TIME}`;
-    const subject = `Saturday training session created — ${teamName}`;
-    const message = `A Saturday training session for ${teamName} has been scheduled for ${dateLabel}, ${timeLabel}${session.location ? ` at ${session.location}` : ''}.`;
+    const dayName = session.date.toLocaleDateString('en-GB', { weekday: 'long', timeZone: 'UTC' });
+    const timeLabel = `${session.startTime ?? DEFAULT_TRAINING_START_TIME}–${session.endTime ?? DEFAULT_TRAINING_END_TIME}`;
+    const subject = `${dayName} training session created — ${teamName}`;
+    const message = `A ${dayName} training session for ${teamName} has been scheduled for ${dateLabel}, ${timeLabel}${session.location ? ` at ${session.location}` : ''}.`;
 
     await Promise.all(
       Array.from(recipients.values()).map((recipient) =>
@@ -591,7 +676,8 @@ export class TrainingService {
       await this.coachContext.assertOwnsPlayer(coachId, player);
     }
 
-    const session = await this.getOrCreateSaturdaySessionRecord(player.teamId);
+    const schedule = await this.getSchedule();
+    const session = await this.getOrCreateWeeklySessionRecord(player.teamId, schedule);
     const recordedAt = new Date();
 
     return this.prisma.trainingAttendance.upsert({

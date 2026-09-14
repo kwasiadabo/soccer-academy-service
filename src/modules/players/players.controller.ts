@@ -37,6 +37,7 @@ import { UpdatePlayerDto } from './dto/update-player.dto';
 import { UpdatePlayerTeamAssignmentDto } from './dto/player-team-assignment.dto';
 import { UpdatePlayerStatusDto } from './dto/player-status.dto';
 import { AddGuardianDto } from './dto/add-guardian.dto';
+import { ApproveRegistrationDto } from './dto/approve-registration.dto';
 import { ConfirmRegistrationPaymentDto } from './dto/confirm-payment.dto';
 import { InitiatePaystackChargeDto, VerifyPaystackChargeDto } from './dto/paystack-charge.dto';
 
@@ -148,8 +149,8 @@ export class PlayersController {
   @AuditLog({ action: 'PLAYER_REGISTRATION_APPROVE', entityType: 'Player' })
   @ApiOperation({ summary: 'Approve a player registration.' })
   @ApiCreatedResponse({ description: 'Registration approved.' })
-  approve(@Param('id') id: string, @CurrentUser() user: RequestUser) {
-    return this.playersService.approve(id, user.userId);
+  approve(@Param('id') id: string, @Body() dto: ApproveRegistrationDto, @CurrentUser() user: RequestUser) {
+    return this.playersService.approve(id, user.userId, dto);
   }
 
   @Post(':id/confirm-payment')

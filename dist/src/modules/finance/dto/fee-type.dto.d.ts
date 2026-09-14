@@ -1,9 +1,8 @@
-import { FeeCategory } from '@prisma/client';
 export declare class CreateFeeTypeDto {
     name: string;
-    category: FeeCategory;
     description?: string;
     isRecurring?: boolean;
+    isRegistrationFee?: boolean;
 }
 export declare class UpdateFeeTypeDto {
     name?: string;
@@ -13,4 +12,5 @@ export declare class UpdateFeeTypeDto {
 }
 export declare class AddFeeTypeItemDto {
     feeItemId: string;
+    amount: number;
 }

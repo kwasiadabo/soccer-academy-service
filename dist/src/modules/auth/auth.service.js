@@ -66,7 +66,7 @@ let AuthService = AuthService_1 = class AuthService {
         });
     }
     async validateCredentials(email, password) {
-        const user = await this.prisma.user.findUnique({
+        const user = await this.prisma.user.findFirst({
             where: { email },
             include: {
                 roles: {
@@ -86,7 +86,7 @@ let AuthService = AuthService_1 = class AuthService {
     buildPayload(user) {
         const roles = user.roles.map((r) => r.role.name);
         const permissions = Array.from(new Set(user.roles.flatMap((r) => r.role.permissions.map((p) => p.permission.key))));
-        return { sub: user.id, email: user.email, roles, permissions };
+        return { sub: user.id, academyId: user.academyId, email: user.email, roles, permissions };
     }
     async login(email, password) {
         const user = await this.validateCredentials(email, password);
@@ -152,7 +152,7 @@ let AuthService = AuthService_1 = class AuthService {
         return this.accessTokenJwt;
     }
     async requestPasswordReset(email) {
-        const user = await this.prisma.user.findUnique({ where: { email } });
+        const user = await this.prisma.user.findFirst({ where: { email } });
         if (!user || user.deletedAt || user.status !== 'ACTIVE') {
             return;
         }

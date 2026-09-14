@@ -12,22 +12,24 @@ var PaystackService_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.PaystackService = void 0;
 const common_1 = require("@nestjs/common");
-const config_1 = require("@nestjs/config");
+const tenant_context_service_1 = require("../../common/tenant-context/tenant-context.service");
+const prisma_service_1 = require("../prisma/prisma.service");
 let PaystackService = PaystackService_1 = class PaystackService {
-    constructor(config) {
-        this.config = config;
+    constructor(prisma, tenantContext) {
+        this.prisma = prisma;
+        this.tenantContext = tenantContext;
         this.logger = new common_1.Logger(PaystackService_1.name);
-        this.secretKey = this.config.get('PAYSTACK_SECRET_KEY');
-        this.currency = this.config.get('PAYSTACK_CURRENCY', 'GHS');
     }
-    assertConfigured() {
-        if (!this.secretKey) {
-            throw new common_1.BadRequestException('Paystack is not configured on this server');
+    async getCredentials() {
+        const academyId = this.tenantContext.getAcademyId();
+        const settings = await this.prisma.academySettings.findUnique({ where: { academyId } });
+        if (!settings?.paystackSecretKey) {
+            throw new common_1.BadRequestException('Paystack is not configured for this academy');
         }
-        return this.secretKey;
+        return { secretKey: settings.paystackSecretKey, currency: settings.paystackCurrency };
     }
     async chargeMobileMoney(params) {
-        const secretKey = this.assertConfigured();
+        const { secretKey, currency } = await this.getCredentials();
         const response = await fetch('https://api.paystack.co/charge', {
             method: 'POST',
             headers: {
@@ -37,7 +39,7 @@ let PaystackService = PaystackService_1 = class PaystackService {
             body: JSON.stringify({
                 email: params.email,
                 amount: Math.round(params.amount * 100),
-                currency: this.currency,
+                currency,
                 reference: params.reference,
                 mobile_money: { phone: params.phone, provider: params.provider },
             }),
@@ -54,7 +56,7 @@ let PaystackService = PaystackService_1 = class PaystackService {
         };
     }
     async verifyTransaction(reference) {
-        const secretKey = this.assertConfigured();
+        const { secretKey } = await this.getCredentials();
         const response = await fetch(`https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`, {
             headers: { Authorization: `Bearer ${secretKey}` },
         });
@@ -68,6 +70,7 @@ let PaystackService = PaystackService_1 = class PaystackService {
 exports.PaystackService = PaystackService;
 exports.PaystackService = PaystackService = PaystackService_1 = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [config_1.ConfigService])
+    __metadata("design:paramtypes", [prisma_service_1.PrismaService,
+        tenant_context_service_1.TenantContextService])
 ], PaystackService);
 //# sourceMappingURL=paystack.service.js.map

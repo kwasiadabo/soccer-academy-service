@@ -14,6 +14,7 @@ const common_1 = require("@nestjs/common");
 const config_1 = require("@nestjs/config");
 const passport_1 = require("@nestjs/passport");
 const passport_jwt_1 = require("passport-jwt");
+const tenant_context_service_1 = require("../../../common/tenant-context/tenant-context.service");
 const prisma_service_1 = require("../../prisma/prisma.service");
 const ALLOWED_PATHS_WHEN_MUST_CHANGE_PASSWORD = [
     '/api/auth/change-password',
@@ -21,7 +22,7 @@ const ALLOWED_PATHS_WHEN_MUST_CHANGE_PASSWORD = [
     '/api/auth/logout',
 ];
 let JwtStrategy = class JwtStrategy extends (0, passport_1.PassportStrategy)(passport_jwt_1.Strategy) {
-    constructor(config, prisma) {
+    constructor(config, prisma, tenantContext) {
         super({
             jwtFromRequest: passport_jwt_1.ExtractJwt.fromAuthHeaderAsBearerToken(),
             ignoreExpiration: false,
@@ -29,8 +30,12 @@ let JwtStrategy = class JwtStrategy extends (0, passport_1.PassportStrategy)(pas
             passReqToCallback: true,
         });
         this.prisma = prisma;
+        this.tenantContext = tenantContext;
     }
     async validate(req, payload) {
+        if (payload.academyId !== this.tenantContext.getAcademyId()) {
+            throw new common_1.UnauthorizedException('Token does not belong to this academy');
+        }
         const user = await this.prisma.user.findUnique({ where: { id: payload.sub } });
         if (!user || user.deletedAt || user.status !== 'ACTIVE') {
             throw new common_1.UnauthorizedException('User is no longer active');
@@ -40,6 +45,7 @@ let JwtStrategy = class JwtStrategy extends (0, passport_1.PassportStrategy)(pas
         }
         return {
             userId: payload.sub,
+            academyId: payload.academyId,
             email: payload.email,
             roles: payload.roles,
             permissions: payload.permissions,
@@ -51,6 +57,7 @@ exports.JwtStrategy = JwtStrategy;
 exports.JwtStrategy = JwtStrategy = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [config_1.ConfigService,
-        prisma_service_1.PrismaService])
+        prisma_service_1.PrismaService,
+        tenant_context_service_1.TenantContextService])
 ], JwtStrategy);
 //# sourceMappingURL=jwt.strategy.js.map

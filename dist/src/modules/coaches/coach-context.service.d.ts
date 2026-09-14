@@ -4,6 +4,7 @@ export declare class CoachContextService {
     private readonly prisma;
     constructor(prisma: PrismaService);
     resolveCoachId(userId: string): Promise<string>;
+    resolveOptionalCoachId(userId: string): Promise<string | null>;
     assertOwnsTeam(coachId: string, teamId: string): Promise<void>;
     assertOwnsTrainingGroup(coachId: string, trainingGroupId: string): Promise<void>;
     getAssignedTeamIds(coachId: string): Promise<string[]>;

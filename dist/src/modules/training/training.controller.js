@@ -29,13 +29,16 @@ const training_decision_dto_1 = require("./dto/training-decision.dto");
 const training_session_dto_1 = require("./dto/training-session.dto");
 const training_activity_mark_dto_1 = require("./dto/training-activity-mark.dto");
 const training_session_activity_dto_1 = require("./dto/training-session-activity.dto");
+const training_schedule_dto_1 = require("./dto/training-schedule.dto");
 const OWN_OR_APPROVE = [permissions_constants_1.PERMISSIONS.TRAINING_MANAGE_OWN, permissions_constants_1.PERMISSIONS.TRAINING_APPROVE];
 const VIEW_SESSIONS = [
     permissions_constants_1.PERMISSIONS.TRAINING_MANAGE_OWN,
     permissions_constants_1.PERMISSIONS.TRAINING_APPROVE,
     permissions_constants_1.PERMISSIONS.TRAINING_ATTENDANCE_RECORD,
+    permissions_constants_1.PERMISSIONS.TRAINING_SESSIONS_MANAGE,
 ];
 const RECORD_ATTENDANCE = [permissions_constants_1.PERMISSIONS.TRAINING_MANAGE_OWN, permissions_constants_1.PERMISSIONS.TRAINING_ATTENDANCE_RECORD];
+const MANAGE_SESSIONS = [permissions_constants_1.PERMISSIONS.TRAINING_MANAGE_OWN, permissions_constants_1.PERMISSIONS.TRAINING_SESSIONS_MANAGE];
 let TrainingController = class TrainingController {
     constructor(trainingService) {
         this.trainingService = trainingService;
@@ -77,7 +80,13 @@ let TrainingController = class TrainingController {
         return this.trainingService.findOneSession(id);
     }
     createSession(dto, user) {
-        return this.trainingService.createSession(user.userId, dto);
+        return this.trainingService.createSession(user, dto);
+    }
+    getSchedule() {
+        return this.trainingService.getSchedule();
+    }
+    updateSchedule(dto) {
+        return this.trainingService.updateSchedule(dto);
     }
     getOrCreateSaturdaySession(dto) {
         return this.trainingService.getOrCreateSaturdaySession(dto.teamId, dto.date);
@@ -86,7 +95,7 @@ let TrainingController = class TrainingController {
         return this.trainingService.quickMarkAttendance(dto.playerId, user, dto.status);
     }
     updateSession(id, dto, user) {
-        return this.trainingService.updateSession(id, user.userId, dto);
+        return this.trainingService.updateSession(id, user, dto);
     }
     recordAttendance(id, dto, user) {
         return this.trainingService.recordAttendance(id, user, dto);
@@ -255,7 +264,7 @@ __decorate([
 ], TrainingController.prototype, "findOneSession", null);
 __decorate([
     (0, common_1.Post)('sessions'),
-    (0, permissions_decorator_1.RequirePermissions)(permissions_constants_1.PERMISSIONS.TRAINING_MANAGE_OWN),
+    (0, permissions_decorator_1.RequireAnyPermission)(...MANAGE_SESSIONS),
     (0, audit_log_decorator_1.AuditLog)({ action: 'TRAINING_SESSION_CREATE', entityType: 'TrainingSession' }),
     (0, swagger_1.ApiOperation)({ summary: 'Create a training session.' }),
     (0, swagger_1.ApiCreatedResponse)({ description: 'Session created.' }),
@@ -265,6 +274,26 @@ __decorate([
     __metadata("design:paramtypes", [training_session_dto_1.CreateTrainingSessionDto, Object]),
     __metadata("design:returntype", void 0)
 ], TrainingController.prototype, "createSession", null);
+__decorate([
+    (0, common_1.Get)('schedule'),
+    (0, permissions_decorator_1.RequireAnyPermission)(...VIEW_SESSIONS),
+    (0, swagger_1.ApiOperation)({ summary: "Get the academy's recurring weekly training fixture." }),
+    (0, swagger_1.ApiOkResponse)({ description: 'Schedule returned.' }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", void 0)
+], TrainingController.prototype, "getSchedule", null);
+__decorate([
+    (0, common_1.Patch)('schedule'),
+    (0, permissions_decorator_1.RequirePermissions)(permissions_constants_1.PERMISSIONS.TRAINING_SCHEDULE_MANAGE),
+    (0, audit_log_decorator_1.AuditLog)({ action: 'TRAINING_SCHEDULE_UPDATE', entityType: 'AcademySettings' }),
+    (0, swagger_1.ApiOperation)({ summary: "Update the academy's recurring weekly training fixture." }),
+    (0, swagger_1.ApiOkResponse)({ description: 'Schedule updated.' }),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [training_schedule_dto_1.UpdateTrainingScheduleDto]),
+    __metadata("design:returntype", void 0)
+], TrainingController.prototype, "updateSchedule", null);
 __decorate([
     (0, common_1.Post)('sessions/saturday'),
     (0, permissions_decorator_1.RequireAnyPermission)(...RECORD_ATTENDANCE),
@@ -290,7 +319,7 @@ __decorate([
 ], TrainingController.prototype, "quickMarkAttendance", null);
 __decorate([
     (0, common_1.Patch)('sessions/:id'),
-    (0, permissions_decorator_1.RequirePermissions)(permissions_constants_1.PERMISSIONS.TRAINING_MANAGE_OWN),
+    (0, permissions_decorator_1.RequireAnyPermission)(...MANAGE_SESSIONS),
     (0, audit_log_decorator_1.AuditLog)({ action: 'TRAINING_SESSION_UPDATE', entityType: 'TrainingSession' }),
     (0, swagger_1.ApiOperation)({ summary: 'Update a training session.' }),
     (0, swagger_1.ApiOkResponse)({ description: 'Session updated.' }),

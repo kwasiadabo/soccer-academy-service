@@ -47,7 +47,6 @@ const common_1 = require("@nestjs/common");
 const bcrypt = __importStar(require("bcrypt"));
 const prisma_service_1 = require("../prisma/prisma.service");
 const auth_service_1 = require("../auth/auth.service");
-const permissions_constants_1 = require("../rbac/permissions.constants");
 const userListSelect = {
     id: true,
     email: true,
@@ -93,26 +92,34 @@ let UsersService = class UsersService {
         return roles;
     }
     async create(dto) {
-        const existing = await this.prisma.user.findUnique({ where: { email: dto.email } });
+        const coach = await this.prisma.coach.findFirst({ where: { id: dto.coachId, deletedAt: null } });
+        if (!coach) {
+            throw new common_1.NotFoundException('Staff member not found');
+        }
+        if (coach.userId) {
+            throw new common_1.BadRequestException('This staff member already has a user account');
+        }
+        const existing = await this.prisma.user.findFirst({ where: { email: dto.email } });
         if (existing) {
             throw new common_1.ConflictException('A user with this email already exists');
         }
         const roles = await this.resolveRoles(dto.roleNames);
-        const mustChangePassword = dto.mustChangePassword ?? dto.roleNames.includes(permissions_constants_1.ROLE_NAMES.PARENT);
+        const mustChangePassword = dto.mustChangePassword ?? true;
         const passwordHash = await bcrypt.hash(dto.password, 10);
-        const user = await this.prisma.user.create({
+        const created = await this.prisma.user.create({
             data: {
                 email: dto.email,
                 passwordHash,
-                firstName: dto.firstName,
-                lastName: dto.lastName,
-                phone: dto.phone,
+                firstName: coach.firstName,
+                lastName: coach.lastName,
+                phone: coach.phone,
                 mustChangePassword,
                 roles: { create: roles.map((role) => ({ roleId: role.id })) },
             },
             select: userListSelect,
         });
-        return this.serialize(user);
+        await this.prisma.coach.update({ where: { id: coach.id }, data: { userId: created.id } });
+        return this.serialize(created);
     }
     async update(id, dto) {
         const existing = await this.prisma.user.findFirst({ where: { id, deletedAt: null } });
@@ -120,7 +127,7 @@ let UsersService = class UsersService {
             throw new common_1.NotFoundException('User not found');
         }
         if (dto.email && dto.email !== existing.email) {
-            const emailTaken = await this.prisma.user.findUnique({ where: { email: dto.email } });
+            const emailTaken = await this.prisma.user.findFirst({ where: { email: dto.email } });
             if (emailTaken) {
                 throw new common_1.ConflictException('A user with this email already exists');
             }

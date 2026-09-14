@@ -9,6 +9,14 @@ export const PERMISSIONS = {
   TRAINING_MANAGE_OWN: 'training:manage-own',
   TRAINING_APPROVE: 'training:approve',
   TRAINING_ATTENDANCE_RECORD: 'training:attendance-record',
+  // Narrower than TRAINING_MANAGE_OWN — lets a caller create/reschedule training
+  // sessions (logistics only: team, date, time, location) without the rest of
+  // TRAINING_MANAGE_OWN's scope (training plans, session activities).
+  TRAINING_SESSIONS_MANAGE: 'training:sessions-manage',
+  // Lets a caller change the academy's recurring weekly training fixture (day of
+  // week, start/end time, location) — the schedule that TRAINING_SESSIONS_MANAGE's
+  // and TRAINING_MANAGE_OWN's auto-provisioned sessions are generated from.
+  TRAINING_SCHEDULE_MANAGE: 'training:schedule-manage',
   ASSESSMENTS_MANAGE_OWN: 'assessments:manage-own',
   ASSESSMENTS_VIEW: 'assessments:view',
   ASSESSMENTS_MANAGE_TEMPLATES: 'assessments:manage-templates',
@@ -22,6 +30,9 @@ export const PERMISSIONS = {
   ISSUES_MANAGE: 'issues:manage',
   ORDERS_MANAGE: 'orders:manage',
   GALLERY_MANAGE: 'gallery:manage',
+  // SAMS's own subscription/billing for this academy — not the academy's own
+  // player-fee finance (FINANCE_MANAGE), which is unrelated.
+  BILLING_MANAGE: 'billing:manage',
 } as const;
 
 export type PermissionKey = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
@@ -56,6 +67,14 @@ export const ROLE_PERMISSIONS: Record<string, PermissionKey[]> = {
     PERMISSIONS.ACADEMY_CONFIG_VIEW,
     PERMISSIONS.PLAYERS_VIEW,
     PERMISSIONS.TRAINING_APPROVE,
+    // Lets a Head Coach open a session's roster and record who showed up, same
+    // as Reception — narrower than TRAINING_MANAGE_OWN, which also covers
+    // creating/editing sessions and plans.
+    PERMISSIONS.TRAINING_ATTENDANCE_RECORD,
+    // Lets a Head Coach create/reschedule training sessions (e.g. a makeup session)
+    // for any team, and edit the academy's recurring weekly training fixture.
+    PERMISSIONS.TRAINING_SESSIONS_MANAGE,
+    PERMISSIONS.TRAINING_SCHEDULE_MANAGE,
     PERMISSIONS.ASSESSMENTS_VIEW,
     // Lets a Head Coach submit ratings, but only for sessions/matches they were
     // personally in charge of — see CoachContextService#assertOwnsOrConductedSession

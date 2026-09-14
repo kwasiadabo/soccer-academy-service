@@ -42,6 +42,13 @@ export class MerchandiseOrdersController {
     return this.ordersService.pendingCount();
   }
 
+  @Get('report')
+  @ApiOperation({ summary: 'Get a report of items ordered within a date range — either sold (paid) or still pending payment.' })
+  @ApiOkResponse({ description: 'Report returned.' })
+  getReport(@Query('from') from?: string, @Query('to') to?: string, @Query('status') status?: string) {
+    return this.ordersService.getOrdersReport(from, to, status === 'PENDING' ? 'PENDING' : 'SOLD');
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get an order by ID.' })
   @ApiOkResponse({ description: 'Order returned.' })

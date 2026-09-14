@@ -19,13 +19,14 @@ export declare class IssuesService {
         };
     } & {
         id: string;
-        description: string;
+        status: import(".prisma/client").$Enums.IssueStatus;
         createdAt: Date;
         updatedAt: Date;
-        status: import(".prisma/client").$Enums.IssueStatus;
-        subject: string;
+        description: string;
+        academyId: string;
         guardianId: string;
         submittedByUserId: string;
+        subject: string;
     }>;
     listMyIssues(userId: string): Promise<({
         guardian: {
@@ -43,13 +44,14 @@ export declare class IssuesService {
         };
     } & {
         id: string;
-        description: string;
+        status: import(".prisma/client").$Enums.IssueStatus;
         createdAt: Date;
         updatedAt: Date;
-        status: import(".prisma/client").$Enums.IssueStatus;
-        subject: string;
+        description: string;
+        academyId: string;
         guardianId: string;
         submittedByUserId: string;
+        subject: string;
     })[]>;
     unreadCount(userId: string): Promise<number>;
     private assertOwnsIssue;
@@ -73,21 +75,23 @@ export declare class IssuesService {
         } & {
             id: string;
             createdAt: Date;
+            academyId: string;
             message: string;
-            readAt: Date | null;
-            isStaffReply: boolean;
             issueId: string;
             authorUserId: string;
+            isStaffReply: boolean;
+            readAt: Date | null;
         })[];
     } & {
         id: string;
-        description: string;
+        status: import(".prisma/client").$Enums.IssueStatus;
         createdAt: Date;
         updatedAt: Date;
-        status: import(".prisma/client").$Enums.IssueStatus;
-        subject: string;
+        description: string;
+        academyId: string;
         guardianId: string;
         submittedByUserId: string;
+        subject: string;
     }>;
     addMyMessage(userId: string, issueId: string, message: string): Promise<{
         guardian: {
@@ -109,21 +113,23 @@ export declare class IssuesService {
         } & {
             id: string;
             createdAt: Date;
+            academyId: string;
             message: string;
-            readAt: Date | null;
-            isStaffReply: boolean;
             issueId: string;
             authorUserId: string;
+            isStaffReply: boolean;
+            readAt: Date | null;
         })[];
     } & {
         id: string;
-        description: string;
+        status: import(".prisma/client").$Enums.IssueStatus;
         createdAt: Date;
         updatedAt: Date;
-        status: import(".prisma/client").$Enums.IssueStatus;
-        subject: string;
+        description: string;
+        academyId: string;
         guardianId: string;
         submittedByUserId: string;
+        subject: string;
     }>;
     listAll(): Promise<({
         guardian: {
@@ -141,13 +147,14 @@ export declare class IssuesService {
         };
     } & {
         id: string;
-        description: string;
+        status: import(".prisma/client").$Enums.IssueStatus;
         createdAt: Date;
         updatedAt: Date;
-        status: import(".prisma/client").$Enums.IssueStatus;
-        subject: string;
+        description: string;
+        academyId: string;
         guardianId: string;
         submittedByUserId: string;
+        subject: string;
     })[]>;
     getForStaff(issueId: string): Promise<{
         guardian: {
@@ -169,21 +176,23 @@ export declare class IssuesService {
         } & {
             id: string;
             createdAt: Date;
+            academyId: string;
             message: string;
-            readAt: Date | null;
-            isStaffReply: boolean;
             issueId: string;
             authorUserId: string;
+            isStaffReply: boolean;
+            readAt: Date | null;
         })[];
     } & {
         id: string;
-        description: string;
+        status: import(".prisma/client").$Enums.IssueStatus;
         createdAt: Date;
         updatedAt: Date;
-        status: import(".prisma/client").$Enums.IssueStatus;
-        subject: string;
+        description: string;
+        academyId: string;
         guardianId: string;
         submittedByUserId: string;
+        subject: string;
     }>;
     addStaffMessage(userId: string, issueId: string, message: string): Promise<{
         guardian: {
@@ -205,21 +214,23 @@ export declare class IssuesService {
         } & {
             id: string;
             createdAt: Date;
+            academyId: string;
             message: string;
-            readAt: Date | null;
-            isStaffReply: boolean;
             issueId: string;
             authorUserId: string;
+            isStaffReply: boolean;
+            readAt: Date | null;
         })[];
     } & {
         id: string;
-        description: string;
+        status: import(".prisma/client").$Enums.IssueStatus;
         createdAt: Date;
         updatedAt: Date;
-        status: import(".prisma/client").$Enums.IssueStatus;
-        subject: string;
+        description: string;
+        academyId: string;
         guardianId: string;
         submittedByUserId: string;
+        subject: string;
     }>;
     updateStatus(issueId: string, status: IssueStatus): Promise<{
         guardian: {
@@ -241,20 +252,22 @@ export declare class IssuesService {
         } & {
             id: string;
             createdAt: Date;
+            academyId: string;
             message: string;
-            readAt: Date | null;
-            isStaffReply: boolean;
             issueId: string;
             authorUserId: string;
+            isStaffReply: boolean;
+            readAt: Date | null;
         })[];
     } & {
         id: string;
-        description: string;
+        status: import(".prisma/client").$Enums.IssueStatus;
         createdAt: Date;
         updatedAt: Date;
-        status: import(".prisma/client").$Enums.IssueStatus;
-        subject: string;
+        description: string;
+        academyId: string;
         guardianId: string;
         submittedByUserId: string;
+        subject: string;
     }>;
 }

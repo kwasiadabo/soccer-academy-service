@@ -4,6 +4,7 @@ import { randomUUID } from 'crypto';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { v2 as cloudinary } from 'cloudinary';
+import { TenantContextService } from '../../common/tenant-context/tenant-context.service';
 
 export interface StoredFile {
   storageKey: string;
@@ -26,7 +27,10 @@ export class StorageService {
   private readonly driver: 'local' | 'cloudinary';
   private readonly basePath: string;
 
-  constructor(private readonly config: ConfigService) {
+  constructor(
+    private readonly config: ConfigService,
+    private readonly tenantContext: TenantContextService,
+  ) {
     this.driver = this.config.get<'local' | 'cloudinary'>('STORAGE_DRIVER', 'local');
     this.basePath = this.config.get<string>('STORAGE_LOCAL_PATH', './uploads');
 
@@ -79,9 +83,13 @@ export class StorageService {
   }
 
   private saveToCloudinary(originalName: string, mimeType: string, buffer: Buffer): Promise<StoredFile> {
+    // Everything shares one Cloudinary account across academies — the folder
+    // namespace is what keeps their assets apart (and lets one academy's
+    // uploads be bulk-managed/exported without touching another's).
+    const folder = `academies/${this.tenantContext.getSlug()}`;
     return new Promise((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(
-        { resource_type: 'auto', folder: 'soccer-academy' },
+        { resource_type: 'auto', folder },
         (error, result) => {
           if (error || !result) {
             reject(error instanceof Error ? error : new Error('Cloudinary upload failed'));
@@ -111,9 +119,11 @@ export class StorageService {
   }
 
   private async saveToLocal(originalName: string, mimeType: string, buffer: Buffer): Promise<StoredFile> {
-    await fs.mkdir(this.basePath, { recursive: true });
+    const slug = this.tenantContext.getSlug();
+    const dir = path.join(this.basePath, slug);
+    await fs.mkdir(dir, { recursive: true });
     const ext = path.extname(originalName);
-    const storageKey = `${randomUUID()}${ext}`;
+    const storageKey = `${slug}/${randomUUID()}${ext}`;
     await fs.writeFile(path.join(this.basePath, storageKey), buffer);
 
     return {

@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { join } from 'node:path';
 import { Prisma } from '@prisma/client';
+import { TenantContextService } from '../../common/tenant-context/tenant-context.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { EmailService } from '../messaging/email.service';
 import { SmsService } from '../messaging/sms.service';
@@ -29,7 +29,7 @@ function buildReceiptRows(
     invoice: {
       description: string | null;
       issuedAt: Date;
-      feeType: { name: string; category: string };
+      feeType: { name: string; isRecurring: boolean };
       merchandiseOrder: {
         items: { quantity: number; productVariant: { sizeLabel: string; product: { name: string } } }[];
       } | null;
@@ -44,7 +44,7 @@ function buildReceiptRows(
     // month was paid — append it from the invoice's issued date instead.
     const label =
       a.invoice.description ??
-      (a.invoice.feeType.category === 'MONTHLY_SUBSCRIPTION'
+      (a.invoice.feeType.isRecurring
         ? `${a.invoice.feeType.name} - ${monthLabel(a.invoice.issuedAt)}`
         : a.invoice.feeType.name);
     if (items.length > 0) {
@@ -74,18 +74,28 @@ const BRAND = {
   border: '#e4e4e7',
 };
 
-const LOGO_PATH = join(__dirname, 'assets', 'kapikids-logo.png');
-const LOGO_CID = 'kapikids-academy-logo';
-
 @Injectable()
 export class ReceiptsService {
   private readonly logger = new Logger(ReceiptsService.name);
 
   constructor(
     private readonly prisma: PrismaService,
+    private readonly tenantContext: TenantContextService,
     private readonly email: EmailService,
     private readonly sms: SmsService,
   ) {}
+
+  private async getBranding(): Promise<{ brandName: string; logoUrl: string | null }> {
+    const academyId = this.tenantContext.getAcademyId();
+    const settings = await this.prisma.academySettings.findUnique({ where: { academyId } });
+    return { brandName: settings?.brandName ?? 'Your Academy', logoUrl: settings?.logoUrl ?? null };
+  }
+
+  // No logoUrl configured for this academy yet -> the header shows only its name.
+  private renderLogo(logoUrl: string | null): string {
+    if (!logoUrl) return '';
+    return `<img src="${logoUrl}" alt="" width="64" height="64" style="display: block; margin: 0 auto 8px; border-radius: 50%; background: #fff; object-fit: cover;" />`;
+  }
 
   // Best-effort — never throws, so a notification failure never rolls back a
   // payment that has already been recorded.
@@ -125,15 +135,16 @@ export class ReceiptsService {
       });
       const rows = buildReceiptRows(payment.allocations);
       const total = formatGhs(payment.amount);
+      const { brandName, logoUrl } = await this.getBranding();
 
-      const smsMessage = `Kapikids Soccer Academy: Payment received for ${playerName}. Receipt ${payment.receiptNumber}. Amount: ${total}. Method: ${payment.method}. Thank you!`;
+      const smsMessage = `${brandName}: Payment received for ${playerName}. Receipt ${payment.receiptNumber}. Amount: ${total}. Method: ${payment.method}. Thank you!`;
 
-      const subject = `Payment Receipt ${payment.receiptNumber} — Kapikids Soccer Academy`;
+      const subject = `Payment Receipt ${payment.receiptNumber} — ${brandName}`;
       const html = `
         <div style="font-family: Arial, Helvetica, sans-serif; max-width: 480px; margin: 0 auto; color: ${BRAND.ink}; border: 1px solid ${BRAND.border}; border-radius: 12px; overflow: hidden;">
           <div style="background: ${BRAND.primary}; padding: 24px; text-align: center;">
-            <img src="cid:${LOGO_CID}" alt="Kapikids Soccer Academy" width="64" height="64" style="display: block; margin: 0 auto 8px; border-radius: 50%; background: #fff;" />
-            <p style="color: #ffffff; font-size: 18px; font-weight: 700; margin: 0; letter-spacing: -0.01em;">Kapikids Soccer Academy</p>
+            ${this.renderLogo(logoUrl)}
+            <p style="color: #ffffff; font-size: 18px; font-weight: 700; margin: 0; letter-spacing: -0.01em;">${brandName}</p>
             <p style="color: ${BRAND.tint}; font-size: 13px; margin: 4px 0 0;">Payment Receipt</p>
           </div>
           <div style="padding: 24px; background: #ffffff;">
@@ -161,14 +172,7 @@ export class ReceiptsService {
 
       const results = await Promise.all([
         guardian.phone ? this.sms.send(guardian.phone, smsMessage) : Promise.resolve(false),
-        guardian.email
-          ? this.email.send({
-              to: guardian.email,
-              subject,
-              html,
-              attachments: [{ filename: 'kapikids-logo.png', path: LOGO_PATH, cid: LOGO_CID }],
-            })
-          : Promise.resolve(false),
+        guardian.email ? this.email.send({ to: guardian.email, subject, html }) : Promise.resolve(false),
       ]);
       this.logger.log(`Receipt ${payment.receiptNumber}: sms=${results[0]} email=${results[1]}`);
     } catch (err) {
@@ -202,14 +206,15 @@ export class ReceiptsService {
         year: 'numeric',
       });
 
-      const smsMessage = `Kapikids Soccer Academy: Payment reminder for ${playerName} — ${invoice.feeType.name}, ${amount} due ${dueDate} (invoice ${invoice.invoiceNumber}). Please settle at your earliest convenience.`;
+      const { brandName, logoUrl } = await this.getBranding();
+      const smsMessage = `${brandName}: Payment reminder for ${playerName} — ${invoice.feeType.name}, ${amount} due ${dueDate} (invoice ${invoice.invoiceNumber}). Please settle at your earliest convenience.`;
 
-      const subject = `Payment Reminder — Kapikids Soccer Academy`;
+      const subject = `Payment Reminder — ${brandName}`;
       const html = `
         <div style="font-family: Arial, Helvetica, sans-serif; max-width: 480px; margin: 0 auto; color: ${BRAND.ink}; border: 1px solid ${BRAND.border}; border-radius: 12px; overflow: hidden;">
           <div style="background: ${BRAND.primary}; padding: 24px; text-align: center;">
-            <img src="cid:${LOGO_CID}" alt="Kapikids Soccer Academy" width="64" height="64" style="display: block; margin: 0 auto 8px; border-radius: 50%; background: #fff;" />
-            <p style="color: #ffffff; font-size: 18px; font-weight: 700; margin: 0; letter-spacing: -0.01em;">Kapikids Soccer Academy</p>
+            ${this.renderLogo(logoUrl)}
+            <p style="color: #ffffff; font-size: 18px; font-weight: 700; margin: 0; letter-spacing: -0.01em;">${brandName}</p>
             <p style="color: ${BRAND.tint}; font-size: 13px; margin: 4px 0 0;">Payment Reminder</p>
           </div>
           <div style="padding: 24px; background: #ffffff;">
@@ -227,14 +232,7 @@ export class ReceiptsService {
 
       const [sms, email] = await Promise.all([
         this.sms.send(guardian.phone, smsMessage),
-        guardian.email
-          ? this.email.send({
-              to: guardian.email,
-              subject,
-              html,
-              attachments: [{ filename: 'kapikids-logo.png', path: LOGO_PATH, cid: LOGO_CID }],
-            })
-          : Promise.resolve(false),
+        guardian.email ? this.email.send({ to: guardian.email, subject, html }) : Promise.resolve(false),
       ]);
       this.logger.log(`Reminder for invoice ${invoice.invoiceNumber}: sms=${sms} email=${email}`);
       return { sms, email };

@@ -7,7 +7,36 @@ import { PERMISSIONS, ROLE_NAMES, ROLE_PERMISSIONS } from '../src/modules/rbac/p
 
 const prisma = new PrismaClient();
 
+// This script runs standalone, outside any HTTP request — there's no
+// tenant-resolution middleware to set the current academy for it. It seeds
+// (or reuses) one designated academy explicitly, then sets the same Postgres
+// session variable the app's request-scoped middleware would set, so every
+// tenant-scoped table's `academyId` default (and every row-level-security
+// policy) resolves against that academy for the rest of this run.
+const SEED_ACADEMY_SLUG = 'kapikids';
+const SEED_ACADEMY_NAME = 'Kapikids Soccer Academy';
+
 async function main() {
+  console.log(`Seeding academy '${SEED_ACADEMY_SLUG}'...`);
+  const academy = await prisma.academy.upsert({
+    where: { slug: SEED_ACADEMY_SLUG },
+    update: {},
+    create: { slug: SEED_ACADEMY_SLUG, name: SEED_ACADEMY_NAME, status: 'ACTIVE' },
+  });
+
+  console.log('Seeding a default platform admin (platform-operator control plane)...');
+  const platformAdminEmail = 'platform-admin@sams.internal';
+  await prisma.platformAdmin.upsert({
+    where: { email: platformAdminEmail },
+    update: {},
+    create: {
+      email: platformAdminEmail,
+      passwordHash: await bcrypt.hash('ChangeMe123!', 10),
+      firstName: 'Platform',
+      lastName: 'Operator',
+    },
+  });
+
   console.log('Seeding permissions...');
   const permissionRecords = await Promise.all(
     Object.values(PERMISSIONS).map((key) =>
@@ -40,89 +69,111 @@ async function main() {
     }
   }
 
-  console.log('Seeding admin user...');
   const adminEmail = 'admin@academy.test';
   const passwordHash = await bcrypt.hash('ChangeMe123!', 10);
-  const adminUser = await prisma.user.upsert({
-    where: { email: adminEmail },
-    update: {},
-    create: {
-      email: adminEmail,
-      passwordHash,
-      firstName: 'System',
-      lastName: 'Administrator',
-    },
-  });
 
-  const adminRole = await prisma.role.findUniqueOrThrow({ where: { name: ROLE_NAMES.ADMIN } });
-  await prisma.userRole.upsert({
-    where: { userId_roleId: { userId: adminUser.id, roleId: adminRole.id } },
-    update: {},
-    create: { userId: adminUser.id, roleId: adminRole.id },
-  });
+  // Everything below is tenant-scoped (see TENANT_SCOPED_MODELS) and needs
+  // `app.current_academy_id` set for its academyId default/RLS check to
+  // resolve correctly. A single interactive transaction, not a bare
+  // `set_config(..., false)` before separate calls — Prisma's connection pool
+  // doesn't guarantee later calls reuse the same connection a session-level
+  // set_config was run on, which silently breaks exactly this kind of script.
+  const adminUser = await prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT set_config('app.current_academy_id', ${academy.id}, true)`;
 
-  console.log('Seeding sample academy structure...');
-  const season = await prisma.season.upsert({
-    where: { id: '00000000-0000-4000-8000-000000000001' },
-    update: {},
-    create: {
-      id: '00000000-0000-4000-8000-000000000001',
-      name: '2026 Season',
-      startDate: new Date('2026-01-01'),
-      endDate: new Date('2026-12-31'),
-    },
-  });
+    console.log('Seeding academy settings...');
+    await tx.academySettings.upsert({
+      where: { academyId: academy.id },
+      update: {},
+      create: { academyId: academy.id, brandName: SEED_ACADEMY_NAME },
+    });
 
-  const ageCategory = await prisma.ageCategory.upsert({
-    where: { code: 'U12' },
-    update: {},
-    create: { name: 'Under 12', code: 'U12', minAge: 10, maxAge: 12, sortOrder: 1 },
-  });
+    console.log('Seeding admin user...');
+    const user = await tx.user.upsert({
+      where: { academyId_email: { academyId: academy.id, email: adminEmail } },
+      update: {},
+      create: {
+        email: adminEmail,
+        passwordHash,
+        firstName: 'System',
+        lastName: 'Administrator',
+      },
+    });
 
-  await prisma.team.upsert({
-    where: { id: '00000000-0000-4000-8000-000000000002' },
-    update: {},
-    create: {
-      id: '00000000-0000-4000-8000-000000000002',
-      name: 'U12 Eagles',
-      ageCategoryId: ageCategory.id,
-      seasonId: season.id,
-    },
-  });
+    const adminRole = await tx.role.findUniqueOrThrow({ where: { name: ROLE_NAMES.ADMIN } });
+    await tx.userRole.upsert({
+      where: { userId_roleId: { userId: user.id, roleId: adminRole.id } },
+      update: {},
+      create: { userId: user.id, roleId: adminRole.id },
+    });
 
-  console.log('Seeding fee types and configuration...');
-  await prisma.feeType.upsert({
-    where: { id: '00000000-0000-4000-8000-000000000003' },
-    update: {},
-    create: {
-      id: '00000000-0000-4000-8000-000000000003',
-      name: 'Registration Fee',
-      category: 'REGISTRATION',
-      defaultAmount: 150,
-      isRecurring: false,
-    },
-  });
+    console.log('Seeding sample academy structure...');
+    const season = await tx.season.upsert({
+      where: { id: '00000000-0000-4000-8000-000000000001' },
+      update: {},
+      create: {
+        id: '00000000-0000-4000-8000-000000000001',
+        name: '2026 Season',
+        startDate: new Date('2026-01-01'),
+        endDate: new Date('2026-12-31'),
+      },
+    });
 
-  await prisma.feeType.upsert({
-    where: { id: '00000000-0000-4000-8000-000000000004' },
-    update: {},
-    create: {
-      id: '00000000-0000-4000-8000-000000000004',
-      name: 'Merchandise',
-      category: 'UNIFORM_EQUIPMENT',
-      defaultAmount: 0,
-      isRecurring: false,
-    },
-  });
+    const ageCategory = await tx.ageCategory.upsert({
+      where: { academyId_code: { academyId: academy.id, code: 'U12' } },
+      update: {},
+      create: { name: 'Under 12', code: 'U12', minAge: 10, maxAge: 12, sortOrder: 1 },
+    });
 
-  await prisma.configurationSetting.upsert({
-    where: { key: 'player_id.academy_code' },
-    update: {},
-    create: { key: 'player_id.academy_code', value: 'ACA' },
+    await tx.team.upsert({
+      where: { id: '00000000-0000-4000-8000-000000000002' },
+      update: {},
+      create: {
+        id: '00000000-0000-4000-8000-000000000002',
+        name: 'U12 Eagles',
+        ageCategoryId: ageCategory.id,
+        seasonId: season.id,
+      },
+    });
+
+    console.log('Seeding fee types and configuration...');
+    await tx.feeType.upsert({
+      where: { id: '00000000-0000-4000-8000-000000000003' },
+      update: {},
+      create: {
+        id: '00000000-0000-4000-8000-000000000003',
+        name: 'Registration Fee',
+        isRegistrationFee: true,
+        defaultAmount: 150,
+        isRecurring: false,
+      },
+    });
+
+    await tx.feeType.upsert({
+      where: { id: '00000000-0000-4000-8000-000000000004' },
+      update: {},
+      create: {
+        id: '00000000-0000-4000-8000-000000000004',
+        name: 'Merchandise',
+        defaultAmount: 0,
+        isRecurring: false,
+      },
+    });
+
+    await tx.configurationSetting.upsert({
+      where: { academyId_key: { academyId: academy.id, key: 'player_id.academy_code' } },
+      update: {},
+      create: { key: 'player_id.academy_code', value: 'ACA' },
+    });
+
+    return user;
   });
 
   console.log('Seeding gallery photos...');
-  const galleryPhotoCount = await prisma.galleryPhoto.count();
+  const galleryPhotoCount = await prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT set_config('app.current_academy_id', ${academy.id}, true)`;
+    return tx.galleryPhoto.count();
+  });
   if (galleryPhotoCount > 0) {
     console.log('Gallery already has photos — skipping.');
   } else if (!process.env.CLOUDINARY_URL) {
@@ -159,16 +210,23 @@ async function main() {
           uploadStream.end(buffer);
         });
 
-        await prisma.galleryPhoto.create({
-          data: {
-            context,
-            storageKey: `${uploadResult.resource_type}/${uploadResult.public_id}`,
-            sortOrder: index,
-            sessionDate: contextDetails[context].sessionDate,
-            details: contextDetails[context].details,
-            uploadedByUserId: adminUser.id,
-          },
-        });
+        // Paired with its own SET LOCAL rather than reusing one session-level
+        // set_config from earlier — same connection-pooling reason as above —
+        // and kept to just the DB write so the transaction never spans the
+        // slow Cloudinary upload above it.
+        await prisma.$transaction([
+          prisma.$executeRaw`SELECT set_config('app.current_academy_id', ${academy.id}, true)`,
+          prisma.galleryPhoto.create({
+            data: {
+              context,
+              storageKey: `${uploadResult.resource_type}/${uploadResult.public_id}`,
+              sortOrder: index,
+              sessionDate: contextDetails[context].sessionDate,
+              details: contextDetails[context].details,
+              uploadedByUserId: adminUser.id,
+            },
+          }),
+        ]);
       }
     }
     console.log('Gallery photos seeded.');
@@ -176,6 +234,7 @@ async function main() {
 
   console.log('Seed complete.');
   console.log(`Admin login: ${adminEmail} / ChangeMe123!`);
+  console.log(`Platform admin login: ${platformAdminEmail} / ChangeMe123!`);
 }
 
 main()

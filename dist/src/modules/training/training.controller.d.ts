@@ -7,15 +7,17 @@ import { TrainingPlanDecisionDto } from './dto/training-decision.dto';
 import { CreateTrainingSessionDto, GetOrCreateSaturdaySessionDto, QuickMarkAttendanceDto, RecordAttendanceDto, UpdateTrainingSessionDto } from './dto/training-session.dto';
 import { UpsertActivityMarksDto } from './dto/training-activity-mark.dto';
 import { CreateSessionActivityDto } from './dto/training-session-activity.dto';
+import { UpdateTrainingScheduleDto } from './dto/training-schedule.dto';
 export declare class TrainingController {
     private readonly trainingService;
     constructor(trainingService: TrainingService);
     findAllPlans(user: RequestUser, status?: TrainingApprovalStatus): Promise<({
         team: {
             id: string;
-            createdAt: Date;
             name: string;
+            createdAt: Date;
             updatedAt: Date;
+            academyId: string;
             branchId: string | null;
             isActive: boolean;
             ageCategoryId: string;
@@ -24,9 +26,10 @@ export declare class TrainingController {
         };
         trainingGroup: {
             id: string;
-            createdAt: Date;
             name: string;
+            createdAt: Date;
             updatedAt: Date;
+            academyId: string;
             branchId: string | null;
             isActive: boolean;
             teamId: string;
@@ -36,10 +39,11 @@ export declare class TrainingController {
             id: string;
             createdAt: Date;
             updatedAt: Date;
-            role: import(".prisma/client").$Enums.StaffRole;
             email: string | null;
             firstName: string;
             lastName: string;
+            role: import(".prisma/client").$Enums.StaffRole;
+            academyId: string;
             phone: string | null;
             deletedAt: Date | null;
             userId: string | null;
@@ -49,33 +53,35 @@ export declare class TrainingController {
         };
         activities: {
             id: string;
-            description: string | null;
             name: string;
+            description: string | null;
+            academyId: string;
             sortOrder: number;
+            trainingPlanId: string;
             durationMinutes: number | null;
             skillsDeveloped: string | null;
-            trainingPlanId: string;
         }[];
         approvals: {
             id: string;
-            submittedByUserId: string;
+            academyId: string;
             submittedAt: Date;
             reviewedByUserId: string | null;
             reviewedAt: Date | null;
+            trainingPlanId: string;
+            submittedByUserId: string;
             decision: import(".prisma/client").$Enums.TrainingApprovalStatus;
             comments: string | null;
-            trainingPlanId: string;
         }[];
     } & {
         id: string;
         createdAt: Date;
         updatedAt: Date;
         assessmentCriteria: string | null;
-        title: string;
+        academyId: string;
         teamId: string;
-        coachId: string;
         trainingGroupId: string | null;
-        version: number;
+        coachId: string;
+        title: string;
         objectives: string | null;
         scheduledDate: Date;
         scheduledStart: string | null;
@@ -84,6 +90,7 @@ export declare class TrainingController {
         requiredEquipment: string | null;
         skillsFocus: string | null;
         approvalStatus: import(".prisma/client").$Enums.TrainingApprovalStatus;
+        version: number;
     })[]>;
     listTeams(user: RequestUser): Promise<{
         id: string;
@@ -92,9 +99,10 @@ export declare class TrainingController {
     findOnePlan(id: string, user: RequestUser): Promise<{
         team: {
             id: string;
-            createdAt: Date;
             name: string;
+            createdAt: Date;
             updatedAt: Date;
+            academyId: string;
             branchId: string | null;
             isActive: boolean;
             ageCategoryId: string;
@@ -103,9 +111,10 @@ export declare class TrainingController {
         };
         trainingGroup: {
             id: string;
-            createdAt: Date;
             name: string;
+            createdAt: Date;
             updatedAt: Date;
+            academyId: string;
             branchId: string | null;
             isActive: boolean;
             teamId: string;
@@ -115,10 +124,11 @@ export declare class TrainingController {
             id: string;
             createdAt: Date;
             updatedAt: Date;
-            role: import(".prisma/client").$Enums.StaffRole;
             email: string | null;
             firstName: string;
             lastName: string;
+            role: import(".prisma/client").$Enums.StaffRole;
+            academyId: string;
             phone: string | null;
             deletedAt: Date | null;
             userId: string | null;
@@ -128,33 +138,35 @@ export declare class TrainingController {
         };
         activities: {
             id: string;
-            description: string | null;
             name: string;
+            description: string | null;
+            academyId: string;
             sortOrder: number;
+            trainingPlanId: string;
             durationMinutes: number | null;
             skillsDeveloped: string | null;
-            trainingPlanId: string;
         }[];
         approvals: {
             id: string;
-            submittedByUserId: string;
+            academyId: string;
             submittedAt: Date;
             reviewedByUserId: string | null;
             reviewedAt: Date | null;
+            trainingPlanId: string;
+            submittedByUserId: string;
             decision: import(".prisma/client").$Enums.TrainingApprovalStatus;
             comments: string | null;
-            trainingPlanId: string;
         }[];
     } & {
         id: string;
         createdAt: Date;
         updatedAt: Date;
         assessmentCriteria: string | null;
-        title: string;
+        academyId: string;
         teamId: string;
-        coachId: string;
         trainingGroupId: string | null;
-        version: number;
+        coachId: string;
+        title: string;
         objectives: string | null;
         scheduledDate: Date;
         scheduledStart: string | null;
@@ -163,13 +175,15 @@ export declare class TrainingController {
         requiredEquipment: string | null;
         skillsFocus: string | null;
         approvalStatus: import(".prisma/client").$Enums.TrainingApprovalStatus;
+        version: number;
     }>;
     createPlan(dto: CreateTrainingPlanDto, user: RequestUser): Promise<{
         team: {
             id: string;
-            createdAt: Date;
             name: string;
+            createdAt: Date;
             updatedAt: Date;
+            academyId: string;
             branchId: string | null;
             isActive: boolean;
             ageCategoryId: string;
@@ -178,9 +192,10 @@ export declare class TrainingController {
         };
         trainingGroup: {
             id: string;
-            createdAt: Date;
             name: string;
+            createdAt: Date;
             updatedAt: Date;
+            academyId: string;
             branchId: string | null;
             isActive: boolean;
             teamId: string;
@@ -190,10 +205,11 @@ export declare class TrainingController {
             id: string;
             createdAt: Date;
             updatedAt: Date;
-            role: import(".prisma/client").$Enums.StaffRole;
             email: string | null;
             firstName: string;
             lastName: string;
+            role: import(".prisma/client").$Enums.StaffRole;
+            academyId: string;
             phone: string | null;
             deletedAt: Date | null;
             userId: string | null;
@@ -203,33 +219,35 @@ export declare class TrainingController {
         };
         activities: {
             id: string;
-            description: string | null;
             name: string;
+            description: string | null;
+            academyId: string;
             sortOrder: number;
+            trainingPlanId: string;
             durationMinutes: number | null;
             skillsDeveloped: string | null;
-            trainingPlanId: string;
         }[];
         approvals: {
             id: string;
-            submittedByUserId: string;
+            academyId: string;
             submittedAt: Date;
             reviewedByUserId: string | null;
             reviewedAt: Date | null;
+            trainingPlanId: string;
+            submittedByUserId: string;
             decision: import(".prisma/client").$Enums.TrainingApprovalStatus;
             comments: string | null;
-            trainingPlanId: string;
         }[];
     } & {
         id: string;
         createdAt: Date;
         updatedAt: Date;
         assessmentCriteria: string | null;
-        title: string;
+        academyId: string;
         teamId: string;
-        coachId: string;
         trainingGroupId: string | null;
-        version: number;
+        coachId: string;
+        title: string;
         objectives: string | null;
         scheduledDate: Date;
         scheduledStart: string | null;
@@ -238,13 +256,15 @@ export declare class TrainingController {
         requiredEquipment: string | null;
         skillsFocus: string | null;
         approvalStatus: import(".prisma/client").$Enums.TrainingApprovalStatus;
+        version: number;
     }>;
     updatePlan(id: string, dto: UpdateTrainingPlanDto, user: RequestUser): Promise<{
         team: {
             id: string;
-            createdAt: Date;
             name: string;
+            createdAt: Date;
             updatedAt: Date;
+            academyId: string;
             branchId: string | null;
             isActive: boolean;
             ageCategoryId: string;
@@ -253,9 +273,10 @@ export declare class TrainingController {
         };
         trainingGroup: {
             id: string;
-            createdAt: Date;
             name: string;
+            createdAt: Date;
             updatedAt: Date;
+            academyId: string;
             branchId: string | null;
             isActive: boolean;
             teamId: string;
@@ -265,10 +286,11 @@ export declare class TrainingController {
             id: string;
             createdAt: Date;
             updatedAt: Date;
-            role: import(".prisma/client").$Enums.StaffRole;
             email: string | null;
             firstName: string;
             lastName: string;
+            role: import(".prisma/client").$Enums.StaffRole;
+            academyId: string;
             phone: string | null;
             deletedAt: Date | null;
             userId: string | null;
@@ -278,33 +300,35 @@ export declare class TrainingController {
         };
         activities: {
             id: string;
-            description: string | null;
             name: string;
+            description: string | null;
+            academyId: string;
             sortOrder: number;
+            trainingPlanId: string;
             durationMinutes: number | null;
             skillsDeveloped: string | null;
-            trainingPlanId: string;
         }[];
         approvals: {
             id: string;
-            submittedByUserId: string;
+            academyId: string;
             submittedAt: Date;
             reviewedByUserId: string | null;
             reviewedAt: Date | null;
+            trainingPlanId: string;
+            submittedByUserId: string;
             decision: import(".prisma/client").$Enums.TrainingApprovalStatus;
             comments: string | null;
-            trainingPlanId: string;
         }[];
     } & {
         id: string;
         createdAt: Date;
         updatedAt: Date;
         assessmentCriteria: string | null;
-        title: string;
+        academyId: string;
         teamId: string;
-        coachId: string;
         trainingGroupId: string | null;
-        version: number;
+        coachId: string;
+        title: string;
         objectives: string | null;
         scheduledDate: Date;
         scheduledStart: string | null;
@@ -313,13 +337,15 @@ export declare class TrainingController {
         requiredEquipment: string | null;
         skillsFocus: string | null;
         approvalStatus: import(".prisma/client").$Enums.TrainingApprovalStatus;
+        version: number;
     }>;
     addActivity(id: string, dto: CreateTrainingActivityInputDto, user: RequestUser): Promise<{
         team: {
             id: string;
-            createdAt: Date;
             name: string;
+            createdAt: Date;
             updatedAt: Date;
+            academyId: string;
             branchId: string | null;
             isActive: boolean;
             ageCategoryId: string;
@@ -328,9 +354,10 @@ export declare class TrainingController {
         };
         trainingGroup: {
             id: string;
-            createdAt: Date;
             name: string;
+            createdAt: Date;
             updatedAt: Date;
+            academyId: string;
             branchId: string | null;
             isActive: boolean;
             teamId: string;
@@ -340,10 +367,11 @@ export declare class TrainingController {
             id: string;
             createdAt: Date;
             updatedAt: Date;
-            role: import(".prisma/client").$Enums.StaffRole;
             email: string | null;
             firstName: string;
             lastName: string;
+            role: import(".prisma/client").$Enums.StaffRole;
+            academyId: string;
             phone: string | null;
             deletedAt: Date | null;
             userId: string | null;
@@ -353,33 +381,35 @@ export declare class TrainingController {
         };
         activities: {
             id: string;
-            description: string | null;
             name: string;
+            description: string | null;
+            academyId: string;
             sortOrder: number;
+            trainingPlanId: string;
             durationMinutes: number | null;
             skillsDeveloped: string | null;
-            trainingPlanId: string;
         }[];
         approvals: {
             id: string;
-            submittedByUserId: string;
+            academyId: string;
             submittedAt: Date;
             reviewedByUserId: string | null;
             reviewedAt: Date | null;
+            trainingPlanId: string;
+            submittedByUserId: string;
             decision: import(".prisma/client").$Enums.TrainingApprovalStatus;
             comments: string | null;
-            trainingPlanId: string;
         }[];
     } & {
         id: string;
         createdAt: Date;
         updatedAt: Date;
         assessmentCriteria: string | null;
-        title: string;
+        academyId: string;
         teamId: string;
-        coachId: string;
         trainingGroupId: string | null;
-        version: number;
+        coachId: string;
+        title: string;
         objectives: string | null;
         scheduledDate: Date;
         scheduledStart: string | null;
@@ -388,13 +418,15 @@ export declare class TrainingController {
         requiredEquipment: string | null;
         skillsFocus: string | null;
         approvalStatus: import(".prisma/client").$Enums.TrainingApprovalStatus;
+        version: number;
     }>;
     updateActivity(id: string, activityId: string, dto: UpdateTrainingActivityDto, user: RequestUser): Promise<{
         team: {
             id: string;
-            createdAt: Date;
             name: string;
+            createdAt: Date;
             updatedAt: Date;
+            academyId: string;
             branchId: string | null;
             isActive: boolean;
             ageCategoryId: string;
@@ -403,9 +435,10 @@ export declare class TrainingController {
         };
         trainingGroup: {
             id: string;
-            createdAt: Date;
             name: string;
+            createdAt: Date;
             updatedAt: Date;
+            academyId: string;
             branchId: string | null;
             isActive: boolean;
             teamId: string;
@@ -415,10 +448,11 @@ export declare class TrainingController {
             id: string;
             createdAt: Date;
             updatedAt: Date;
-            role: import(".prisma/client").$Enums.StaffRole;
             email: string | null;
             firstName: string;
             lastName: string;
+            role: import(".prisma/client").$Enums.StaffRole;
+            academyId: string;
             phone: string | null;
             deletedAt: Date | null;
             userId: string | null;
@@ -428,33 +462,35 @@ export declare class TrainingController {
         };
         activities: {
             id: string;
-            description: string | null;
             name: string;
+            description: string | null;
+            academyId: string;
             sortOrder: number;
+            trainingPlanId: string;
             durationMinutes: number | null;
             skillsDeveloped: string | null;
-            trainingPlanId: string;
         }[];
         approvals: {
             id: string;
-            submittedByUserId: string;
+            academyId: string;
             submittedAt: Date;
             reviewedByUserId: string | null;
             reviewedAt: Date | null;
+            trainingPlanId: string;
+            submittedByUserId: string;
             decision: import(".prisma/client").$Enums.TrainingApprovalStatus;
             comments: string | null;
-            trainingPlanId: string;
         }[];
     } & {
         id: string;
         createdAt: Date;
         updatedAt: Date;
         assessmentCriteria: string | null;
-        title: string;
+        academyId: string;
         teamId: string;
-        coachId: string;
         trainingGroupId: string | null;
-        version: number;
+        coachId: string;
+        title: string;
         objectives: string | null;
         scheduledDate: Date;
         scheduledStart: string | null;
@@ -463,13 +499,15 @@ export declare class TrainingController {
         requiredEquipment: string | null;
         skillsFocus: string | null;
         approvalStatus: import(".prisma/client").$Enums.TrainingApprovalStatus;
+        version: number;
     }>;
     removeActivity(id: string, activityId: string, user: RequestUser): Promise<{
         team: {
             id: string;
-            createdAt: Date;
             name: string;
+            createdAt: Date;
             updatedAt: Date;
+            academyId: string;
             branchId: string | null;
             isActive: boolean;
             ageCategoryId: string;
@@ -478,9 +516,10 @@ export declare class TrainingController {
         };
         trainingGroup: {
             id: string;
-            createdAt: Date;
             name: string;
+            createdAt: Date;
             updatedAt: Date;
+            academyId: string;
             branchId: string | null;
             isActive: boolean;
             teamId: string;
@@ -490,10 +529,11 @@ export declare class TrainingController {
             id: string;
             createdAt: Date;
             updatedAt: Date;
-            role: import(".prisma/client").$Enums.StaffRole;
             email: string | null;
             firstName: string;
             lastName: string;
+            role: import(".prisma/client").$Enums.StaffRole;
+            academyId: string;
             phone: string | null;
             deletedAt: Date | null;
             userId: string | null;
@@ -503,33 +543,35 @@ export declare class TrainingController {
         };
         activities: {
             id: string;
-            description: string | null;
             name: string;
+            description: string | null;
+            academyId: string;
             sortOrder: number;
+            trainingPlanId: string;
             durationMinutes: number | null;
             skillsDeveloped: string | null;
-            trainingPlanId: string;
         }[];
         approvals: {
             id: string;
-            submittedByUserId: string;
+            academyId: string;
             submittedAt: Date;
             reviewedByUserId: string | null;
             reviewedAt: Date | null;
+            trainingPlanId: string;
+            submittedByUserId: string;
             decision: import(".prisma/client").$Enums.TrainingApprovalStatus;
             comments: string | null;
-            trainingPlanId: string;
         }[];
     } & {
         id: string;
         createdAt: Date;
         updatedAt: Date;
         assessmentCriteria: string | null;
-        title: string;
+        academyId: string;
         teamId: string;
-        coachId: string;
         trainingGroupId: string | null;
-        version: number;
+        coachId: string;
+        title: string;
         objectives: string | null;
         scheduledDate: Date;
         scheduledStart: string | null;
@@ -538,13 +580,15 @@ export declare class TrainingController {
         requiredEquipment: string | null;
         skillsFocus: string | null;
         approvalStatus: import(".prisma/client").$Enums.TrainingApprovalStatus;
+        version: number;
     }>;
     submit(id: string, user: RequestUser): Promise<{
         team: {
             id: string;
-            createdAt: Date;
             name: string;
+            createdAt: Date;
             updatedAt: Date;
+            academyId: string;
             branchId: string | null;
             isActive: boolean;
             ageCategoryId: string;
@@ -553,9 +597,10 @@ export declare class TrainingController {
         };
         trainingGroup: {
             id: string;
-            createdAt: Date;
             name: string;
+            createdAt: Date;
             updatedAt: Date;
+            academyId: string;
             branchId: string | null;
             isActive: boolean;
             teamId: string;
@@ -565,10 +610,11 @@ export declare class TrainingController {
             id: string;
             createdAt: Date;
             updatedAt: Date;
-            role: import(".prisma/client").$Enums.StaffRole;
             email: string | null;
             firstName: string;
             lastName: string;
+            role: import(".prisma/client").$Enums.StaffRole;
+            academyId: string;
             phone: string | null;
             deletedAt: Date | null;
             userId: string | null;
@@ -578,33 +624,35 @@ export declare class TrainingController {
         };
         activities: {
             id: string;
-            description: string | null;
             name: string;
+            description: string | null;
+            academyId: string;
             sortOrder: number;
+            trainingPlanId: string;
             durationMinutes: number | null;
             skillsDeveloped: string | null;
-            trainingPlanId: string;
         }[];
         approvals: {
             id: string;
-            submittedByUserId: string;
+            academyId: string;
             submittedAt: Date;
             reviewedByUserId: string | null;
             reviewedAt: Date | null;
+            trainingPlanId: string;
+            submittedByUserId: string;
             decision: import(".prisma/client").$Enums.TrainingApprovalStatus;
             comments: string | null;
-            trainingPlanId: string;
         }[];
     } & {
         id: string;
         createdAt: Date;
         updatedAt: Date;
         assessmentCriteria: string | null;
-        title: string;
+        academyId: string;
         teamId: string;
-        coachId: string;
         trainingGroupId: string | null;
-        version: number;
+        coachId: string;
+        title: string;
         objectives: string | null;
         scheduledDate: Date;
         scheduledStart: string | null;
@@ -613,13 +661,15 @@ export declare class TrainingController {
         requiredEquipment: string | null;
         skillsFocus: string | null;
         approvalStatus: import(".prisma/client").$Enums.TrainingApprovalStatus;
+        version: number;
     }>;
     decide(id: string, dto: TrainingPlanDecisionDto, user: RequestUser): Promise<{
         team: {
             id: string;
-            createdAt: Date;
             name: string;
+            createdAt: Date;
             updatedAt: Date;
+            academyId: string;
             branchId: string | null;
             isActive: boolean;
             ageCategoryId: string;
@@ -628,9 +678,10 @@ export declare class TrainingController {
         };
         trainingGroup: {
             id: string;
-            createdAt: Date;
             name: string;
+            createdAt: Date;
             updatedAt: Date;
+            academyId: string;
             branchId: string | null;
             isActive: boolean;
             teamId: string;
@@ -640,10 +691,11 @@ export declare class TrainingController {
             id: string;
             createdAt: Date;
             updatedAt: Date;
-            role: import(".prisma/client").$Enums.StaffRole;
             email: string | null;
             firstName: string;
             lastName: string;
+            role: import(".prisma/client").$Enums.StaffRole;
+            academyId: string;
             phone: string | null;
             deletedAt: Date | null;
             userId: string | null;
@@ -653,33 +705,35 @@ export declare class TrainingController {
         };
         activities: {
             id: string;
-            description: string | null;
             name: string;
+            description: string | null;
+            academyId: string;
             sortOrder: number;
+            trainingPlanId: string;
             durationMinutes: number | null;
             skillsDeveloped: string | null;
-            trainingPlanId: string;
         }[];
         approvals: {
             id: string;
-            submittedByUserId: string;
+            academyId: string;
             submittedAt: Date;
             reviewedByUserId: string | null;
             reviewedAt: Date | null;
+            trainingPlanId: string;
+            submittedByUserId: string;
             decision: import(".prisma/client").$Enums.TrainingApprovalStatus;
             comments: string | null;
-            trainingPlanId: string;
         }[];
     } & {
         id: string;
         createdAt: Date;
         updatedAt: Date;
         assessmentCriteria: string | null;
-        title: string;
+        academyId: string;
         teamId: string;
-        coachId: string;
         trainingGroupId: string | null;
-        version: number;
+        coachId: string;
+        title: string;
         objectives: string | null;
         scheduledDate: Date;
         scheduledStart: string | null;
@@ -688,13 +742,15 @@ export declare class TrainingController {
         requiredEquipment: string | null;
         skillsFocus: string | null;
         approvalStatus: import(".prisma/client").$Enums.TrainingApprovalStatus;
+        version: number;
     }>;
     findAllSessions(user: RequestUser): Promise<({
         team: {
             id: string;
-            createdAt: Date;
             name: string;
+            createdAt: Date;
             updatedAt: Date;
+            academyId: string;
             branchId: string | null;
             isActive: boolean;
             ageCategoryId: string;
@@ -703,9 +759,10 @@ export declare class TrainingController {
         };
         trainingGroup: {
             id: string;
-            createdAt: Date;
             name: string;
+            createdAt: Date;
             updatedAt: Date;
+            academyId: string;
             branchId: string | null;
             isActive: boolean;
             teamId: string;
@@ -716,11 +773,11 @@ export declare class TrainingController {
             createdAt: Date;
             updatedAt: Date;
             assessmentCriteria: string | null;
-            title: string;
+            academyId: string;
             teamId: string;
-            coachId: string;
             trainingGroupId: string | null;
-            version: number;
+            coachId: string;
+            title: string;
             objectives: string | null;
             scheduledDate: Date;
             scheduledStart: string | null;
@@ -729,15 +786,17 @@ export declare class TrainingController {
             requiredEquipment: string | null;
             skillsFocus: string | null;
             approvalStatus: import(".prisma/client").$Enums.TrainingApprovalStatus;
+            version: number;
         } | null;
         conductedByCoach: {
             id: string;
             createdAt: Date;
             updatedAt: Date;
-            role: import(".prisma/client").$Enums.StaffRole;
             email: string | null;
             firstName: string;
             lastName: string;
+            role: import(".prisma/client").$Enums.StaffRole;
+            academyId: string;
             phone: string | null;
             deletedAt: Date | null;
             userId: string | null;
@@ -761,32 +820,35 @@ export declare class TrainingController {
         } & {
             id: string;
             status: import(".prisma/client").$Enums.AttendanceStatus;
-            remarks: string | null;
+            academyId: string;
             playerId: string;
+            remarks: string | null;
             trainingSessionId: string;
             recordedByUserId: string;
             recordedAt: Date;
         })[];
         sessionActivities: {
             id: string;
-            createdAt: Date;
             name: string;
+            createdAt: Date;
+            academyId: string;
             sortOrder: number;
             trainingSessionId: string;
         }[];
     } & {
         id: string;
+        status: import(".prisma/client").$Enums.TrainingSessionStatus;
         createdAt: Date;
         updatedAt: Date;
-        status: import(".prisma/client").$Enums.TrainingSessionStatus;
+        academyId: string;
         teamId: string;
         trainingGroupId: string | null;
-        date: Date;
         location: string | null;
         trainingPlanId: string | null;
+        conductedByCoachId: string | null;
+        date: Date;
         startTime: string | null;
         endTime: string | null;
-        conductedByCoachId: string | null;
     })[]>;
     findOneSession(id: string): Promise<{
         roster: {
@@ -798,9 +860,10 @@ export declare class TrainingController {
         }[];
         team: {
             id: string;
-            createdAt: Date;
             name: string;
+            createdAt: Date;
             updatedAt: Date;
+            academyId: string;
             branchId: string | null;
             isActive: boolean;
             ageCategoryId: string;
@@ -809,9 +872,10 @@ export declare class TrainingController {
         };
         trainingGroup: {
             id: string;
-            createdAt: Date;
             name: string;
+            createdAt: Date;
             updatedAt: Date;
+            academyId: string;
             branchId: string | null;
             isActive: boolean;
             teamId: string;
@@ -822,11 +886,11 @@ export declare class TrainingController {
             createdAt: Date;
             updatedAt: Date;
             assessmentCriteria: string | null;
-            title: string;
+            academyId: string;
             teamId: string;
-            coachId: string;
             trainingGroupId: string | null;
-            version: number;
+            coachId: string;
+            title: string;
             objectives: string | null;
             scheduledDate: Date;
             scheduledStart: string | null;
@@ -835,15 +899,17 @@ export declare class TrainingController {
             requiredEquipment: string | null;
             skillsFocus: string | null;
             approvalStatus: import(".prisma/client").$Enums.TrainingApprovalStatus;
+            version: number;
         } | null;
         conductedByCoach: {
             id: string;
             createdAt: Date;
             updatedAt: Date;
-            role: import(".prisma/client").$Enums.StaffRole;
             email: string | null;
             firstName: string;
             lastName: string;
+            role: import(".prisma/client").$Enums.StaffRole;
+            academyId: string;
             phone: string | null;
             deletedAt: Date | null;
             userId: string | null;
@@ -867,38 +933,42 @@ export declare class TrainingController {
         } & {
             id: string;
             status: import(".prisma/client").$Enums.AttendanceStatus;
-            remarks: string | null;
+            academyId: string;
             playerId: string;
+            remarks: string | null;
             trainingSessionId: string;
             recordedByUserId: string;
             recordedAt: Date;
         })[];
         sessionActivities: {
             id: string;
-            createdAt: Date;
             name: string;
+            createdAt: Date;
+            academyId: string;
             sortOrder: number;
             trainingSessionId: string;
         }[];
         id: string;
+        status: import(".prisma/client").$Enums.TrainingSessionStatus;
         createdAt: Date;
         updatedAt: Date;
-        status: import(".prisma/client").$Enums.TrainingSessionStatus;
+        academyId: string;
         teamId: string;
         trainingGroupId: string | null;
-        date: Date;
         location: string | null;
         trainingPlanId: string | null;
+        conductedByCoachId: string | null;
+        date: Date;
         startTime: string | null;
         endTime: string | null;
-        conductedByCoachId: string | null;
     }>;
     createSession(dto: CreateTrainingSessionDto, user: RequestUser): Promise<{
         team: {
             id: string;
-            createdAt: Date;
             name: string;
+            createdAt: Date;
             updatedAt: Date;
+            academyId: string;
             branchId: string | null;
             isActive: boolean;
             ageCategoryId: string;
@@ -907,9 +977,10 @@ export declare class TrainingController {
         };
         trainingGroup: {
             id: string;
-            createdAt: Date;
             name: string;
+            createdAt: Date;
             updatedAt: Date;
+            academyId: string;
             branchId: string | null;
             isActive: boolean;
             teamId: string;
@@ -920,11 +991,11 @@ export declare class TrainingController {
             createdAt: Date;
             updatedAt: Date;
             assessmentCriteria: string | null;
-            title: string;
+            academyId: string;
             teamId: string;
-            coachId: string;
             trainingGroupId: string | null;
-            version: number;
+            coachId: string;
+            title: string;
             objectives: string | null;
             scheduledDate: Date;
             scheduledStart: string | null;
@@ -933,15 +1004,17 @@ export declare class TrainingController {
             requiredEquipment: string | null;
             skillsFocus: string | null;
             approvalStatus: import(".prisma/client").$Enums.TrainingApprovalStatus;
+            version: number;
         } | null;
         conductedByCoach: {
             id: string;
             createdAt: Date;
             updatedAt: Date;
-            role: import(".prisma/client").$Enums.StaffRole;
             email: string | null;
             firstName: string;
             lastName: string;
+            role: import(".prisma/client").$Enums.StaffRole;
+            academyId: string;
             phone: string | null;
             deletedAt: Date | null;
             userId: string | null;
@@ -965,33 +1038,38 @@ export declare class TrainingController {
         } & {
             id: string;
             status: import(".prisma/client").$Enums.AttendanceStatus;
-            remarks: string | null;
+            academyId: string;
             playerId: string;
+            remarks: string | null;
             trainingSessionId: string;
             recordedByUserId: string;
             recordedAt: Date;
         })[];
         sessionActivities: {
             id: string;
-            createdAt: Date;
             name: string;
+            createdAt: Date;
+            academyId: string;
             sortOrder: number;
             trainingSessionId: string;
         }[];
     } & {
         id: string;
+        status: import(".prisma/client").$Enums.TrainingSessionStatus;
         createdAt: Date;
         updatedAt: Date;
-        status: import(".prisma/client").$Enums.TrainingSessionStatus;
+        academyId: string;
         teamId: string;
         trainingGroupId: string | null;
-        date: Date;
         location: string | null;
         trainingPlanId: string | null;
+        conductedByCoachId: string | null;
+        date: Date;
         startTime: string | null;
         endTime: string | null;
-        conductedByCoachId: string | null;
     }>;
+    getSchedule(): Promise<import("./training.service").TrainingSchedule>;
+    updateSchedule(dto: UpdateTrainingScheduleDto): Promise<import("./training.service").TrainingSchedule>;
     getOrCreateSaturdaySession(dto: GetOrCreateSaturdaySessionDto): Promise<{
         roster: {
             id: string;
@@ -1002,9 +1080,10 @@ export declare class TrainingController {
         }[];
         team: {
             id: string;
-            createdAt: Date;
             name: string;
+            createdAt: Date;
             updatedAt: Date;
+            academyId: string;
             branchId: string | null;
             isActive: boolean;
             ageCategoryId: string;
@@ -1013,9 +1092,10 @@ export declare class TrainingController {
         };
         trainingGroup: {
             id: string;
-            createdAt: Date;
             name: string;
+            createdAt: Date;
             updatedAt: Date;
+            academyId: string;
             branchId: string | null;
             isActive: boolean;
             teamId: string;
@@ -1026,11 +1106,11 @@ export declare class TrainingController {
             createdAt: Date;
             updatedAt: Date;
             assessmentCriteria: string | null;
-            title: string;
+            academyId: string;
             teamId: string;
-            coachId: string;
             trainingGroupId: string | null;
-            version: number;
+            coachId: string;
+            title: string;
             objectives: string | null;
             scheduledDate: Date;
             scheduledStart: string | null;
@@ -1039,15 +1119,17 @@ export declare class TrainingController {
             requiredEquipment: string | null;
             skillsFocus: string | null;
             approvalStatus: import(".prisma/client").$Enums.TrainingApprovalStatus;
+            version: number;
         } | null;
         conductedByCoach: {
             id: string;
             createdAt: Date;
             updatedAt: Date;
-            role: import(".prisma/client").$Enums.StaffRole;
             email: string | null;
             firstName: string;
             lastName: string;
+            role: import(".prisma/client").$Enums.StaffRole;
+            academyId: string;
             phone: string | null;
             deletedAt: Date | null;
             userId: string | null;
@@ -1071,31 +1153,34 @@ export declare class TrainingController {
         } & {
             id: string;
             status: import(".prisma/client").$Enums.AttendanceStatus;
-            remarks: string | null;
+            academyId: string;
             playerId: string;
+            remarks: string | null;
             trainingSessionId: string;
             recordedByUserId: string;
             recordedAt: Date;
         })[];
         sessionActivities: {
             id: string;
-            createdAt: Date;
             name: string;
+            createdAt: Date;
+            academyId: string;
             sortOrder: number;
             trainingSessionId: string;
         }[];
         id: string;
+        status: import(".prisma/client").$Enums.TrainingSessionStatus;
         createdAt: Date;
         updatedAt: Date;
-        status: import(".prisma/client").$Enums.TrainingSessionStatus;
+        academyId: string;
         teamId: string;
         trainingGroupId: string | null;
-        date: Date;
         location: string | null;
         trainingPlanId: string | null;
+        conductedByCoachId: string | null;
+        date: Date;
         startTime: string | null;
         endTime: string | null;
-        conductedByCoachId: string | null;
     }>;
     quickMarkAttendance(dto: QuickMarkAttendanceDto, user: RequestUser): Promise<{
         player: {
@@ -1111,17 +1196,18 @@ export declare class TrainingController {
             };
         } & {
             id: string;
+            status: import(".prisma/client").$Enums.TrainingSessionStatus;
             createdAt: Date;
             updatedAt: Date;
-            status: import(".prisma/client").$Enums.TrainingSessionStatus;
+            academyId: string;
             teamId: string;
             trainingGroupId: string | null;
-            date: Date;
             location: string | null;
             trainingPlanId: string | null;
+            conductedByCoachId: string | null;
+            date: Date;
             startTime: string | null;
             endTime: string | null;
-            conductedByCoachId: string | null;
         };
         recordedByUser: {
             id: string;
@@ -1131,8 +1217,9 @@ export declare class TrainingController {
     } & {
         id: string;
         status: import(".prisma/client").$Enums.AttendanceStatus;
-        remarks: string | null;
+        academyId: string;
         playerId: string;
+        remarks: string | null;
         trainingSessionId: string;
         recordedByUserId: string;
         recordedAt: Date;
@@ -1140,9 +1227,10 @@ export declare class TrainingController {
     updateSession(id: string, dto: UpdateTrainingSessionDto, user: RequestUser): Promise<{
         team: {
             id: string;
-            createdAt: Date;
             name: string;
+            createdAt: Date;
             updatedAt: Date;
+            academyId: string;
             branchId: string | null;
             isActive: boolean;
             ageCategoryId: string;
@@ -1151,9 +1239,10 @@ export declare class TrainingController {
         };
         trainingGroup: {
             id: string;
-            createdAt: Date;
             name: string;
+            createdAt: Date;
             updatedAt: Date;
+            academyId: string;
             branchId: string | null;
             isActive: boolean;
             teamId: string;
@@ -1164,11 +1253,11 @@ export declare class TrainingController {
             createdAt: Date;
             updatedAt: Date;
             assessmentCriteria: string | null;
-            title: string;
+            academyId: string;
             teamId: string;
-            coachId: string;
             trainingGroupId: string | null;
-            version: number;
+            coachId: string;
+            title: string;
             objectives: string | null;
             scheduledDate: Date;
             scheduledStart: string | null;
@@ -1177,15 +1266,17 @@ export declare class TrainingController {
             requiredEquipment: string | null;
             skillsFocus: string | null;
             approvalStatus: import(".prisma/client").$Enums.TrainingApprovalStatus;
+            version: number;
         } | null;
         conductedByCoach: {
             id: string;
             createdAt: Date;
             updatedAt: Date;
-            role: import(".prisma/client").$Enums.StaffRole;
             email: string | null;
             firstName: string;
             lastName: string;
+            role: import(".prisma/client").$Enums.StaffRole;
+            academyId: string;
             phone: string | null;
             deletedAt: Date | null;
             userId: string | null;
@@ -1209,39 +1300,43 @@ export declare class TrainingController {
         } & {
             id: string;
             status: import(".prisma/client").$Enums.AttendanceStatus;
-            remarks: string | null;
+            academyId: string;
             playerId: string;
+            remarks: string | null;
             trainingSessionId: string;
             recordedByUserId: string;
             recordedAt: Date;
         })[];
         sessionActivities: {
             id: string;
-            createdAt: Date;
             name: string;
+            createdAt: Date;
+            academyId: string;
             sortOrder: number;
             trainingSessionId: string;
         }[];
     } & {
         id: string;
+        status: import(".prisma/client").$Enums.TrainingSessionStatus;
         createdAt: Date;
         updatedAt: Date;
-        status: import(".prisma/client").$Enums.TrainingSessionStatus;
+        academyId: string;
         teamId: string;
         trainingGroupId: string | null;
-        date: Date;
         location: string | null;
         trainingPlanId: string | null;
+        conductedByCoachId: string | null;
+        date: Date;
         startTime: string | null;
         endTime: string | null;
-        conductedByCoachId: string | null;
     }>;
     recordAttendance(id: string, dto: RecordAttendanceDto, user: RequestUser): Promise<{
         team: {
             id: string;
-            createdAt: Date;
             name: string;
+            createdAt: Date;
             updatedAt: Date;
+            academyId: string;
             branchId: string | null;
             isActive: boolean;
             ageCategoryId: string;
@@ -1250,9 +1345,10 @@ export declare class TrainingController {
         };
         trainingGroup: {
             id: string;
-            createdAt: Date;
             name: string;
+            createdAt: Date;
             updatedAt: Date;
+            academyId: string;
             branchId: string | null;
             isActive: boolean;
             teamId: string;
@@ -1263,11 +1359,11 @@ export declare class TrainingController {
             createdAt: Date;
             updatedAt: Date;
             assessmentCriteria: string | null;
-            title: string;
+            academyId: string;
             teamId: string;
-            coachId: string;
             trainingGroupId: string | null;
-            version: number;
+            coachId: string;
+            title: string;
             objectives: string | null;
             scheduledDate: Date;
             scheduledStart: string | null;
@@ -1276,15 +1372,17 @@ export declare class TrainingController {
             requiredEquipment: string | null;
             skillsFocus: string | null;
             approvalStatus: import(".prisma/client").$Enums.TrainingApprovalStatus;
+            version: number;
         } | null;
         conductedByCoach: {
             id: string;
             createdAt: Date;
             updatedAt: Date;
-            role: import(".prisma/client").$Enums.StaffRole;
             email: string | null;
             firstName: string;
             lastName: string;
+            role: import(".prisma/client").$Enums.StaffRole;
+            academyId: string;
             phone: string | null;
             deletedAt: Date | null;
             userId: string | null;
@@ -1308,32 +1406,35 @@ export declare class TrainingController {
         } & {
             id: string;
             status: import(".prisma/client").$Enums.AttendanceStatus;
-            remarks: string | null;
+            academyId: string;
             playerId: string;
+            remarks: string | null;
             trainingSessionId: string;
             recordedByUserId: string;
             recordedAt: Date;
         })[];
         sessionActivities: {
             id: string;
-            createdAt: Date;
             name: string;
+            createdAt: Date;
+            academyId: string;
             sortOrder: number;
             trainingSessionId: string;
         }[];
     } & {
         id: string;
+        status: import(".prisma/client").$Enums.TrainingSessionStatus;
         createdAt: Date;
         updatedAt: Date;
-        status: import(".prisma/client").$Enums.TrainingSessionStatus;
+        academyId: string;
         teamId: string;
         trainingGroupId: string | null;
-        date: Date;
         location: string | null;
         trainingPlanId: string | null;
+        conductedByCoachId: string | null;
+        date: Date;
         startTime: string | null;
         endTime: string | null;
-        conductedByCoachId: string | null;
     }>;
     addSessionActivity(id: string, dto: CreateSessionActivityDto, user: RequestUser): Promise<{
         roster: {
@@ -1345,9 +1446,10 @@ export declare class TrainingController {
         }[];
         team: {
             id: string;
-            createdAt: Date;
             name: string;
+            createdAt: Date;
             updatedAt: Date;
+            academyId: string;
             branchId: string | null;
             isActive: boolean;
             ageCategoryId: string;
@@ -1356,9 +1458,10 @@ export declare class TrainingController {
         };
         trainingGroup: {
             id: string;
-            createdAt: Date;
             name: string;
+            createdAt: Date;
             updatedAt: Date;
+            academyId: string;
             branchId: string | null;
             isActive: boolean;
             teamId: string;
@@ -1369,11 +1472,11 @@ export declare class TrainingController {
             createdAt: Date;
             updatedAt: Date;
             assessmentCriteria: string | null;
-            title: string;
+            academyId: string;
             teamId: string;
-            coachId: string;
             trainingGroupId: string | null;
-            version: number;
+            coachId: string;
+            title: string;
             objectives: string | null;
             scheduledDate: Date;
             scheduledStart: string | null;
@@ -1382,15 +1485,17 @@ export declare class TrainingController {
             requiredEquipment: string | null;
             skillsFocus: string | null;
             approvalStatus: import(".prisma/client").$Enums.TrainingApprovalStatus;
+            version: number;
         } | null;
         conductedByCoach: {
             id: string;
             createdAt: Date;
             updatedAt: Date;
-            role: import(".prisma/client").$Enums.StaffRole;
             email: string | null;
             firstName: string;
             lastName: string;
+            role: import(".prisma/client").$Enums.StaffRole;
+            academyId: string;
             phone: string | null;
             deletedAt: Date | null;
             userId: string | null;
@@ -1414,31 +1519,34 @@ export declare class TrainingController {
         } & {
             id: string;
             status: import(".prisma/client").$Enums.AttendanceStatus;
-            remarks: string | null;
+            academyId: string;
             playerId: string;
+            remarks: string | null;
             trainingSessionId: string;
             recordedByUserId: string;
             recordedAt: Date;
         })[];
         sessionActivities: {
             id: string;
-            createdAt: Date;
             name: string;
+            createdAt: Date;
+            academyId: string;
             sortOrder: number;
             trainingSessionId: string;
         }[];
         id: string;
+        status: import(".prisma/client").$Enums.TrainingSessionStatus;
         createdAt: Date;
         updatedAt: Date;
-        status: import(".prisma/client").$Enums.TrainingSessionStatus;
+        academyId: string;
         teamId: string;
         trainingGroupId: string | null;
-        date: Date;
         location: string | null;
         trainingPlanId: string | null;
+        conductedByCoachId: string | null;
+        date: Date;
         startTime: string | null;
         endTime: string | null;
-        conductedByCoachId: string | null;
     }>;
     removeSessionActivity(id: string, activityId: string, user: RequestUser): Promise<{
         roster: {
@@ -1450,9 +1558,10 @@ export declare class TrainingController {
         }[];
         team: {
             id: string;
-            createdAt: Date;
             name: string;
+            createdAt: Date;
             updatedAt: Date;
+            academyId: string;
             branchId: string | null;
             isActive: boolean;
             ageCategoryId: string;
@@ -1461,9 +1570,10 @@ export declare class TrainingController {
         };
         trainingGroup: {
             id: string;
-            createdAt: Date;
             name: string;
+            createdAt: Date;
             updatedAt: Date;
+            academyId: string;
             branchId: string | null;
             isActive: boolean;
             teamId: string;
@@ -1474,11 +1584,11 @@ export declare class TrainingController {
             createdAt: Date;
             updatedAt: Date;
             assessmentCriteria: string | null;
-            title: string;
+            academyId: string;
             teamId: string;
-            coachId: string;
             trainingGroupId: string | null;
-            version: number;
+            coachId: string;
+            title: string;
             objectives: string | null;
             scheduledDate: Date;
             scheduledStart: string | null;
@@ -1487,15 +1597,17 @@ export declare class TrainingController {
             requiredEquipment: string | null;
             skillsFocus: string | null;
             approvalStatus: import(".prisma/client").$Enums.TrainingApprovalStatus;
+            version: number;
         } | null;
         conductedByCoach: {
             id: string;
             createdAt: Date;
             updatedAt: Date;
-            role: import(".prisma/client").$Enums.StaffRole;
             email: string | null;
             firstName: string;
             lastName: string;
+            role: import(".prisma/client").$Enums.StaffRole;
+            academyId: string;
             phone: string | null;
             deletedAt: Date | null;
             userId: string | null;
@@ -1519,31 +1631,34 @@ export declare class TrainingController {
         } & {
             id: string;
             status: import(".prisma/client").$Enums.AttendanceStatus;
-            remarks: string | null;
+            academyId: string;
             playerId: string;
+            remarks: string | null;
             trainingSessionId: string;
             recordedByUserId: string;
             recordedAt: Date;
         })[];
         sessionActivities: {
             id: string;
-            createdAt: Date;
             name: string;
+            createdAt: Date;
+            academyId: string;
             sortOrder: number;
             trainingSessionId: string;
         }[];
         id: string;
+        status: import(".prisma/client").$Enums.TrainingSessionStatus;
         createdAt: Date;
         updatedAt: Date;
-        status: import(".prisma/client").$Enums.TrainingSessionStatus;
+        academyId: string;
         teamId: string;
         trainingGroupId: string | null;
-        date: Date;
         location: string | null;
         trainingPlanId: string | null;
+        conductedByCoachId: string | null;
+        date: Date;
         startTime: string | null;
         endTime: string | null;
-        conductedByCoachId: string | null;
     }>;
     getActivityMarks(activityId: string, user: RequestUser): Promise<{
         activity: {
@@ -1552,11 +1667,11 @@ export declare class TrainingController {
                 createdAt: Date;
                 updatedAt: Date;
                 assessmentCriteria: string | null;
-                title: string;
+                academyId: string;
                 teamId: string;
-                coachId: string;
                 trainingGroupId: string | null;
-                version: number;
+                coachId: string;
+                title: string;
                 objectives: string | null;
                 scheduledDate: Date;
                 scheduledStart: string | null;
@@ -1565,15 +1680,17 @@ export declare class TrainingController {
                 requiredEquipment: string | null;
                 skillsFocus: string | null;
                 approvalStatus: import(".prisma/client").$Enums.TrainingApprovalStatus;
+                version: number;
             };
         } & {
             id: string;
-            description: string | null;
             name: string;
+            description: string | null;
+            academyId: string;
             sortOrder: number;
+            trainingPlanId: string;
             durationMinutes: number | null;
             skillsDeveloped: string | null;
-            trainingPlanId: string;
         };
         roster: {
             id: string;
@@ -1592,11 +1709,12 @@ export declare class TrainingController {
             id: string;
             createdAt: Date;
             updatedAt: Date;
-            remarks: string | null;
+            academyId: string;
             playerId: string;
-            rating: number;
             trainingActivityId: string;
             ratedByCoachId: string;
+            rating: number;
+            remarks: string | null;
         })[];
     }>;
     upsertActivityMarks(activityId: string, dto: UpsertActivityMarksDto, user: RequestUser): Promise<{
@@ -1606,11 +1724,11 @@ export declare class TrainingController {
                 createdAt: Date;
                 updatedAt: Date;
                 assessmentCriteria: string | null;
-                title: string;
+                academyId: string;
                 teamId: string;
-                coachId: string;
                 trainingGroupId: string | null;
-                version: number;
+                coachId: string;
+                title: string;
                 objectives: string | null;
                 scheduledDate: Date;
                 scheduledStart: string | null;
@@ -1619,15 +1737,17 @@ export declare class TrainingController {
                 requiredEquipment: string | null;
                 skillsFocus: string | null;
                 approvalStatus: import(".prisma/client").$Enums.TrainingApprovalStatus;
+                version: number;
             };
         } & {
             id: string;
-            description: string | null;
             name: string;
+            description: string | null;
+            academyId: string;
             sortOrder: number;
+            trainingPlanId: string;
             durationMinutes: number | null;
             skillsDeveloped: string | null;
-            trainingPlanId: string;
         };
         roster: {
             id: string;
@@ -1646,11 +1766,12 @@ export declare class TrainingController {
             id: string;
             createdAt: Date;
             updatedAt: Date;
-            remarks: string | null;
+            academyId: string;
             playerId: string;
-            rating: number;
             trainingActivityId: string;
             ratedByCoachId: string;
+            rating: number;
+            remarks: string | null;
         })[];
     }>;
     getPlayerMarks(playerId: string, user: RequestUser): Promise<({
@@ -1661,12 +1782,13 @@ export declare class TrainingController {
             };
         } & {
             id: string;
-            description: string | null;
             name: string;
+            description: string | null;
+            academyId: string;
             sortOrder: number;
+            trainingPlanId: string;
             durationMinutes: number | null;
             skillsDeveloped: string | null;
-            trainingPlanId: string;
         };
         ratedByCoach: {
             id: string;
@@ -1677,11 +1799,12 @@ export declare class TrainingController {
         id: string;
         createdAt: Date;
         updatedAt: Date;
-        remarks: string | null;
+        academyId: string;
         playerId: string;
-        rating: number;
         trainingActivityId: string;
         ratedByCoachId: string;
+        rating: number;
+        remarks: string | null;
     })[]>;
     getTeamMarks(teamId: string, user: RequestUser): Promise<{
         id: string;
@@ -1691,7 +1814,7 @@ export declare class TrainingController {
             lastName: string;
         };
         playerId: string;
-        rating: number;
         trainingActivityId: string;
+        rating: number;
     }[]>;
 }

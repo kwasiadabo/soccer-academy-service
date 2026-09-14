@@ -21,13 +21,14 @@ export declare class IssuesController {
         };
     } & {
         id: string;
-        description: string;
+        status: import(".prisma/client").$Enums.IssueStatus;
         createdAt: Date;
         updatedAt: Date;
-        status: import(".prisma/client").$Enums.IssueStatus;
-        subject: string;
+        description: string;
+        academyId: string;
         guardianId: string;
         submittedByUserId: string;
+        subject: string;
     })[]>;
     getOne(id: string): Promise<{
         guardian: {
@@ -49,21 +50,23 @@ export declare class IssuesController {
         } & {
             id: string;
             createdAt: Date;
+            academyId: string;
             message: string;
-            readAt: Date | null;
-            isStaffReply: boolean;
             issueId: string;
             authorUserId: string;
+            isStaffReply: boolean;
+            readAt: Date | null;
         })[];
     } & {
         id: string;
-        description: string;
+        status: import(".prisma/client").$Enums.IssueStatus;
         createdAt: Date;
         updatedAt: Date;
-        status: import(".prisma/client").$Enums.IssueStatus;
-        subject: string;
+        description: string;
+        academyId: string;
         guardianId: string;
         submittedByUserId: string;
+        subject: string;
     }>;
     addMessage(id: string, dto: CreateIssueMessageDto, user: RequestUser): Promise<{
         guardian: {
@@ -85,21 +88,23 @@ export declare class IssuesController {
         } & {
             id: string;
             createdAt: Date;
+            academyId: string;
             message: string;
-            readAt: Date | null;
-            isStaffReply: boolean;
             issueId: string;
             authorUserId: string;
+            isStaffReply: boolean;
+            readAt: Date | null;
         })[];
     } & {
         id: string;
-        description: string;
+        status: import(".prisma/client").$Enums.IssueStatus;
         createdAt: Date;
         updatedAt: Date;
-        status: import(".prisma/client").$Enums.IssueStatus;
-        subject: string;
+        description: string;
+        academyId: string;
         guardianId: string;
         submittedByUserId: string;
+        subject: string;
     }>;
     updateStatus(id: string, dto: UpdateIssueStatusDto): Promise<{
         guardian: {
@@ -121,20 +126,22 @@ export declare class IssuesController {
         } & {
             id: string;
             createdAt: Date;
+            academyId: string;
             message: string;
-            readAt: Date | null;
-            isStaffReply: boolean;
             issueId: string;
             authorUserId: string;
+            isStaffReply: boolean;
+            readAt: Date | null;
         })[];
     } & {
         id: string;
-        description: string;
+        status: import(".prisma/client").$Enums.IssueStatus;
         createdAt: Date;
         updatedAt: Date;
-        status: import(".prisma/client").$Enums.IssueStatus;
-        subject: string;
+        description: string;
+        academyId: string;
         guardianId: string;
         submittedByUserId: string;
+        subject: string;
     }>;
 }

@@ -39,7 +39,9 @@ export class AuthService {
   }
 
   async validateCredentials(email: string, password: string) {
-    const user = await this.prisma.user.findUnique({
+    // findFirst rather than findUnique: email is only unique per-academy now, and
+    // row-level security already scopes this query to the current request's academy.
+    const user = await this.prisma.user.findFirst({
       where: { email },
       include: {
         roles: {
@@ -62,6 +64,7 @@ export class AuthService {
 
   private buildPayload(user: {
     id: string;
+    academyId: string;
     email: string;
     roles: { role: { name: string; permissions: { permission: { key: string } }[] } }[];
   }): JwtPayload {
@@ -69,7 +72,7 @@ export class AuthService {
     const permissions = Array.from(
       new Set(user.roles.flatMap((r) => r.role.permissions.map((p) => p.permission.key))),
     );
-    return { sub: user.id, email: user.email, roles, permissions };
+    return { sub: user.id, academyId: user.academyId, email: user.email, roles, permissions };
   }
 
   async login(email: string, password: string): Promise<{
@@ -158,7 +161,7 @@ export class AuthService {
   }
 
   async requestPasswordReset(email: string): Promise<void> {
-    const user = await this.prisma.user.findUnique({ where: { email } });
+    const user = await this.prisma.user.findFirst({ where: { email } });
 
     // Always behave the same whether or not the account exists, so the
     // response can't be used to enumerate registered emails.

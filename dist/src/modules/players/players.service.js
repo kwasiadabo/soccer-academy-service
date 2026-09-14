@@ -237,7 +237,7 @@ let PlayersService = class PlayersService {
         ]);
         return this.findOne(id);
     }
-    async approve(id, reviewerUserId) {
+    async approve(id, reviewerUserId, dto = {}) {
         const player = await this.findOne(id);
         const existingInvoiceId = player.registrations[0]?.registrationFeeInvoiceId;
         const hasValidInvoice = existingInvoiceId
@@ -252,11 +252,20 @@ let PlayersService = class PlayersService {
             throw new common_1.BadRequestException('Assign an age category before proceeding to payment');
         }
         const registrationFeeType = await this.prisma.feeType.findFirst({
-            where: { category: 'REGISTRATION', isActive: true },
+            where: { isRegistrationFee: true, isActive: true },
+            include: { items: { include: { feeItem: true } } },
         });
         if (!registrationFeeType) {
             throw new common_1.BadRequestException('No active registration fee is configured. Ask an administrator to set one up.');
         }
+        let amount = registrationFeeType.defaultAmount;
+        let itemsCharged = registrationFeeType.items;
+        if (dto.feeItemIds !== undefined) {
+            const selected = new Set(dto.feeItemIds);
+            itemsCharged = registrationFeeType.items.filter((link) => selected.has(link.feeItemId));
+            amount = itemsCharged.reduce((sum, link) => sum + Number(link.amount), 0);
+        }
+        const itemsSummary = itemsCharged.map((link) => link.feeItem.name).join(', ');
         const registration = player.registrations[0];
         const dueDate = new Date();
         dueDate.setDate(dueDate.getDate() + 14);
@@ -265,8 +274,10 @@ let PlayersService = class PlayersService {
                 invoiceNumber: (0, finance_utils_1.generateInvoiceNumber)(),
                 playerId: player.id,
                 feeTypeId: registrationFeeType.id,
-                description: `Registration fee — ${player.firstName} ${player.lastName}`,
-                amount: registrationFeeType.defaultAmount,
+                description: itemsSummary
+                    ? `Registration fee — ${player.firstName} ${player.lastName} (${itemsSummary})`
+                    : `Registration fee — ${player.firstName} ${player.lastName}`,
+                amount,
                 dueDate,
                 gracePeriodDays: 7,
                 status: 'PENDING',
@@ -353,7 +364,7 @@ let PlayersService = class PlayersService {
     async initiatePaystackRegistrationCharge(id, dto) {
         const { player, invoice } = await this.getPendingRegistrationInvoice(id);
         const primaryGuardianLink = player.guardians.find((g) => g.isPrimary) ?? player.guardians[0];
-        const email = primaryGuardianLink?.guardian.email || `player-${player.id}@kapikidsacademy.com`;
+        const email = primaryGuardianLink?.guardian.email || `player-${player.id}@noreply.invalid`;
         const reference = `REGPAY-${Date.now()}-${player.id.slice(0, 8)}`;
         return this.paystack.chargeMobileMoney({
             email,
@@ -379,7 +390,7 @@ let PlayersService = class PlayersService {
         const ageCategory = await this.prisma.ageCategory.findUniqueOrThrow({ where: { id: ageCategoryId } });
         for (let attempt = 0; attempt < 5; attempt++) {
             const candidate = await this.playerIdService.generate(ageCategory.code, dateOfBirth);
-            const exists = await this.prisma.player.findUnique({ where: { playerCode: candidate } });
+            const exists = await this.prisma.player.findFirst({ where: { playerCode: candidate } });
             if (!exists)
                 return candidate;
         }

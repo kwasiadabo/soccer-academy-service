@@ -50,7 +50,7 @@ export class GuardiansService {
       throw new BadRequestException('This guardian already has portal access');
     }
 
-    let user = await this.prisma.user.findUnique({ where: { email: dto.email } });
+    let user = await this.prisma.user.findFirst({ where: { email: dto.email } });
 
     if (user) {
       const linkedCoach = await this.prisma.coach.findFirst({ where: { userId: user.id } });

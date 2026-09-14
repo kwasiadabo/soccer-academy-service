@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import { TenantContextService } from '../../common/tenant-context/tenant-context.service';
+import { PrismaService } from '../prisma/prisma.service';
 
 export type MomoProvider = 'mtn' | 'vod' | 'tgo';
 
@@ -18,23 +19,28 @@ export interface PaystackVerification {
  * Thin wrapper over Paystack's REST API for Ghana mobile-money charges.
  * There is no public webhook receiver in this dev environment, so the flow
  * is initiate -> caller polls verifyTransaction() until status is 'success'.
+ *
+ * Each academy brings its own Paystack account (its own secret/public keys,
+ * stored in AcademySettings) so money is collected straight into that
+ * academy's own bank account — resolved per call from the current tenant,
+ * never from process-wide config.
  */
 @Injectable()
 export class PaystackService {
   private readonly logger = new Logger(PaystackService.name);
-  private readonly secretKey?: string;
-  private readonly currency: string;
 
-  constructor(private readonly config: ConfigService) {
-    this.secretKey = this.config.get<string>('PAYSTACK_SECRET_KEY');
-    this.currency = this.config.get<string>('PAYSTACK_CURRENCY', 'GHS');
-  }
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly tenantContext: TenantContextService,
+  ) {}
 
-  private assertConfigured(): string {
-    if (!this.secretKey) {
-      throw new BadRequestException('Paystack is not configured on this server');
+  private async getCredentials(): Promise<{ secretKey: string; currency: string }> {
+    const academyId = this.tenantContext.getAcademyId();
+    const settings = await this.prisma.academySettings.findUnique({ where: { academyId } });
+    if (!settings?.paystackSecretKey) {
+      throw new BadRequestException('Paystack is not configured for this academy');
     }
-    return this.secretKey;
+    return { secretKey: settings.paystackSecretKey, currency: settings.paystackCurrency };
   }
 
   async chargeMobileMoney(params: {
@@ -44,7 +50,7 @@ export class PaystackService {
     provider: MomoProvider;
     reference: string;
   }): Promise<PaystackChargeResult> {
-    const secretKey = this.assertConfigured();
+    const { secretKey, currency } = await this.getCredentials();
 
     const response = await fetch('https://api.paystack.co/charge', {
       method: 'POST',
@@ -55,7 +61,7 @@ export class PaystackService {
       body: JSON.stringify({
         email: params.email,
         amount: Math.round(params.amount * 100),
-        currency: this.currency,
+        currency,
         reference: params.reference,
         mobile_money: { phone: params.phone, provider: params.provider },
       }),
@@ -80,7 +86,7 @@ export class PaystackService {
   }
 
   async verifyTransaction(reference: string): Promise<PaystackVerification> {
-    const secretKey = this.assertConfigured();
+    const { secretKey } = await this.getCredentials();
 
     const response = await fetch(`https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`, {
       headers: { Authorization: `Bearer ${secretKey}` },

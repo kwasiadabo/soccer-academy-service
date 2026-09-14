@@ -50,9 +50,11 @@ const crypto_1 = require("crypto");
 const fs = __importStar(require("fs/promises"));
 const path = __importStar(require("path"));
 const cloudinary_1 = require("cloudinary");
+const tenant_context_service_1 = require("../../common/tenant-context/tenant-context.service");
 let StorageService = StorageService_1 = class StorageService {
-    constructor(config) {
+    constructor(config, tenantContext) {
         this.config = config;
+        this.tenantContext = tenantContext;
         this.logger = new common_1.Logger(StorageService_1.name);
         this.driver = this.config.get('STORAGE_DRIVER', 'local');
         this.basePath = this.config.get('STORAGE_LOCAL_PATH', './uploads');
@@ -99,8 +101,9 @@ let StorageService = StorageService_1 = class StorageService {
         return { resourceType, publicId: rest.join('/') };
     }
     saveToCloudinary(originalName, mimeType, buffer) {
+        const folder = `academies/${this.tenantContext.getSlug()}`;
         return new Promise((resolve, reject) => {
-            const uploadStream = cloudinary_1.v2.uploader.upload_stream({ resource_type: 'auto', folder: 'soccer-academy' }, (error, result) => {
+            const uploadStream = cloudinary_1.v2.uploader.upload_stream({ resource_type: 'auto', folder }, (error, result) => {
                 if (error || !result) {
                     reject(error instanceof Error ? error : new Error('Cloudinary upload failed'));
                     return;
@@ -126,9 +129,11 @@ let StorageService = StorageService_1 = class StorageService {
         return Buffer.from(arrayBuffer);
     }
     async saveToLocal(originalName, mimeType, buffer) {
-        await fs.mkdir(this.basePath, { recursive: true });
+        const slug = this.tenantContext.getSlug();
+        const dir = path.join(this.basePath, slug);
+        await fs.mkdir(dir, { recursive: true });
         const ext = path.extname(originalName);
-        const storageKey = `${(0, crypto_1.randomUUID)()}${ext}`;
+        const storageKey = `${slug}/${(0, crypto_1.randomUUID)()}${ext}`;
         await fs.writeFile(path.join(this.basePath, storageKey), buffer);
         return {
             storageKey,
@@ -141,6 +146,7 @@ let StorageService = StorageService_1 = class StorageService {
 exports.StorageService = StorageService;
 exports.StorageService = StorageService = StorageService_1 = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [config_1.ConfigService])
+    __metadata("design:paramtypes", [config_1.ConfigService,
+        tenant_context_service_1.TenantContextService])
 ], StorageService);
 //# sourceMappingURL=storage.service.js.map

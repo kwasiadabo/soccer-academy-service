@@ -29,6 +29,7 @@ import {
 } from './dto/training-session.dto';
 import { UpsertActivityMarksDto } from './dto/training-activity-mark.dto';
 import { CreateSessionActivityDto } from './dto/training-session-activity.dto';
+import { UpdateTrainingScheduleDto } from './dto/training-schedule.dto';
 
 const OWN_OR_APPROVE = [PERMISSIONS.TRAINING_MANAGE_OWN, PERMISSIONS.TRAINING_APPROVE] as const;
 // Reception marks attendance for sessions coaches have already scheduled — they need to
@@ -37,8 +38,10 @@ const VIEW_SESSIONS = [
   PERMISSIONS.TRAINING_MANAGE_OWN,
   PERMISSIONS.TRAINING_APPROVE,
   PERMISSIONS.TRAINING_ATTENDANCE_RECORD,
+  PERMISSIONS.TRAINING_SESSIONS_MANAGE,
 ] as const;
 const RECORD_ATTENDANCE = [PERMISSIONS.TRAINING_MANAGE_OWN, PERMISSIONS.TRAINING_ATTENDANCE_RECORD] as const;
+const MANAGE_SESSIONS = [PERMISSIONS.TRAINING_MANAGE_OWN, PERMISSIONS.TRAINING_SESSIONS_MANAGE] as const;
 
 @ApiTags('training')
 @ApiBearerAuth()
@@ -168,12 +171,30 @@ export class TrainingController {
   }
 
   @Post('sessions')
-  @RequirePermissions(PERMISSIONS.TRAINING_MANAGE_OWN)
+  @RequireAnyPermission(...MANAGE_SESSIONS)
   @AuditLog({ action: 'TRAINING_SESSION_CREATE', entityType: 'TrainingSession' })
   @ApiOperation({ summary: 'Create a training session.' })
   @ApiCreatedResponse({ description: 'Session created.' })
   createSession(@Body() dto: CreateTrainingSessionDto, @CurrentUser() user: RequestUser) {
-    return this.trainingService.createSession(user.userId, dto);
+    return this.trainingService.createSession(user, dto);
+  }
+
+  // --- Recurring weekly fixture ---
+  @Get('schedule')
+  @RequireAnyPermission(...VIEW_SESSIONS)
+  @ApiOperation({ summary: "Get the academy's recurring weekly training fixture." })
+  @ApiOkResponse({ description: 'Schedule returned.' })
+  getSchedule() {
+    return this.trainingService.getSchedule();
+  }
+
+  @Patch('schedule')
+  @RequirePermissions(PERMISSIONS.TRAINING_SCHEDULE_MANAGE)
+  @AuditLog({ action: 'TRAINING_SCHEDULE_UPDATE', entityType: 'AcademySettings' })
+  @ApiOperation({ summary: "Update the academy's recurring weekly training fixture." })
+  @ApiOkResponse({ description: 'Schedule updated.' })
+  updateSchedule(@Body() dto: UpdateTrainingScheduleDto) {
+    return this.trainingService.updateSchedule(dto);
   }
 
   @Post('sessions/saturday')
@@ -197,12 +218,12 @@ export class TrainingController {
   }
 
   @Patch('sessions/:id')
-  @RequirePermissions(PERMISSIONS.TRAINING_MANAGE_OWN)
+  @RequireAnyPermission(...MANAGE_SESSIONS)
   @AuditLog({ action: 'TRAINING_SESSION_UPDATE', entityType: 'TrainingSession' })
   @ApiOperation({ summary: 'Update a training session.' })
   @ApiOkResponse({ description: 'Session updated.' })
   updateSession(@Param('id') id: string, @Body() dto: UpdateTrainingSessionDto, @CurrentUser() user: RequestUser) {
-    return this.trainingService.updateSession(id, user.userId, dto);
+    return this.trainingService.updateSession(id, user, dto);
   }
 
   @Post('sessions/:id/attendance')

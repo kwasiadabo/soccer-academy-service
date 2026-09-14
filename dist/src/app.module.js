@@ -15,7 +15,10 @@ const schedule_1 = require("@nestjs/schedule");
 const nestjs_pino_1 = require("nestjs-pino");
 const env_validation_1 = require("./config/env.validation");
 const all_exceptions_filter_1 = require("./common/filters/all-exceptions.filter");
+const tenant_context_module_1 = require("./common/tenant-context/tenant-context.module");
+const tenant_resolution_middleware_1 = require("./common/middleware/tenant-resolution.middleware");
 const prisma_module_1 = require("./modules/prisma/prisma.module");
+const academies_module_1 = require("./modules/academies/academies.module");
 const auth_module_1 = require("./modules/auth/auth.module");
 const users_module_1 = require("./modules/users/users.module");
 const academy_config_module_1 = require("./modules/academy-config/academy-config.module");
@@ -35,7 +38,15 @@ const issues_module_1 = require("./modules/issues/issues.module");
 const merchandise_module_1 = require("./modules/merchandise/merchandise.module");
 const player_of_the_week_module_1 = require("./modules/player-of-the-week/player-of-the-week.module");
 const gallery_module_1 = require("./modules/gallery/gallery.module");
+const platform_admin_module_1 = require("./modules/platform-admin/platform-admin.module");
+const billing_module_1 = require("./modules/billing/billing.module");
 let AppModule = class AppModule {
+    configure(consumer) {
+        consumer
+            .apply(tenant_resolution_middleware_1.TenantResolutionMiddleware)
+            .exclude('/', 'platform', 'platform/(.*)')
+            .forRoutes('*');
+    }
 };
 exports.AppModule = AppModule;
 exports.AppModule = AppModule = __decorate([
@@ -51,6 +62,8 @@ exports.AppModule = AppModule = __decorate([
             throttler_1.ThrottlerModule.forRoot({ throttlers: [{ ttl: 60_000, limit: 100 }] }),
             schedule_1.ScheduleModule.forRoot(),
             prisma_module_1.PrismaModule,
+            tenant_context_module_1.TenantContextModule,
+            academies_module_1.AcademiesModule,
             audit_module_1.AuditModule,
             storage_module_1.StorageModule,
             auth_module_1.AuthModule,
@@ -69,6 +82,8 @@ exports.AppModule = AppModule = __decorate([
             merchandise_module_1.MerchandiseModule,
             player_of_the_week_module_1.PlayerOfTheWeekModule,
             gallery_module_1.GalleryModule,
+            platform_admin_module_1.PlatformAdminModule,
+            billing_module_1.BillingModule,
         ],
         providers: [
             { provide: core_1.APP_GUARD, useClass: throttler_1.ThrottlerGuard },

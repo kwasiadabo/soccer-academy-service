@@ -1,4 +1,5 @@
 import { ConfigService } from '@nestjs/config';
+import { TenantContextService } from '../../common/tenant-context/tenant-context.service';
 export interface StoredFile {
     storageKey: string;
     fileName: string;
@@ -7,10 +8,11 @@ export interface StoredFile {
 }
 export declare class StorageService {
     private readonly config;
+    private readonly tenantContext;
     private readonly logger;
     private readonly driver;
     private readonly basePath;
-    constructor(config: ConfigService);
+    constructor(config: ConfigService, tenantContext: TenantContextService);
     save(originalName: string, mimeType: string, buffer: Buffer): Promise<StoredFile>;
     read(storageKey: string): Promise<Buffer>;
     delete(storageKey: string): Promise<void>;

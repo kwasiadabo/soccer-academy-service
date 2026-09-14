@@ -33,6 +33,9 @@ let MerchandiseOrdersController = class MerchandiseOrdersController {
     pendingCount() {
         return this.ordersService.pendingCount();
     }
+    getReport(from, to, status) {
+        return this.ordersService.getOrdersReport(from, to, status === 'PENDING' ? 'PENDING' : 'SOLD');
+    }
     getOne(id) {
         return this.ordersService.getForStaff(id);
     }
@@ -58,6 +61,17 @@ __decorate([
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", void 0)
 ], MerchandiseOrdersController.prototype, "pendingCount", null);
+__decorate([
+    (0, common_1.Get)('report'),
+    (0, swagger_1.ApiOperation)({ summary: 'Get a report of items ordered within a date range — either sold (paid) or still pending payment.' }),
+    (0, swagger_1.ApiOkResponse)({ description: 'Report returned.' }),
+    __param(0, (0, common_1.Query)('from')),
+    __param(1, (0, common_1.Query)('to')),
+    __param(2, (0, common_1.Query)('status')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String, String]),
+    __metadata("design:returntype", void 0)
+], MerchandiseOrdersController.prototype, "getReport", null);
 __decorate([
     (0, common_1.Get)(':id'),
     (0, swagger_1.ApiOperation)({ summary: 'Get an order by ID.' }),

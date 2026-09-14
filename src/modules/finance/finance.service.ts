@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { Prisma } from '@prisma/client';
+import { TenantContextService } from '../../common/tenant-context/tenant-context.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { PlayersService } from '../players/players.service';
 import { ReceiptsService } from '../receipts/receipts.service';
@@ -42,7 +43,6 @@ export interface PaymentReportRow {
   invoiceNumber: string;
   feeTypeId: string;
   feeTypeName: string;
-  feeTypeCategory: string;
   amount: number;
 }
 
@@ -83,6 +83,7 @@ export class FinanceService {
     private readonly prisma: PrismaService,
     private readonly playersService: PlayersService,
     private readonly receipts: ReceiptsService,
+    private readonly tenantContext: TenantContextService,
   ) {}
 
   // --- Fee items (raw priced building blocks, no category of their own) ---
@@ -97,22 +98,19 @@ export class FinanceService {
     return this.prisma.feeItem.create({ data: dto });
   }
 
+  // Sequential top-level calls, not a hand-rolled $transaction(async (tx) =>
+  // ...): each tenant-scoped model call already gets its own SET LOCAL from
+  // PrismaService's tenant-scoping extension, but only when called on
+  // `this.prisma` directly — a manual transaction callback's `tx` is a bare,
+  // un-extended client that bypasses that wrapping entirely, which is exactly
+  // what made this throw "record not found" under RLS (same class of bug
+  // already fixed in UsersService.create and BillingService).
   async updateFeeItem(id: string, dto: UpdateFeeItemDto) {
     const feeItem = await this.prisma.feeItem.findUnique({ where: { id } });
     if (!feeItem) {
       throw new NotFoundException('Fee item not found');
     }
-    return this.prisma.$transaction(async (tx) => {
-      const updated = await tx.feeItem.update({ where: { id }, data: dto });
-      if (dto.defaultAmount !== undefined) {
-        // Every Fee this item is attached to needs its cached total refreshed.
-        const links = await tx.feeTypeItem.findMany({ where: { feeItemId: id }, select: { feeTypeId: true } });
-        for (const link of links) {
-          await this.recomputeFeeTypeAmount(tx, link.feeTypeId);
-        }
-      }
-      return updated;
-    });
+    return this.prisma.feeItem.update({ where: { id }, data: dto });
   }
 
   // --- Fee types (chargeable Fees composed of Fee Items) ---
@@ -124,28 +122,25 @@ export class FinanceService {
     });
   }
 
-  // Player registration picks whichever REGISTRATION fee type is active via a plain
+  // Player registration picks whichever fee has isRegistrationFee via a plain
   // findFirst (see players.service.ts#approve) — at most one may be active at a time
   // so that lookup is never ambiguous.
-  private async deactivateOtherRegistrationFeeTypes(tx: Prisma.TransactionClient, excludeId?: string) {
-    await tx.feeType.updateMany({
-      where: { category: 'REGISTRATION', isActive: true, ...(excludeId ? { id: { not: excludeId } } : {}) },
+  private async deactivateOtherRegistrationFeeTypes(excludeId?: string) {
+    await this.prisma.feeType.updateMany({
+      where: { isRegistrationFee: true, isActive: true, ...(excludeId ? { id: { not: excludeId } } : {}) },
       data: { isActive: false },
     });
   }
 
-  private async recomputeFeeTypeAmount(tx: Prisma.TransactionClient, feeTypeId: string) {
-    const items = await tx.feeTypeItem.findMany({ where: { feeTypeId }, include: { feeItem: true } });
-    const total = items.reduce((sum, link) => sum + Number(link.feeItem.defaultAmount), 0);
-    await tx.feeType.update({ where: { id: feeTypeId }, data: { defaultAmount: total } });
+  private async recomputeFeeTypeAmount(feeTypeId: string) {
+    const links = await this.prisma.feeTypeItem.findMany({ where: { feeTypeId } });
+    const total = links.reduce((sum, link) => sum + Number(link.amount), 0);
+    await this.prisma.feeType.update({ where: { id: feeTypeId }, data: { defaultAmount: total } });
   }
 
   async createFeeType(dto: CreateFeeTypeDto) {
-    if (dto.category === 'REGISTRATION') {
-      return this.prisma.$transaction(async (tx) => {
-        await this.deactivateOtherRegistrationFeeTypes(tx);
-        return tx.feeType.create({ data: dto, include: FEE_TYPE_INCLUDE });
-      });
+    if (dto.isRegistrationFee) {
+      await this.deactivateOtherRegistrationFeeTypes();
     }
     return this.prisma.feeType.create({ data: dto, include: FEE_TYPE_INCLUDE });
   }
@@ -156,16 +151,15 @@ export class FinanceService {
       throw new NotFoundException('Fee type not found');
     }
     const activating = dto.isActive === true && !feeType.isActive;
-    if (activating && feeType.category === 'REGISTRATION') {
-      return this.prisma.$transaction(async (tx) => {
-        await this.deactivateOtherRegistrationFeeTypes(tx, id);
-        return tx.feeType.update({ where: { id }, data: dto, include: FEE_TYPE_INCLUDE });
-      });
+    if (activating && feeType.isRegistrationFee) {
+      await this.deactivateOtherRegistrationFeeTypes(id);
     }
     return this.prisma.feeType.update({ where: { id }, data: dto, include: FEE_TYPE_INCLUDE });
   }
 
-  async addFeeTypeItem(feeTypeId: string, feeItemId: string) {
+  // Also used to change the amount of an already-attached item — upsert
+  // lets the same call both attach a new item and re-price an existing one.
+  async addFeeTypeItem(feeTypeId: string, feeItemId: string, amount: number) {
     const [feeType, feeItem] = await Promise.all([
       this.prisma.feeType.findUnique({ where: { id: feeTypeId } }),
       this.prisma.feeItem.findUnique({ where: { id: feeItemId } }),
@@ -173,23 +167,19 @@ export class FinanceService {
     if (!feeType) throw new NotFoundException('Fee not found');
     if (!feeItem) throw new NotFoundException('Fee item not found');
 
-    return this.prisma.$transaction(async (tx) => {
-      await tx.feeTypeItem.upsert({
-        where: { feeTypeId_feeItemId: { feeTypeId, feeItemId } },
-        create: { feeTypeId, feeItemId },
-        update: {},
-      });
-      await this.recomputeFeeTypeAmount(tx, feeTypeId);
-      return tx.feeType.findUniqueOrThrow({ where: { id: feeTypeId }, include: FEE_TYPE_INCLUDE });
+    await this.prisma.feeTypeItem.upsert({
+      where: { feeTypeId_feeItemId: { feeTypeId, feeItemId } },
+      create: { feeTypeId, feeItemId, amount },
+      update: { amount },
     });
+    await this.recomputeFeeTypeAmount(feeTypeId);
+    return this.prisma.feeType.findUniqueOrThrow({ where: { id: feeTypeId }, include: FEE_TYPE_INCLUDE });
   }
 
   async removeFeeTypeItem(feeTypeId: string, feeItemId: string) {
-    return this.prisma.$transaction(async (tx) => {
-      await tx.feeTypeItem.deleteMany({ where: { feeTypeId, feeItemId } });
-      await this.recomputeFeeTypeAmount(tx, feeTypeId);
-      return tx.feeType.findUniqueOrThrow({ where: { id: feeTypeId }, include: FEE_TYPE_INCLUDE });
-    });
+    await this.prisma.feeTypeItem.deleteMany({ where: { feeTypeId, feeItemId } });
+    await this.recomputeFeeTypeAmount(feeTypeId);
+    return this.prisma.feeType.findUniqueOrThrow({ where: { id: feeTypeId }, include: FEE_TYPE_INCLUDE });
   }
 
   // --- Invoices ---
@@ -291,7 +281,7 @@ export class FinanceService {
       ? await this.prisma.invoice.findMany({
           where: {
             deletedAt: null,
-            feeType: { category: 'MONTHLY_SUBSCRIPTION' },
+            feeType: { isRecurring: true },
             status: { in: ['PENDING', 'PARTIALLY_PAID', 'OVERDUE'] },
             playerId: { in: players.map((p) => p.id) },
           },
@@ -434,7 +424,6 @@ export class FinanceService {
       invoiceNumber: a.invoice.invoiceNumber,
       feeTypeId: a.invoice.feeType.id,
       feeTypeName: a.invoice.feeType.name,
-      feeTypeCategory: a.invoice.feeType.category,
       amount: Number(a.amount),
     }));
 
@@ -471,8 +460,17 @@ export class FinanceService {
   // player its flat defaultAmount on the same day.
   @Cron('0 0 1 * *')
   async handleMonthlyBillingCron() {
-    const result = await this.generateRecurringInvoices();
-    this.logger.log(`Monthly billing cron: created ${result.created} invoice(s), skipped ${result.skipped} already-billed.`);
+    // Academy isn't a tenant-scoped model, so this listing runs unscoped with
+    // no special escape hatch needed — see TENANT_SCOPED_MODELS.
+    const academies = await this.prisma.academy.findMany({ where: { status: 'ACTIVE' } });
+    for (const academy of academies) {
+      await this.tenantContext.run({ academyId: academy.id, slug: academy.slug }, async () => {
+        const result = await this.generateRecurringInvoices();
+        this.logger.log(
+          `Monthly billing cron (${academy.slug}): created ${result.created} invoice(s), skipped ${result.skipped} already-billed.`,
+        );
+      });
+    }
   }
 
   async generateRecurringInvoices(): Promise<{ created: number; skipped: number }> {

@@ -12,6 +12,8 @@ exports.PERMISSIONS = {
     TRAINING_MANAGE_OWN: 'training:manage-own',
     TRAINING_APPROVE: 'training:approve',
     TRAINING_ATTENDANCE_RECORD: 'training:attendance-record',
+    TRAINING_SESSIONS_MANAGE: 'training:sessions-manage',
+    TRAINING_SCHEDULE_MANAGE: 'training:schedule-manage',
     ASSESSMENTS_MANAGE_OWN: 'assessments:manage-own',
     ASSESSMENTS_VIEW: 'assessments:view',
     ASSESSMENTS_MANAGE_TEMPLATES: 'assessments:manage-templates',
@@ -25,6 +27,7 @@ exports.PERMISSIONS = {
     ISSUES_MANAGE: 'issues:manage',
     ORDERS_MANAGE: 'orders:manage',
     GALLERY_MANAGE: 'gallery:manage',
+    BILLING_MANAGE: 'billing:manage',
 };
 exports.ROLE_NAMES = {
     ADMIN: 'System Administrator',
@@ -51,6 +54,9 @@ exports.ROLE_PERMISSIONS = {
         exports.PERMISSIONS.ACADEMY_CONFIG_VIEW,
         exports.PERMISSIONS.PLAYERS_VIEW,
         exports.PERMISSIONS.TRAINING_APPROVE,
+        exports.PERMISSIONS.TRAINING_ATTENDANCE_RECORD,
+        exports.PERMISSIONS.TRAINING_SESSIONS_MANAGE,
+        exports.PERMISSIONS.TRAINING_SCHEDULE_MANAGE,
         exports.PERMISSIONS.ASSESSMENTS_VIEW,
         exports.PERMISSIONS.ASSESSMENTS_MANAGE_OWN,
         exports.PERMISSIONS.ASSESSMENTS_MANAGE_TEMPLATES,

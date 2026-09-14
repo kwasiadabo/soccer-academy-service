@@ -1,39 +1,38 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import nodemailer, { type Transporter } from 'nodemailer';
+import nodemailer from 'nodemailer';
+import { TenantContextService } from '../../common/tenant-context/tenant-context.service';
+import { PrismaService } from '../prisma/prisma.service';
 
+// Each academy brings its own email account (its own Gmail address + app
+// password, stored in AcademySettings) and its own display/brand name for the
+// "from" header — resolved per call from the current tenant.
 @Injectable()
 export class EmailService {
   private readonly logger = new Logger(EmailService.name);
-  private readonly transporter: Transporter | null;
-  private readonly fromAddress?: string;
 
-  constructor(private readonly config: ConfigService) {
-    const user = this.config.get<string>('EMAIL_USER');
-    const pass = this.config.get<string>('EMAIL_APP_PASSWORD');
-    this.fromAddress = user;
-    this.transporter =
-      user && pass ? nodemailer.createTransport({ service: 'gmail', auth: { user, pass } }) : null;
-  }
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly tenantContext: TenantContextService,
+  ) {}
 
   // Never throws — a notification failure must not roll back a real payment.
-  async send(params: {
-    to: string;
-    subject: string;
-    html: string;
-    attachments?: { filename: string; path: string; cid: string }[];
-  }): Promise<boolean> {
-    if (!this.transporter) {
-      this.logger.warn('Email not configured (EMAIL_USER/EMAIL_APP_PASSWORD missing) — skipping send');
+  async send(params: { to: string; subject: string; html: string }): Promise<boolean> {
+    const academyId = this.tenantContext.getAcademyId();
+    const settings = await this.prisma.academySettings.findUnique({ where: { academyId } });
+    if (!settings?.emailUser || !settings?.emailAppPassword) {
+      this.logger.warn(`Email not configured for academy ${academyId} — skipping send`);
       return false;
     }
     try {
-      const info = await this.transporter.sendMail({
-        from: `Kapikids Soccer Academy <${this.fromAddress}>`,
+      const transporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: { user: settings.emailUser, pass: settings.emailAppPassword },
+      });
+      const info = await transporter.sendMail({
+        from: `${settings.brandName} <${settings.emailUser}>`,
         to: params.to,
         subject: params.subject,
         html: params.html,
-        attachments: params.attachments,
       });
       this.logger.log(`Email sent to ${params.to}: ${info.messageId}`);
       return true;

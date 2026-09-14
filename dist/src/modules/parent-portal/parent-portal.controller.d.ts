@@ -7,9 +7,9 @@ export declare class ParentPortalController {
     constructor(parentPortalService: ParentPortalService);
     listChildren(user: RequestUser): Promise<{
         id: string;
+        status: import(".prisma/client").$Enums.PlayerStatus;
         firstName: string;
         lastName: string;
-        status: import(".prisma/client").$Enums.PlayerStatus;
         ageCategory: {
             id: string;
             name: string;
@@ -29,6 +29,7 @@ export declare class ParentPortalController {
     } & {
         id: string;
         createdAt: Date;
+        academyId: string;
         teamId: string;
         playerId: string;
         trainingSessionId: string;
@@ -37,9 +38,9 @@ export declare class ParentPortalController {
     })[]>;
     getChild(playerId: string, user: RequestUser): Promise<{
         id: string;
+        status: import(".prisma/client").$Enums.PlayerStatus;
         firstName: string;
         lastName: string;
-        status: import(".prisma/client").$Enums.PlayerStatus;
         ageCategory: {
             id: string;
             name: string;
@@ -57,9 +58,10 @@ export declare class ParentPortalController {
         trainingSession: {
             team: {
                 id: string;
-                createdAt: Date;
                 name: string;
+                createdAt: Date;
                 updatedAt: Date;
+                academyId: string;
                 branchId: string | null;
                 isActive: boolean;
                 ageCategoryId: string;
@@ -68,23 +70,25 @@ export declare class ParentPortalController {
             };
         } & {
             id: string;
+            status: import(".prisma/client").$Enums.TrainingSessionStatus;
             createdAt: Date;
             updatedAt: Date;
-            status: import(".prisma/client").$Enums.TrainingSessionStatus;
+            academyId: string;
             teamId: string;
             trainingGroupId: string | null;
-            date: Date;
             location: string | null;
             trainingPlanId: string | null;
+            conductedByCoachId: string | null;
+            date: Date;
             startTime: string | null;
             endTime: string | null;
-            conductedByCoachId: string | null;
         };
     } & {
         id: string;
         status: import(".prisma/client").$Enums.AttendanceStatus;
-        remarks: string | null;
+        academyId: string;
         playerId: string;
+        remarks: string | null;
         trainingSessionId: string;
         recordedByUserId: string;
         recordedAt: Date;
@@ -93,33 +97,37 @@ export declare class ParentPortalController {
         ratings: ({
             criteria: {
                 id: string;
-                description: string | null;
                 name: string;
+                description: string | null;
+                academyId: string;
                 sortOrder: number;
-                category: import(".prisma/client").$Enums.AssessmentCategory;
                 templateId: string;
+                category: import(".prisma/client").$Enums.AssessmentCategory;
             } | null;
             sessionActivity: {
                 id: string;
-                createdAt: Date;
                 name: string;
+                createdAt: Date;
+                academyId: string;
                 sortOrder: number;
                 trainingSessionId: string;
             } | null;
         } & {
             id: string;
+            academyId: string;
             remarks: string | null;
+            playerAssessmentId: string;
             criteriaId: string | null;
             sessionActivityId: string | null;
             ratingValue: import("@prisma/client/runtime/library").Decimal;
             ratingLabel: string | null;
-            playerAssessmentId: string;
         })[];
         template: {
             id: string;
-            createdAt: Date;
             name: string;
+            createdAt: Date;
             updatedAt: Date;
+            academyId: string;
             isActive: boolean;
             ageCategoryId: string | null;
             ratingScale: import(".prisma/client").$Enums.RatingScaleType;
@@ -133,16 +141,17 @@ export declare class ParentPortalController {
         id: string;
         createdAt: Date;
         updatedAt: Date;
+        academyId: string;
         deletedAt: Date | null;
         playerId: string;
         trainingSessionId: string | null;
         templateId: string | null;
         matchId: string | null;
+        assessedByCoachId: string;
+        assessmentDate: Date;
         strengths: string | null;
         areasForImprovement: string | null;
         developmentGoals: string | null;
-        assessedByCoachId: string;
-        assessmentDate: Date;
     })[]>;
     getActivityMarks(playerId: string, user: RequestUser): Promise<({
         trainingActivity: {
@@ -156,11 +165,12 @@ export declare class ParentPortalController {
         id: string;
         createdAt: Date;
         updatedAt: Date;
-        remarks: string | null;
+        academyId: string;
         playerId: string;
-        rating: number;
         trainingActivityId: string;
         ratedByCoachId: string;
+        rating: number;
+        remarks: string | null;
     })[]>;
     getCoaches(playerId: string, user: RequestUser): Promise<{
         id: string;
@@ -171,9 +181,10 @@ export declare class ParentPortalController {
         match: {
             team: {
                 id: string;
-                createdAt: Date;
                 name: string;
+                createdAt: Date;
                 updatedAt: Date;
+                academyId: string;
                 branchId: string | null;
                 isActive: boolean;
                 ageCategoryId: string;
@@ -182,15 +193,17 @@ export declare class ParentPortalController {
             };
             opponent: {
                 id: string;
-                createdAt: Date;
                 name: string;
+                createdAt: Date;
+                academyId: string;
                 contactInfo: string | null;
             };
         } & {
             id: string;
+            status: import(".prisma/client").$Enums.MatchStatus;
             createdAt: Date;
             updatedAt: Date;
-            status: import(".prisma/client").$Enums.MatchStatus;
+            academyId: string;
             teamId: string;
             opponentId: string;
             competitionName: string | null;
@@ -202,6 +215,7 @@ export declare class ParentPortalController {
         };
     } & {
         id: string;
+        academyId: string;
         playerId: string;
         matchId: string;
         isStarting: boolean;
@@ -241,15 +255,17 @@ export declare class ParentPortalController {
     submitFeedback(playerId: string, dto: CreateCoachFeedbackDto, user: RequestUser): Promise<{
         criteria: {
             id: string;
+            academyId: string;
             rating: import("@prisma/client/runtime/library").Decimal;
-            criterionName: string;
             feedbackId: string;
+            criterionName: string;
         }[];
     } & {
         id: string;
         createdAt: Date;
-        coachId: string;
+        academyId: string;
         playerId: string;
+        coachId: string;
         submittedByUserId: string;
         comments: string | null;
         overallRating: import("@prisma/client/runtime/library").Decimal;

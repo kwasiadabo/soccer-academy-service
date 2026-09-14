@@ -13,6 +13,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.TrainingService = void 0;
 const common_1 = require("@nestjs/common");
 const schedule_1 = require("@nestjs/schedule");
+const tenant_context_service_1 = require("../../common/tenant-context/tenant-context.service");
 const prisma_service_1 = require("../prisma/prisma.service");
 const coach_context_service_1 = require("../coaches/coach-context.service");
 const email_service_1 = require("../messaging/email.service");
@@ -39,14 +40,16 @@ const SESSION_INCLUDE = {
     },
     sessionActivities: { orderBy: { sortOrder: 'asc' } },
 };
-const SATURDAY_START_TIME = '08:00';
-const SATURDAY_END_TIME = '10:00';
+const DEFAULT_TRAINING_DAY_OF_WEEK = 6;
+const DEFAULT_TRAINING_START_TIME = '08:00';
+const DEFAULT_TRAINING_END_TIME = '10:00';
 let TrainingService = TrainingService_1 = class TrainingService {
-    constructor(prisma, coachContext, email, sms) {
+    constructor(prisma, coachContext, email, sms, tenantContext) {
         this.prisma = prisma;
         this.coachContext = coachContext;
         this.email = email;
         this.sms = sms;
+        this.tenantContext = tenantContext;
         this.logger = new common_1.Logger(TrainingService_1.name);
     }
     canApprove(user) {
@@ -300,11 +303,13 @@ let TrainingService = TrainingService_1 = class TrainingService {
         }
         return session;
     }
-    async assertOwnSession(id, userId) {
-        const coachId = await this.coachContext.resolveCoachId(userId);
+    async assertOwnSession(id, user) {
         const session = await this.getSessionOrThrow(id);
-        if (session.conductedByCoachId !== coachId) {
-            throw new common_1.ForbiddenException('You do not have access to this training session');
+        if (this.coachContext.isCoachOnly(user)) {
+            const coachId = await this.coachContext.resolveCoachId(user.userId);
+            if (session.conductedByCoachId !== coachId) {
+                throw new common_1.ForbiddenException('You do not have access to this training session');
+            }
         }
         return session;
     }
@@ -320,16 +325,46 @@ let TrainingService = TrainingService_1 = class TrainingService {
             orderBy: { lastName: 'asc' },
         });
     }
-    async ensureTodaysSaturdaySessions(teamIds) {
-        if (new Date().getUTCDay() !== 6 || teamIds.length === 0) {
+    async getSchedule() {
+        const academyId = this.tenantContext.getAcademyId();
+        const settings = await this.prisma.academySettings.findUnique({ where: { academyId } });
+        return {
+            dayOfWeek: settings?.trainingDayOfWeek ?? DEFAULT_TRAINING_DAY_OF_WEEK,
+            startTime: settings?.trainingStartTime ?? DEFAULT_TRAINING_START_TIME,
+            endTime: settings?.trainingEndTime ?? DEFAULT_TRAINING_END_TIME,
+            location: settings?.trainingLocation ?? null,
+        };
+    }
+    async updateSchedule(dto) {
+        const current = await this.getSchedule();
+        const startTime = dto.startTime ?? current.startTime;
+        const endTime = dto.endTime ?? current.endTime;
+        if (startTime >= endTime) {
+            throw new common_1.BadRequestException('Start time must be before end time');
+        }
+        const academyId = this.tenantContext.getAcademyId();
+        await this.prisma.academySettings.update({
+            where: { academyId },
+            data: {
+                ...(dto.dayOfWeek !== undefined ? { trainingDayOfWeek: dto.dayOfWeek } : {}),
+                ...(dto.startTime ? { trainingStartTime: dto.startTime } : {}),
+                ...(dto.endTime ? { trainingEndTime: dto.endTime } : {}),
+                ...(dto.location !== undefined ? { trainingLocation: dto.location } : {}),
+            },
+        });
+        return this.getSchedule();
+    }
+    async ensureThisWeeksWeeklySessions(teamIds, schedule) {
+        if (teamIds.length === 0) {
             return;
         }
-        await Promise.all(teamIds.map((teamId) => this.getOrCreateSaturdaySessionRecord(teamId)));
+        await Promise.all(teamIds.map((teamId) => this.getOrCreateWeeklySessionRecord(teamId, schedule)));
     }
     async findAllSessions(user) {
+        const schedule = await this.getSchedule();
         if (!this.coachContext.isCoachOnly(user)) {
             const allTeamIds = await this.prisma.team.findMany({ where: { isActive: true }, select: { id: true } });
-            await this.ensureTodaysSaturdaySessions(allTeamIds.map((t) => t.id));
+            await this.ensureThisWeeksWeeklySessions(allTeamIds.map((t) => t.id), schedule);
             return this.prisma.trainingSession.findMany({ include: SESSION_INCLUDE, orderBy: { date: 'desc' } });
         }
         const coachId = await this.coachContext.resolveCoachId(user.userId);
@@ -340,7 +375,7 @@ let TrainingService = TrainingService_1 = class TrainingService {
         if (teamIds.length === 0 && trainingGroupIds.length === 0) {
             return [];
         }
-        await this.ensureTodaysSaturdaySessions(teamIds);
+        await this.ensureThisWeeksWeeklySessions(teamIds, schedule);
         return this.prisma.trainingSession.findMany({
             where: {
                 OR: [
@@ -357,16 +392,18 @@ let TrainingService = TrainingService_1 = class TrainingService {
         const roster = await this.rosterFor(session);
         return { ...session, roster };
     }
-    async createSession(userId, dto) {
-        const coachId = await this.coachContext.resolveCoachId(userId);
+    async createSession(user, dto) {
+        const coachId = this.coachContext.isCoachOnly(user)
+            ? await this.coachContext.resolveCoachId(user.userId)
+            : await this.coachContext.resolveOptionalCoachId(user.userId);
         const { date, ...rest } = dto;
         return this.prisma.trainingSession.create({
-            data: { ...rest, date: new Date(date), conductedByCoachId: coachId, status: 'SCHEDULED' },
+            data: { ...rest, date: new Date(date), conductedByCoachId: coachId ?? undefined, status: 'SCHEDULED' },
             include: SESSION_INCLUDE,
         });
     }
-    async updateSession(id, userId, dto) {
-        await this.assertOwnSession(id, userId);
+    async updateSession(id, user, dto) {
+        await this.assertOwnSession(id, user);
         const { date, ...rest } = dto;
         await this.prisma.trainingSession.update({
             where: { id },
@@ -374,33 +411,50 @@ let TrainingService = TrainingService_1 = class TrainingService {
         });
         return this.getSessionOrThrow(id);
     }
-    resolveSaturday(dateStr) {
+    resolveFixtureDate(dayOfWeek, dateStr) {
         const base = dateStr ? new Date(dateStr) : new Date();
         const day = base.getUTCDay();
-        const daysSinceSaturday = (day + 1) % 7;
-        return new Date(Date.UTC(base.getUTCFullYear(), base.getUTCMonth(), base.getUTCDate() - daysSinceSaturday));
+        const daysSince = (day - dayOfWeek + 7) % 7;
+        return new Date(Date.UTC(base.getUTCFullYear(), base.getUTCMonth(), base.getUTCDate() - daysSince));
     }
-    async getOrCreateSaturdaySessionRecord(teamId, dateStr) {
-        const date = this.resolveSaturday(dateStr);
+    async getOrCreateWeeklySessionRecord(teamId, schedule, dateStr) {
+        const date = this.resolveFixtureDate(schedule.dayOfWeek, dateStr);
         const existing = await this.prisma.trainingSession.findFirst({ where: { teamId, date }, include: SESSION_INCLUDE });
         return (existing ??
             this.prisma.trainingSession.create({
-                data: { teamId, date, startTime: SATURDAY_START_TIME, endTime: SATURDAY_END_TIME, status: 'SCHEDULED' },
+                data: {
+                    teamId,
+                    date,
+                    startTime: schedule.startTime,
+                    endTime: schedule.endTime,
+                    location: schedule.location ?? undefined,
+                    status: 'SCHEDULED',
+                },
                 include: SESSION_INCLUDE,
             }));
     }
     async getOrCreateSaturdaySession(teamId, dateStr) {
-        const session = await this.getOrCreateSaturdaySessionRecord(teamId, dateStr);
+        const schedule = await this.getSchedule();
+        const session = await this.getOrCreateWeeklySessionRecord(teamId, schedule, dateStr);
         const roster = await this.rosterFor(session);
         return { ...session, roster };
     }
     async handleSaturdaySessionsCron() {
-        const result = await this.provisionSaturdaySessions();
-        this.logger.log(`Saturday sessions cron: created ${result.created} session(s), skipped ${result.skipped} already existing.`);
+        const academies = await this.prisma.academy.findMany({ where: { status: 'ACTIVE' } });
+        for (const academy of academies) {
+            await this.tenantContext.run({ academyId: academy.id, slug: academy.slug }, async () => {
+                const result = await this.provisionSaturdaySessions();
+                this.logger.log(`Weekly training sessions cron (${academy.slug}): created ${result.created} session(s), skipped ${result.skipped} already existing.`);
+            });
+        }
     }
     async provisionSaturdaySessions() {
+        const schedule = await this.getSchedule();
+        if (new Date().getUTCDay() !== schedule.dayOfWeek) {
+            return { created: 0, skipped: 0 };
+        }
         const teams = await this.prisma.team.findMany({ where: { isActive: true }, select: { id: true, name: true } });
-        const date = this.resolveSaturday();
+        const date = this.resolveFixtureDate(schedule.dayOfWeek);
         let created = 0;
         let skipped = 0;
         for (const team of teams) {
@@ -410,7 +464,14 @@ let TrainingService = TrainingService_1 = class TrainingService {
                 continue;
             }
             const session = await this.prisma.trainingSession.create({
-                data: { teamId: team.id, date, startTime: SATURDAY_START_TIME, endTime: SATURDAY_END_TIME, status: 'SCHEDULED' },
+                data: {
+                    teamId: team.id,
+                    date,
+                    startTime: schedule.startTime,
+                    endTime: schedule.endTime,
+                    location: schedule.location ?? undefined,
+                    status: 'SCHEDULED',
+                },
             });
             created++;
             await this.alertCoachesOfSaturdaySession(session, team.name);
@@ -454,9 +515,10 @@ let TrainingService = TrainingService_1 = class TrainingService {
             year: 'numeric',
             timeZone: 'UTC',
         });
-        const timeLabel = `${session.startTime ?? SATURDAY_START_TIME}–${session.endTime ?? SATURDAY_END_TIME}`;
-        const subject = `Saturday training session created — ${teamName}`;
-        const message = `A Saturday training session for ${teamName} has been scheduled for ${dateLabel}, ${timeLabel}${session.location ? ` at ${session.location}` : ''}.`;
+        const dayName = session.date.toLocaleDateString('en-GB', { weekday: 'long', timeZone: 'UTC' });
+        const timeLabel = `${session.startTime ?? DEFAULT_TRAINING_START_TIME}–${session.endTime ?? DEFAULT_TRAINING_END_TIME}`;
+        const subject = `${dayName} training session created — ${teamName}`;
+        const message = `A ${dayName} training session for ${teamName} has been scheduled for ${dateLabel}, ${timeLabel}${session.location ? ` at ${session.location}` : ''}.`;
         await Promise.all(Array.from(recipients.values()).map((recipient) => Promise.all([
             recipient.email ? this.email.send({ to: recipient.email, subject, html: `<p>${message}</p>` }) : Promise.resolve(false),
             recipient.phone ? this.sms.send(recipient.phone, message) : Promise.resolve(false),
@@ -477,7 +539,8 @@ let TrainingService = TrainingService_1 = class TrainingService {
             const coachId = await this.coachContext.resolveCoachId(user.userId);
             await this.coachContext.assertOwnsPlayer(coachId, player);
         }
-        const session = await this.getOrCreateSaturdaySessionRecord(player.teamId);
+        const schedule = await this.getSchedule();
+        const session = await this.getOrCreateWeeklySessionRecord(player.teamId, schedule);
         const recordedAt = new Date();
         return this.prisma.trainingAttendance.upsert({
             where: { trainingSessionId_playerId: { trainingSessionId: session.id, playerId } },
@@ -545,7 +608,7 @@ let TrainingService = TrainingService_1 = class TrainingService {
 };
 exports.TrainingService = TrainingService;
 __decorate([
-    (0, schedule_1.Cron)('0 6 * * 6'),
+    (0, schedule_1.Cron)('0 6 * * *'),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", Promise)
@@ -555,6 +618,7 @@ exports.TrainingService = TrainingService = TrainingService_1 = __decorate([
     __metadata("design:paramtypes", [prisma_service_1.PrismaService,
         coach_context_service_1.CoachContextService,
         email_service_1.EmailService,
-        sms_service_1.SmsService])
+        sms_service_1.SmsService,
+        tenant_context_service_1.TenantContextService])
 ], TrainingService);
 //# sourceMappingURL=training.service.js.map

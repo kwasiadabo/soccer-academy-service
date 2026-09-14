@@ -5,6 +5,8 @@ export declare const envSchema: z.ZodObject<{
     JWT_ACCESS_TTL: z.ZodDefault<z.ZodString>;
     JWT_REFRESH_SECRET: z.ZodString;
     JWT_REFRESH_TTL: z.ZodDefault<z.ZodString>;
+    JWT_PLATFORM_ADMIN_SECRET: z.ZodString;
+    JWT_PLATFORM_ADMIN_TTL: z.ZodDefault<z.ZodString>;
     PORT: z.ZodDefault<z.ZodNumber>;
     NODE_ENV: z.ZodDefault<z.ZodEnum<["development", "test", "production"]>>;
     CORS_ORIGIN: z.ZodDefault<z.ZodString>;
@@ -25,6 +27,8 @@ export declare const envSchema: z.ZodObject<{
     JWT_ACCESS_TTL: string;
     JWT_REFRESH_SECRET: string;
     JWT_REFRESH_TTL: string;
+    JWT_PLATFORM_ADMIN_SECRET: string;
+    JWT_PLATFORM_ADMIN_TTL: string;
     PORT: number;
     NODE_ENV: "development" | "test" | "production";
     CORS_ORIGIN: string;
@@ -43,9 +47,11 @@ export declare const envSchema: z.ZodObject<{
     DATABASE_URL: string;
     JWT_ACCESS_SECRET: string;
     JWT_REFRESH_SECRET: string;
+    JWT_PLATFORM_ADMIN_SECRET: string;
     CLOUDINARY_URL?: string | undefined;
     JWT_ACCESS_TTL?: string | undefined;
     JWT_REFRESH_TTL?: string | undefined;
+    JWT_PLATFORM_ADMIN_TTL?: string | undefined;
     PORT?: number | undefined;
     NODE_ENV?: "development" | "test" | "production" | undefined;
     CORS_ORIGIN?: string | undefined;

@@ -27,7 +27,7 @@ export class PlayerIdService {
   }
 
   private async getAcademyCode(): Promise<string> {
-    const setting = await this.prisma.configurationSetting.findUnique({
+    const setting = await this.prisma.configurationSetting.findFirst({
       where: { key: ACADEMY_CODE_SETTING_KEY },
     });
     if (setting && typeof setting.value === 'string') {

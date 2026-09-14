@@ -15,6 +15,7 @@ import { CreatePlayerDto } from './dto/create-player.dto';
 import { UpdatePlayerDto } from './dto/update-player.dto';
 import { UpdatePlayerTeamAssignmentDto } from './dto/player-team-assignment.dto';
 import { AddGuardianDto } from './dto/add-guardian.dto';
+import { ApproveRegistrationDto } from './dto/approve-registration.dto';
 import { ConfirmRegistrationPaymentDto } from './dto/confirm-payment.dto';
 import { InitiatePaystackChargeDto } from './dto/paystack-charge.dto';
 import { generateInvoiceNumber, generateReceiptNumber } from '../finance/finance.utils';
@@ -281,7 +282,7 @@ export class PlayersService {
 
   // No separate review/approval gate — this moves a player straight from bio-data
   // capture to payment collection (generates the registration invoice) in one step.
-  async approve(id: string, reviewerUserId: string) {
+  async approve(id: string, reviewerUserId: string, dto: ApproveRegistrationDto = {}) {
     const player = await this.findOne(id);
 
     // Self-heals a player stuck in PENDING_REGISTRATION_PAYMENT with no actual invoice to
@@ -300,17 +301,29 @@ export class PlayersService {
       throw new BadRequestException('Assign an age category before proceeding to payment');
     }
 
-    // The Registration fee's amount is the sum of whatever Fee Items are attached to
-    // it (see finance.service.ts#recomputeFeeTypeAmount) — jersey, kit, etc. are items
-    // on this one Fee rather than separate invoices, so registration stays one invoice.
+    // The Registration fee's amount is normally the sum of whatever Fee Items are
+    // attached to it (see finance.service.ts#recomputeFeeTypeAmount) — jersey, kit,
+    // etc. are items on this one Fee rather than separate invoices. When the caller
+    // picks a subset (e.g. a returning player skips the jersey), this player's
+    // invoice is only the sum of those, not the fee's full academy-wide total.
     const registrationFeeType = await this.prisma.feeType.findFirst({
-      where: { category: 'REGISTRATION', isActive: true },
+      where: { isRegistrationFee: true, isActive: true },
+      include: { items: { include: { feeItem: true } } },
     });
     if (!registrationFeeType) {
       throw new BadRequestException(
         'No active registration fee is configured. Ask an administrator to set one up.',
       );
     }
+
+    let amount = registrationFeeType.defaultAmount as Prisma.Decimal | number;
+    let itemsCharged = registrationFeeType.items;
+    if (dto.feeItemIds !== undefined) {
+      const selected = new Set(dto.feeItemIds);
+      itemsCharged = registrationFeeType.items.filter((link) => selected.has(link.feeItemId));
+      amount = itemsCharged.reduce((sum, link) => sum + Number(link.amount), 0);
+    }
+    const itemsSummary = itemsCharged.map((link) => link.feeItem.name).join(', ');
 
     const registration = player.registrations[0];
     const dueDate = new Date();
@@ -321,8 +334,10 @@ export class PlayersService {
         invoiceNumber: generateInvoiceNumber(),
         playerId: player.id,
         feeTypeId: registrationFeeType.id,
-        description: `Registration fee — ${player.firstName} ${player.lastName}`,
-        amount: registrationFeeType.defaultAmount,
+        description: itemsSummary
+          ? `Registration fee — ${player.firstName} ${player.lastName} (${itemsSummary})`
+          : `Registration fee — ${player.firstName} ${player.lastName}`,
+        amount,
         dueDate,
         gracePeriodDays: 7,
         status: 'PENDING',
@@ -424,7 +439,10 @@ export class PlayersService {
     const { player, invoice } = await this.getPendingRegistrationInvoice(id);
 
     const primaryGuardianLink = player.guardians.find((g) => g.isPrimary) ?? player.guardians[0];
-    const email = primaryGuardianLink?.guardian.email || `player-${player.id}@kapikidsacademy.com`;
+    // .invalid is reserved by RFC 2606 for addresses that are never meant to receive
+    // mail — Paystack requires an email field for the charge, but this fallback is
+    // never actually used for delivery, so it shouldn't imply any real domain.
+    const email = primaryGuardianLink?.guardian.email || `player-${player.id}@noreply.invalid`;
     const reference = `REGPAY-${Date.now()}-${player.id.slice(0, 8)}`;
 
     return this.paystack.chargeMobileMoney({
@@ -457,7 +475,7 @@ export class PlayersService {
 
     for (let attempt = 0; attempt < 5; attempt++) {
       const candidate = await this.playerIdService.generate(ageCategory.code, dateOfBirth);
-      const exists = await this.prisma.player.findUnique({ where: { playerCode: candidate } });
+      const exists = await this.prisma.player.findFirst({ where: { playerCode: candidate } });
       if (!exists) return candidate;
     }
     throw new ConflictException('Could not generate a unique player ID, please retry');

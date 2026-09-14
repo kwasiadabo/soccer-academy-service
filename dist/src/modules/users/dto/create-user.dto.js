@@ -12,9 +12,21 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.CreateUserDto = void 0;
 const swagger_1 = require("@nestjs/swagger");
 const class_validator_1 = require("class-validator");
+const permissions_constants_1 = require("../../rbac/permissions.constants");
+const STAFF_GRANTABLE_ROLES = [
+    permissions_constants_1.ROLE_NAMES.ADMIN,
+    permissions_constants_1.ROLE_NAMES.RECEPTIONIST,
+    permissions_constants_1.ROLE_NAMES.HEAD_COACH,
+    permissions_constants_1.ROLE_NAMES.COACH,
+];
 class CreateUserDto {
 }
 exports.CreateUserDto = CreateUserDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: 'The Coach (staff) record this account belongs to — must not already have one' }),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateUserDto.prototype, "coachId", void 0);
 __decorate([
     (0, swagger_1.ApiProperty)(),
     (0, class_validator_1.IsEmail)(),
@@ -27,31 +39,16 @@ __decorate([
     __metadata("design:type", String)
 ], CreateUserDto.prototype, "password", void 0);
 __decorate([
-    (0, swagger_1.ApiProperty)(),
-    (0, class_validator_1.IsString)(),
-    __metadata("design:type", String)
-], CreateUserDto.prototype, "firstName", void 0);
-__decorate([
-    (0, swagger_1.ApiProperty)(),
-    (0, class_validator_1.IsString)(),
-    __metadata("design:type", String)
-], CreateUserDto.prototype, "lastName", void 0);
-__decorate([
-    (0, swagger_1.ApiProperty)({ required: false }),
-    (0, class_validator_1.IsOptional)(),
-    (0, class_validator_1.IsString)(),
-    __metadata("design:type", String)
-], CreateUserDto.prototype, "phone", void 0);
-__decorate([
-    (0, swagger_1.ApiProperty)({ type: [String], description: 'Role names to assign' }),
+    (0, swagger_1.ApiProperty)({ type: [String], enum: STAFF_GRANTABLE_ROLES, description: 'Role names to assign' }),
     (0, class_validator_1.IsArray)(),
-    (0, class_validator_1.IsString)({ each: true }),
+    (0, class_validator_1.ArrayMinSize)(1),
+    (0, class_validator_1.IsIn)(STAFF_GRANTABLE_ROLES, { each: true }),
     __metadata("design:type", Array)
 ], CreateUserDto.prototype, "roleNames", void 0);
 __decorate([
     (0, swagger_1.ApiProperty)({
         required: false,
-        description: 'Force this user to change their password on first login. Defaults to true for Parent accounts.',
+        description: 'Force this user to change their password on first login. Defaults to true.',
     }),
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsBoolean)(),

@@ -1,4 +1,5 @@
-import { ConfigService } from '@nestjs/config';
+import { TenantContextService } from '../../common/tenant-context/tenant-context.service';
+import { PrismaService } from '../prisma/prisma.service';
 export type MomoProvider = 'mtn' | 'vod' | 'tgo';
 export interface PaystackChargeResult {
     reference: string;
@@ -10,12 +11,11 @@ export interface PaystackVerification {
     amount: number;
 }
 export declare class PaystackService {
-    private readonly config;
+    private readonly prisma;
+    private readonly tenantContext;
     private readonly logger;
-    private readonly secretKey?;
-    private readonly currency;
-    constructor(config: ConfigService);
-    private assertConfigured;
+    constructor(prisma: PrismaService, tenantContext: TenantContextService);
+    private getCredentials;
     chargeMobileMoney(params: {
         email: string;
         amount: number;

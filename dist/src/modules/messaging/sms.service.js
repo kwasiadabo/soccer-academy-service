@@ -13,6 +13,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.SmsService = void 0;
 const common_1 = require("@nestjs/common");
 const config_1 = require("@nestjs/config");
+const tenant_context_service_1 = require("../../common/tenant-context/tenant-context.service");
+const prisma_service_1 = require("../prisma/prisma.service");
 function toGhanaMsisdn(phone) {
     const digits = phone.replace(/[^\d+]/g, '');
     if (digits.startsWith('+233'))
@@ -24,18 +26,20 @@ function toGhanaMsisdn(phone) {
     return digits;
 }
 let SmsService = SmsService_1 = class SmsService {
-    constructor(config) {
+    constructor(config, prisma, tenantContext) {
         this.config = config;
+        this.prisma = prisma;
+        this.tenantContext = tenantContext;
         this.logger = new common_1.Logger(SmsService_1.name);
-        this.apiKey = this.config.get('NALO_API_KEY');
-        this.senderId = this.config.get('NALO_SENDER_ID') ?? 'Kapikids';
         this.endpoint =
             this.config.get('NALO_ENDPOINT') ??
                 'https://sms.nalosolutions.com/smsbackend/Resl_Nalo/send-message/';
     }
     async send(phone, message) {
-        if (!this.apiKey) {
-            this.logger.warn('SMS not configured (NALO_API_KEY missing) — skipping send');
+        const academyId = this.tenantContext.getAcademyId();
+        const settings = await this.prisma.academySettings.findUnique({ where: { academyId } });
+        if (!settings?.smsApiKey) {
+            this.logger.warn(`SMS not configured for academy ${academyId} — skipping send`);
             return false;
         }
         try {
@@ -43,10 +47,10 @@ let SmsService = SmsService_1 = class SmsService {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    key: this.apiKey,
+                    key: settings.smsApiKey,
                     msisdn: toGhanaMsisdn(phone),
                     message,
-                    sender_id: this.senderId,
+                    sender_id: settings.smsSenderId ?? settings.brandName,
                     type: '0',
                 }),
             });
@@ -63,6 +67,8 @@ let SmsService = SmsService_1 = class SmsService {
 exports.SmsService = SmsService;
 exports.SmsService = SmsService = SmsService_1 = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [config_1.ConfigService])
+    __metadata("design:paramtypes", [config_1.ConfigService,
+        prisma_service_1.PrismaService,
+        tenant_context_service_1.TenantContextService])
 ], SmsService);
 //# sourceMappingURL=sms.service.js.map

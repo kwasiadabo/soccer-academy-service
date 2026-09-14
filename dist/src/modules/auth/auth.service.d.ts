@@ -18,9 +18,9 @@ export declare class AuthService {
                 permissions: ({
                     permission: {
                         id: string;
+                        createdAt: Date;
                         key: string;
                         description: string | null;
-                        createdAt: Date;
                     };
                 } & {
                     id: string;
@@ -29,28 +29,30 @@ export declare class AuthService {
                 })[];
             } & {
                 id: string;
-                description: string | null;
-                createdAt: Date;
                 name: string;
-                isSystem: boolean;
+                createdAt: Date;
                 updatedAt: Date;
+                description: string | null;
+                isSystem: boolean;
             };
         } & {
             id: string;
             roleId: string;
+            academyId: string;
             userId: string;
             grantedAt: Date;
         })[];
     } & {
         id: string;
+        status: import(".prisma/client").$Enums.UserStatus;
         createdAt: Date;
         updatedAt: Date;
         email: string;
         passwordHash: string;
         firstName: string;
         lastName: string;
+        academyId: string;
         phone: string | null;
-        status: import(".prisma/client").$Enums.UserStatus;
         mustChangePassword: boolean;
         refreshTokenHash: string | null;
         lastLoginAt: Date | null;
