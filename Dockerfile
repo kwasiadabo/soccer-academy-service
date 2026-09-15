@@ -34,7 +34,7 @@ USER node
 
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
-  CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||3000)+'/api/docs').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+  CMD node -e "fetch('https://api.sams.variablexsolutions.com:'+(process.env.PORT||3000)+'/api/docs').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 
 # tini forwards signals (SIGTERM) and reaps zombies — plain `node` as PID 1 does neither.
 ENTRYPOINT ["/sbin/tini", "--"]
