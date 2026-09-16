@@ -48,7 +48,6 @@ export declare const envSchema: z.ZodObject<{
     JWT_ACCESS_SECRET: string;
     JWT_REFRESH_SECRET: string;
     JWT_PLATFORM_ADMIN_SECRET: string;
-    CLOUDINARY_URL?: string | undefined;
     JWT_ACCESS_TTL?: string | undefined;
     JWT_REFRESH_TTL?: string | undefined;
     JWT_PLATFORM_ADMIN_TTL?: string | undefined;
@@ -57,6 +56,7 @@ export declare const envSchema: z.ZodObject<{
     CORS_ORIGIN?: string | undefined;
     STORAGE_DRIVER?: "local" | "cloudinary" | undefined;
     STORAGE_LOCAL_PATH?: string | undefined;
+    CLOUDINARY_URL?: string | undefined;
     PAYSTACK_SECRET_KEY?: string | undefined;
     PAYSTACK_PUBLIC_KEY?: string | undefined;
     PAYSTACK_CURRENCY?: string | undefined;

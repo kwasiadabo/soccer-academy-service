@@ -12,8 +12,10 @@ exports.envSchema = zod_1.z.object({
     JWT_PLATFORM_ADMIN_SECRET: zod_1.z.string().min(16),
     JWT_PLATFORM_ADMIN_TTL: zod_1.z.string().default('12h'),
     PORT: zod_1.z.coerce.number().default(3000),
-    NODE_ENV: zod_1.z.enum(['development', 'test', 'production']).default('development'),
-    CORS_ORIGIN: zod_1.z.string().default('http://localhost:5173'),
+    NODE_ENV: zod_1.z
+        .enum(['development', 'test', 'production'])
+        .default('development'),
+    CORS_ORIGIN: zod_1.z.string().default('http://sams.variablexsolutions.com'),
     STORAGE_DRIVER: zod_1.z.enum(['local', 'cloudinary']).default('local'),
     STORAGE_LOCAL_PATH: zod_1.z.string().default('./uploads'),
     CLOUDINARY_URL: zod_1.z.string().optional(),
