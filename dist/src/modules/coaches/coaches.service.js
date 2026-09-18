@@ -47,15 +47,19 @@ const common_1 = require("@nestjs/common");
 const crypto_1 = require("crypto");
 const bcrypt = __importStar(require("bcrypt"));
 const prisma_service_1 = require("../prisma/prisma.service");
+const tenant_context_service_1 = require("../../common/tenant-context/tenant-context.service");
 const auth_service_1 = require("../auth/auth.service");
 let CoachesService = class CoachesService {
-    constructor(prisma, authService) {
+    constructor(prisma, authService, tenantContext) {
         this.prisma = prisma;
         this.authService = authService;
+        this.tenantContext = tenantContext;
     }
     async findAll(search) {
+        const academyId = this.tenantContext.getAcademyId();
         return this.prisma.coach.findMany({
             where: {
+                academyId,
                 deletedAt: null,
                 ...(search
                     ? {
@@ -72,8 +76,9 @@ let CoachesService = class CoachesService {
         });
     }
     async findOne(id) {
+        const academyId = this.tenantContext.getAcademyId();
         const coach = await this.prisma.coach.findFirst({
-            where: { id, deletedAt: null },
+            where: { id, academyId, deletedAt: null },
             include: {
                 user: { select: { id: true, email: true, roles: { select: { role: { select: { name: true } } } } } },
                 qualifications: true,
@@ -86,16 +91,18 @@ let CoachesService = class CoachesService {
         return coach;
     }
     create(dto) {
-        return this.prisma.coach.create({ data: dto });
+        const academyId = this.tenantContext.getAcademyId();
+        return this.prisma.coach.create({ data: { ...dto, academyId } });
     }
     async update(id, dto) {
         const coach = await this.findOne(id);
+        const academyId = coach.academyId;
         const { isActive, ...rest } = dto;
         return this.prisma.$transaction(async (tx) => {
-            const updated = await tx.coach.update({ where: { id }, data: { ...rest, isActive } });
+            const updated = await tx.coach.update({ where: { id, academyId }, data: { ...rest, isActive } });
             if (isActive !== undefined && coach.userId) {
                 await tx.user.update({
-                    where: { id: coach.userId },
+                    where: { id: coach.userId, academyId },
                     data: { status: isActive ? 'ACTIVE' : 'SUSPENDED' },
                 });
             }
@@ -104,13 +111,14 @@ let CoachesService = class CoachesService {
     }
     async grantPortalAccess(id, dto) {
         const coach = await this.findOne(id);
+        const academyId = coach.academyId;
         if (coach.userId) {
             throw new common_1.BadRequestException('This coach already has portal access');
         }
-        let user = await this.prisma.user.findFirst({ where: { email: dto.email } });
+        let user = await this.prisma.user.findFirst({ where: { email: dto.email, academyId } });
         if (user) {
-            const alreadyLinked = await this.prisma.coach.findFirst({ where: { userId: user.id } });
-            const linkedGuardian = await this.prisma.guardian.findFirst({ where: { userId: user.id } });
+            const alreadyLinked = await this.prisma.coach.findFirst({ where: { userId: user.id, academyId } });
+            const linkedGuardian = await this.prisma.guardian.findFirst({ where: { userId: user.id, academyId } });
             if (alreadyLinked || linkedGuardian) {
                 throw new common_1.ConflictException('This email is already linked to a different portal profile');
             }
@@ -121,7 +129,7 @@ let CoachesService = class CoachesService {
                 this.prisma.userRole.createMany({
                     data: rolesToAdd.map((role) => ({ userId: user.id, roleId: role.id })),
                 }),
-                this.prisma.coach.update({ where: { id }, data: { userId: user.id } }),
+                this.prisma.coach.update({ where: { id, academyId }, data: { userId: user.id } }),
             ]);
         }
         else {
@@ -134,6 +142,7 @@ let CoachesService = class CoachesService {
             const passwordHash = await bcrypt.hash((0, crypto_1.randomBytes)(32).toString('hex'), 10);
             user = await this.prisma.user.create({
                 data: {
+                    academyId,
                     email: dto.email,
                     passwordHash,
                     firstName: coach.firstName,
@@ -142,15 +151,16 @@ let CoachesService = class CoachesService {
                     roles: { create: roles.map((role) => ({ roleId: role.id })) },
                 },
             });
-            await this.prisma.coach.update({ where: { id }, data: { userId: user.id } });
+            await this.prisma.coach.update({ where: { id, academyId }, data: { userId: user.id } });
         }
         await this.authService.requestPasswordReset(dto.email);
         return this.findOne(id);
     }
     async addQualification(coachId, dto) {
-        await this.findOne(coachId);
+        const coach = await this.findOne(coachId);
         await this.prisma.coachQualification.create({
             data: {
+                academyId: coach.academyId,
                 coachId,
                 title: dto.title,
                 issuingBody: dto.issuingBody,
@@ -161,12 +171,24 @@ let CoachesService = class CoachesService {
         return this.findOne(coachId);
     }
     async addAssignment(coachId, dto) {
-        await this.findOne(coachId);
+        const coach = await this.findOne(coachId);
         if (!dto.teamId && !dto.trainingGroupId) {
             throw new common_1.BadRequestException('Specify a team or a training group to assign this coach to');
         }
+        const academyId = coach.academyId;
+        if (dto.teamId) {
+            const team = await this.prisma.team.findFirst({ where: { id: dto.teamId, academyId } });
+            if (!team)
+                throw new common_1.NotFoundException('Team not found');
+        }
+        if (dto.trainingGroupId) {
+            const group = await this.prisma.trainingGroup.findFirst({ where: { id: dto.trainingGroupId, academyId } });
+            if (!group)
+                throw new common_1.NotFoundException('Training group not found');
+        }
         await this.prisma.coachAssignment.create({
             data: {
+                academyId,
                 coachId,
                 teamId: dto.teamId,
                 trainingGroupId: dto.trainingGroupId,
@@ -177,9 +199,9 @@ let CoachesService = class CoachesService {
         return this.findOne(coachId);
     }
     async endAssignment(coachId, assignmentId, dto) {
-        await this.findOne(coachId);
+        const coach = await this.findOne(coachId);
         const assignment = await this.prisma.coachAssignment.findFirst({
-            where: { id: assignmentId, coachId },
+            where: { id: assignmentId, coachId, academyId: coach.academyId },
         });
         if (!assignment) {
             throw new common_1.NotFoundException('Coach assignment not found');
@@ -195,6 +217,7 @@ exports.CoachesService = CoachesService;
 exports.CoachesService = CoachesService = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [prisma_service_1.PrismaService,
-        auth_service_1.AuthService])
+        auth_service_1.AuthService,
+        tenant_context_service_1.TenantContextService])
 ], CoachesService);
 //# sourceMappingURL=coaches.service.js.map

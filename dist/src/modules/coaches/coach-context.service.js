@@ -12,48 +12,56 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.CoachContextService = void 0;
 const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../prisma/prisma.service");
+const tenant_context_service_1 = require("../../common/tenant-context/tenant-context.service");
 const permissions_constants_1 = require("../rbac/permissions.constants");
 let CoachContextService = class CoachContextService {
-    constructor(prisma) {
+    constructor(prisma, tenantContext) {
         this.prisma = prisma;
+        this.tenantContext = tenantContext;
     }
     async resolveCoachId(userId) {
-        const coach = await this.prisma.coach.findFirst({ where: { userId, deletedAt: null } });
+        const academyId = this.tenantContext.getAcademyId();
+        const coach = await this.prisma.coach.findFirst({ where: { userId, academyId, deletedAt: null } });
         if (!coach) {
             throw new common_1.ForbiddenException('No coach profile is linked to this account');
         }
         return coach.id;
     }
     async resolveOptionalCoachId(userId) {
-        const coach = await this.prisma.coach.findFirst({ where: { userId, deletedAt: null } });
+        const academyId = this.tenantContext.getAcademyId();
+        const coach = await this.prisma.coach.findFirst({ where: { userId, academyId, deletedAt: null } });
         return coach?.id ?? null;
     }
     async assertOwnsTeam(coachId, teamId) {
+        const academyId = this.tenantContext.getAcademyId();
         const assignment = await this.prisma.coachAssignment.findFirst({
-            where: { coachId, teamId, effectiveTo: null },
+            where: { coachId, teamId, academyId, effectiveTo: null },
         });
         if (!assignment) {
             throw new common_1.ForbiddenException('You are not assigned to this team');
         }
     }
     async assertOwnsTrainingGroup(coachId, trainingGroupId) {
+        const academyId = this.tenantContext.getAcademyId();
         const assignment = await this.prisma.coachAssignment.findFirst({
-            where: { coachId, trainingGroupId, effectiveTo: null },
+            where: { coachId, trainingGroupId, academyId, effectiveTo: null },
         });
         if (!assignment) {
             throw new common_1.ForbiddenException('You are not assigned to this training group');
         }
     }
     async getAssignedTeamIds(coachId) {
+        const academyId = this.tenantContext.getAcademyId();
         const assignments = await this.prisma.coachAssignment.findMany({
-            where: { coachId, effectiveTo: null, teamId: { not: null } },
+            where: { coachId, academyId, effectiveTo: null, teamId: { not: null } },
             select: { teamId: true },
         });
         return assignments.map((a) => a.teamId);
     }
     async getAssignedTrainingGroupIds(coachId) {
+        const academyId = this.tenantContext.getAcademyId();
         const assignments = await this.prisma.coachAssignment.findMany({
-            where: { coachId, effectiveTo: null, trainingGroupId: { not: null } },
+            where: { coachId, academyId, effectiveTo: null, trainingGroupId: { not: null } },
             select: { trainingGroupId: true },
         });
         return assignments.map((a) => a.trainingGroupId);
@@ -64,9 +72,11 @@ let CoachContextService = class CoachContextService {
             !user.roles.includes(permissions_constants_1.ROLE_NAMES.ADMIN));
     }
     async assertOwnsTeamOrGroup(coachId, entity, notOwnedMessage) {
+        const academyId = this.tenantContext.getAcademyId();
         const assignment = await this.prisma.coachAssignment.findFirst({
             where: {
                 coachId,
+                academyId,
                 effectiveTo: null,
                 OR: [
                     entity.teamId ? { teamId: entity.teamId } : undefined,
@@ -96,6 +106,7 @@ let CoachContextService = class CoachContextService {
 exports.CoachContextService = CoachContextService;
 exports.CoachContextService = CoachContextService = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [prisma_service_1.PrismaService])
+    __metadata("design:paramtypes", [prisma_service_1.PrismaService,
+        tenant_context_service_1.TenantContextService])
 ], CoachContextService);
 //# sourceMappingURL=coach-context.service.js.map

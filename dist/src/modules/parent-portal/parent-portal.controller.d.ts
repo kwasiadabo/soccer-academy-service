@@ -74,14 +74,14 @@ export declare class ParentPortalController {
             createdAt: Date;
             updatedAt: Date;
             academyId: string;
+            startTime: string | null;
+            endTime: string | null;
+            location: string | null;
             teamId: string;
             trainingGroupId: string | null;
-            location: string | null;
             trainingPlanId: string | null;
             conductedByCoachId: string | null;
             date: Date;
-            startTime: string | null;
-            endTime: string | null;
         };
     } & {
         id: string;

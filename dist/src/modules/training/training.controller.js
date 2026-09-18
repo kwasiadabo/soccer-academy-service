@@ -82,11 +82,17 @@ let TrainingController = class TrainingController {
     createSession(dto, user) {
         return this.trainingService.createSession(user, dto);
     }
-    getSchedule() {
-        return this.trainingService.getSchedule();
+    listSchedule() {
+        return this.trainingService.listSchedule();
     }
-    updateSchedule(dto) {
-        return this.trainingService.updateSchedule(dto);
+    addScheduleSlot(dto) {
+        return this.trainingService.addScheduleSlot(dto);
+    }
+    updateScheduleSlot(id, dto) {
+        return this.trainingService.updateScheduleSlot(id, dto);
+    }
+    removeScheduleSlot(id) {
+        return this.trainingService.removeScheduleSlot(id);
     }
     getOrCreateSaturdaySession(dto) {
         return this.trainingService.getOrCreateSaturdaySession(dto.teamId, dto.date);
@@ -277,23 +283,46 @@ __decorate([
 __decorate([
     (0, common_1.Get)('schedule'),
     (0, permissions_decorator_1.RequireAnyPermission)(...VIEW_SESSIONS),
-    (0, swagger_1.ApiOperation)({ summary: "Get the academy's recurring weekly training fixture." }),
-    (0, swagger_1.ApiOkResponse)({ description: 'Schedule returned.' }),
+    (0, swagger_1.ApiOperation)({ summary: "List the academy's recurring weekly training fixture slots." }),
+    (0, swagger_1.ApiOkResponse)({ description: 'Schedule slots returned.' }),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", void 0)
-], TrainingController.prototype, "getSchedule", null);
+], TrainingController.prototype, "listSchedule", null);
 __decorate([
-    (0, common_1.Patch)('schedule'),
+    (0, common_1.Post)('schedule'),
     (0, permissions_decorator_1.RequirePermissions)(permissions_constants_1.PERMISSIONS.TRAINING_SCHEDULE_MANAGE),
-    (0, audit_log_decorator_1.AuditLog)({ action: 'TRAINING_SCHEDULE_UPDATE', entityType: 'AcademySettings' }),
-    (0, swagger_1.ApiOperation)({ summary: "Update the academy's recurring weekly training fixture." }),
-    (0, swagger_1.ApiOkResponse)({ description: 'Schedule updated.' }),
+    (0, audit_log_decorator_1.AuditLog)({ action: 'TRAINING_SCHEDULE_SLOT_CREATE', entityType: 'TrainingScheduleSlot' }),
+    (0, swagger_1.ApiOperation)({ summary: "Add a slot to the academy's recurring weekly training fixture." }),
+    (0, swagger_1.ApiCreatedResponse)({ description: 'Schedule slot created.' }),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [training_schedule_dto_1.UpdateTrainingScheduleDto]),
+    __metadata("design:paramtypes", [training_schedule_dto_1.CreateTrainingScheduleSlotDto]),
     __metadata("design:returntype", void 0)
-], TrainingController.prototype, "updateSchedule", null);
+], TrainingController.prototype, "addScheduleSlot", null);
+__decorate([
+    (0, common_1.Patch)('schedule/:id'),
+    (0, permissions_decorator_1.RequirePermissions)(permissions_constants_1.PERMISSIONS.TRAINING_SCHEDULE_MANAGE),
+    (0, audit_log_decorator_1.AuditLog)({ action: 'TRAINING_SCHEDULE_SLOT_UPDATE', entityType: 'TrainingScheduleSlot' }),
+    (0, swagger_1.ApiOperation)({ summary: 'Update a weekly training fixture slot.' }),
+    (0, swagger_1.ApiOkResponse)({ description: 'Schedule slot updated.' }),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, training_schedule_dto_1.UpdateTrainingScheduleSlotDto]),
+    __metadata("design:returntype", void 0)
+], TrainingController.prototype, "updateScheduleSlot", null);
+__decorate([
+    (0, common_1.Delete)('schedule/:id'),
+    (0, permissions_decorator_1.RequirePermissions)(permissions_constants_1.PERMISSIONS.TRAINING_SCHEDULE_MANAGE),
+    (0, audit_log_decorator_1.AuditLog)({ action: 'TRAINING_SCHEDULE_SLOT_DELETE', entityType: 'TrainingScheduleSlot' }),
+    (0, swagger_1.ApiOperation)({ summary: 'Remove a weekly training fixture slot.' }),
+    (0, swagger_1.ApiOkResponse)({ description: 'Schedule slot removed.' }),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", void 0)
+], TrainingController.prototype, "removeScheduleSlot", null);
 __decorate([
     (0, common_1.Post)('sessions/saturday'),
     (0, permissions_decorator_1.RequireAnyPermission)(...RECORD_ATTENDANCE),

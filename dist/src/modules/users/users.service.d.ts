@@ -1,12 +1,14 @@
 import { PrismaService } from '../prisma/prisma.service';
 import { AuthService } from '../auth/auth.service';
+import { TenantContextService } from '../../common/tenant-context/tenant-context.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { ResetUserPasswordDto } from './dto/reset-user-password.dto';
 export declare class UsersService {
     private readonly prisma;
     private readonly authService;
-    constructor(prisma: PrismaService, authService: AuthService);
+    private readonly tenantContext;
+    constructor(prisma: PrismaService, authService: AuthService, tenantContext: TenantContextService);
     findAll(): Promise<{
         id: string;
         email: string;

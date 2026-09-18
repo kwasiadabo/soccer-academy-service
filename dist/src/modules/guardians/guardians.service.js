@@ -48,15 +48,19 @@ const crypto_1 = require("crypto");
 const bcrypt = __importStar(require("bcrypt"));
 const prisma_service_1 = require("../prisma/prisma.service");
 const auth_service_1 = require("../auth/auth.service");
+const tenant_context_service_1 = require("../../common/tenant-context/tenant-context.service");
 const permissions_constants_1 = require("../rbac/permissions.constants");
 let GuardiansService = class GuardiansService {
-    constructor(prisma, authService) {
+    constructor(prisma, authService, tenantContext) {
         this.prisma = prisma;
         this.authService = authService;
+        this.tenantContext = tenantContext;
     }
     async findAll(search) {
+        const academyId = this.tenantContext.getAcademyId();
         return this.prisma.guardian.findMany({
             where: {
+                academyId,
                 deletedAt: null,
                 ...(search
                     ? {
@@ -74,8 +78,9 @@ let GuardiansService = class GuardiansService {
         });
     }
     async findOne(id) {
+        const academyId = this.tenantContext.getAcademyId();
         const guardian = await this.prisma.guardian.findFirst({
-            where: { id, deletedAt: null },
+            where: { id, academyId, deletedAt: null },
             include: { players: { include: { player: true } } },
         });
         if (!guardian) {
@@ -85,25 +90,26 @@ let GuardiansService = class GuardiansService {
     }
     async grantPortalAccess(id, dto) {
         const guardian = await this.findOne(id);
+        const academyId = guardian.academyId;
         if (guardian.userId) {
             throw new common_1.BadRequestException('This guardian already has portal access');
         }
-        let user = await this.prisma.user.findFirst({ where: { email: dto.email } });
+        let user = await this.prisma.user.findFirst({ where: { email: dto.email, academyId } });
         if (user) {
-            const linkedCoach = await this.prisma.coach.findFirst({ where: { userId: user.id } });
-            const linkedGuardian = await this.prisma.guardian.findFirst({ where: { userId: user.id } });
+            const linkedCoach = await this.prisma.coach.findFirst({ where: { userId: user.id, academyId } });
+            const linkedGuardian = await this.prisma.guardian.findFirst({ where: { userId: user.id, academyId } });
             if (linkedCoach || linkedGuardian) {
                 throw new common_1.ConflictException('This email is already linked to a different portal profile');
             }
             const parentRole = await this.prisma.role.findUniqueOrThrow({ where: { name: permissions_constants_1.ROLE_NAMES.PARENT } });
             const alreadyHasRole = await this.prisma.userRole.findUnique({
-                where: { userId_roleId: { userId: user.id, roleId: parentRole.id } },
+                where: { userId_roleId: { userId: user.id, roleId: parentRole.id }, academyId },
             });
             await this.prisma.$transaction([
                 ...(alreadyHasRole
                     ? []
-                    : [this.prisma.userRole.create({ data: { userId: user.id, roleId: parentRole.id } })]),
-                this.prisma.guardian.update({ where: { id }, data: { userId: user.id } }),
+                    : [this.prisma.userRole.create({ data: { userId: user.id, roleId: parentRole.id, academyId } })]),
+                this.prisma.guardian.update({ where: { id, academyId }, data: { userId: user.id } }),
             ]);
         }
         else {
@@ -111,6 +117,7 @@ let GuardiansService = class GuardiansService {
             const passwordHash = await bcrypt.hash((0, crypto_1.randomBytes)(32).toString('hex'), 10);
             user = await this.prisma.user.create({
                 data: {
+                    academyId,
                     email: dto.email,
                     passwordHash,
                     firstName: guardian.firstName,
@@ -120,7 +127,7 @@ let GuardiansService = class GuardiansService {
                     roles: { create: { roleId: parentRole.id } },
                 },
             });
-            await this.prisma.guardian.update({ where: { id }, data: { userId: user.id } });
+            await this.prisma.guardian.update({ where: { id, academyId }, data: { userId: user.id } });
         }
         await this.authService.requestPasswordReset(dto.email);
         return this.findOne(id);
@@ -130,6 +137,7 @@ exports.GuardiansService = GuardiansService;
 exports.GuardiansService = GuardiansService = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [prisma_service_1.PrismaService,
-        auth_service_1.AuthService])
+        auth_service_1.AuthService,
+        tenant_context_service_1.TenantContextService])
 ], GuardiansService);
 //# sourceMappingURL=guardians.service.js.map

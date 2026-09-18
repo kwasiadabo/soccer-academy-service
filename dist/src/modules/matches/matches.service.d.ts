@@ -1,5 +1,6 @@
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { TenantContextService } from '../../common/tenant-context/tenant-context.service';
 import { CoachContextService } from '../coaches/coach-context.service';
 import { RequestUser } from '../auth/types';
 import { CreateOpponentDto } from './dto/opponent.dto';
@@ -9,7 +10,8 @@ import { CreateMatchPlayerAssessmentDto } from './dto/match-player-assessment.dt
 export declare class MatchesService {
     private readonly prisma;
     private readonly coachContext;
-    constructor(prisma: PrismaService, coachContext: CoachContextService);
+    private readonly tenantContext;
+    constructor(prisma: PrismaService, coachContext: CoachContextService, tenantContext: TenantContextService);
     private isUnscoped;
     private assertCanManageTeam;
     private assertCanRateMatch;

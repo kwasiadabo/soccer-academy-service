@@ -29,7 +29,7 @@ import {
 } from './dto/training-session.dto';
 import { UpsertActivityMarksDto } from './dto/training-activity-mark.dto';
 import { CreateSessionActivityDto } from './dto/training-session-activity.dto';
-import { UpdateTrainingScheduleDto } from './dto/training-schedule.dto';
+import { CreateTrainingScheduleSlotDto, UpdateTrainingScheduleSlotDto } from './dto/training-schedule.dto';
 
 const OWN_OR_APPROVE = [PERMISSIONS.TRAINING_MANAGE_OWN, PERMISSIONS.TRAINING_APPROVE] as const;
 // Reception marks attendance for sessions coaches have already scheduled — they need to
@@ -179,22 +179,40 @@ export class TrainingController {
     return this.trainingService.createSession(user, dto);
   }
 
-  // --- Recurring weekly fixture ---
+  // --- Recurring weekly fixture(s) — an academy can train more than once a week ---
   @Get('schedule')
   @RequireAnyPermission(...VIEW_SESSIONS)
-  @ApiOperation({ summary: "Get the academy's recurring weekly training fixture." })
-  @ApiOkResponse({ description: 'Schedule returned.' })
-  getSchedule() {
-    return this.trainingService.getSchedule();
+  @ApiOperation({ summary: "List the academy's recurring weekly training fixture slots." })
+  @ApiOkResponse({ description: 'Schedule slots returned.' })
+  listSchedule() {
+    return this.trainingService.listSchedule();
   }
 
-  @Patch('schedule')
+  @Post('schedule')
   @RequirePermissions(PERMISSIONS.TRAINING_SCHEDULE_MANAGE)
-  @AuditLog({ action: 'TRAINING_SCHEDULE_UPDATE', entityType: 'AcademySettings' })
-  @ApiOperation({ summary: "Update the academy's recurring weekly training fixture." })
-  @ApiOkResponse({ description: 'Schedule updated.' })
-  updateSchedule(@Body() dto: UpdateTrainingScheduleDto) {
-    return this.trainingService.updateSchedule(dto);
+  @AuditLog({ action: 'TRAINING_SCHEDULE_SLOT_CREATE', entityType: 'TrainingScheduleSlot' })
+  @ApiOperation({ summary: "Add a slot to the academy's recurring weekly training fixture." })
+  @ApiCreatedResponse({ description: 'Schedule slot created.' })
+  addScheduleSlot(@Body() dto: CreateTrainingScheduleSlotDto) {
+    return this.trainingService.addScheduleSlot(dto);
+  }
+
+  @Patch('schedule/:id')
+  @RequirePermissions(PERMISSIONS.TRAINING_SCHEDULE_MANAGE)
+  @AuditLog({ action: 'TRAINING_SCHEDULE_SLOT_UPDATE', entityType: 'TrainingScheduleSlot' })
+  @ApiOperation({ summary: 'Update a weekly training fixture slot.' })
+  @ApiOkResponse({ description: 'Schedule slot updated.' })
+  updateScheduleSlot(@Param('id') id: string, @Body() dto: UpdateTrainingScheduleSlotDto) {
+    return this.trainingService.updateScheduleSlot(id, dto);
+  }
+
+  @Delete('schedule/:id')
+  @RequirePermissions(PERMISSIONS.TRAINING_SCHEDULE_MANAGE)
+  @AuditLog({ action: 'TRAINING_SCHEDULE_SLOT_DELETE', entityType: 'TrainingScheduleSlot' })
+  @ApiOperation({ summary: 'Remove a weekly training fixture slot.' })
+  @ApiOkResponse({ description: 'Schedule slot removed.' })
+  removeScheduleSlot(@Param('id') id: string) {
+    return this.trainingService.removeScheduleSlot(id);
   }
 
   @Post('sessions/saturday')

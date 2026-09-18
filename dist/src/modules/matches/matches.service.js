@@ -12,6 +12,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.MatchesService = void 0;
 const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../prisma/prisma.service");
+const tenant_context_service_1 = require("../../common/tenant-context/tenant-context.service");
 const coach_context_service_1 = require("../coaches/coach-context.service");
 const permissions_constants_1 = require("../rbac/permissions.constants");
 const MATCH_INCLUDE = {
@@ -21,9 +22,10 @@ const MATCH_INCLUDE = {
     matchPlayerAssessments: true,
 };
 let MatchesService = class MatchesService {
-    constructor(prisma, coachContext) {
+    constructor(prisma, coachContext, tenantContext) {
         this.prisma = prisma;
         this.coachContext = coachContext;
+        this.tenantContext = tenantContext;
     }
     isUnscoped(user) {
         return user.permissions.includes(permissions_constants_1.PERMISSIONS.TRAINING_APPROVE);
@@ -41,26 +43,30 @@ let MatchesService = class MatchesService {
         await this.coachContext.assertOwnsTeam(coachId, teamId);
     }
     listOpponents() {
-        return this.prisma.opponent.findMany({ orderBy: { name: 'asc' } });
+        const academyId = this.tenantContext.getAcademyId();
+        return this.prisma.opponent.findMany({ where: { academyId }, orderBy: { name: 'asc' } });
     }
     createOpponent(dto) {
-        return this.prisma.opponent.create({ data: dto });
+        const academyId = this.tenantContext.getAcademyId();
+        return this.prisma.opponent.create({ data: { ...dto, academyId } });
     }
     async getMatchOrThrow(id) {
-        const match = await this.prisma.match.findUnique({ where: { id }, include: MATCH_INCLUDE });
+        const academyId = this.tenantContext.getAcademyId();
+        const match = await this.prisma.match.findFirst({ where: { id, academyId }, include: MATCH_INCLUDE });
         if (!match) {
             throw new common_1.NotFoundException('Match not found');
         }
         return match;
     }
     async findAll(user) {
+        const academyId = this.tenantContext.getAcademyId();
         if (this.isUnscoped(user)) {
-            return this.prisma.match.findMany({ include: MATCH_INCLUDE, orderBy: { matchDate: 'desc' } });
+            return this.prisma.match.findMany({ where: { academyId }, include: MATCH_INCLUDE, orderBy: { matchDate: 'desc' } });
         }
         const coachId = await this.coachContext.resolveCoachId(user.userId);
         const teamIds = await this.coachContext.getAssignedTeamIds(coachId);
         return this.prisma.match.findMany({
-            where: { teamId: { in: teamIds } },
+            where: { academyId, teamId: { in: teamIds } },
             include: MATCH_INCLUDE,
             orderBy: { matchDate: 'desc' },
         });
@@ -69,7 +75,7 @@ let MatchesService = class MatchesService {
         const match = await this.getMatchOrThrow(id);
         await this.assertCanManageTeam(user, match.teamId);
         const roster = await this.prisma.player.findMany({
-            where: { status: 'ACTIVE', deletedAt: null, teamId: match.teamId },
+            where: { status: 'ACTIVE', deletedAt: null, teamId: match.teamId, academyId: match.academyId },
             select: { id: true, firstName: true, lastName: true },
             orderBy: { lastName: 'asc' },
         });
@@ -77,9 +83,10 @@ let MatchesService = class MatchesService {
     }
     async create(user, dto) {
         await this.assertCanManageTeam(user, dto.teamId);
+        const academyId = this.tenantContext.getAcademyId();
         const { matchDate, ...rest } = dto;
         return this.prisma.match.create({
-            data: { ...rest, matchDate: new Date(matchDate) },
+            data: { ...rest, academyId, matchDate: new Date(matchDate) },
             include: MATCH_INCLUDE,
         });
     }
@@ -88,16 +95,16 @@ let MatchesService = class MatchesService {
         await this.assertCanManageTeam(user, match.teamId);
         const { matchDate, ...rest } = dto;
         await this.prisma.match.update({
-            where: { id },
+            where: { id, academyId: match.academyId },
             data: { ...rest, matchDate: matchDate ? new Date(matchDate) : undefined },
         });
         return this.getMatchOrThrow(id);
     }
-    async assertPlayersAreActive(playerIds) {
+    async assertPlayersAreActive(academyId, playerIds) {
         if (playerIds.length === 0)
             return;
         const players = await this.prisma.player.findMany({
-            where: { id: { in: playerIds } },
+            where: { id: { in: playerIds }, academyId },
             select: { id: true, status: true },
         });
         const inactive = players.filter((p) => p.status !== 'ACTIVE');
@@ -110,10 +117,10 @@ let MatchesService = class MatchesService {
         await this.assertCanManageTeam(user, match.teamId);
         const existingPlayerIds = new Set(match.participations.map((p) => p.playerId));
         const newPlayerIds = dto.records.map((r) => r.playerId).filter((playerId) => !existingPlayerIds.has(playerId));
-        await this.assertPlayersAreActive(newPlayerIds);
+        await this.assertPlayersAreActive(match.academyId, newPlayerIds);
         await this.prisma.$transaction(dto.records.map((record) => this.prisma.matchParticipation.upsert({
             where: { matchId_playerId: { matchId: id, playerId: record.playerId } },
-            create: { matchId: id, ...record },
+            create: { matchId: id, academyId: match.academyId, ...record },
             update: record,
         })));
         return this.getMatchOrThrow(id);
@@ -122,11 +129,11 @@ let MatchesService = class MatchesService {
         const match = await this.getMatchOrThrow(id);
         await this.assertCanRateMatch(user, match.teamId);
         const coachId = await this.coachContext.resolveCoachId(user.userId);
-        await this.assertPlayersAreActive([dto.playerId]);
+        await this.assertPlayersAreActive(match.academyId, [dto.playerId]);
         const { playerId, ...ratings } = dto;
         await this.prisma.matchPlayerAssessment.upsert({
             where: { matchId_playerId: { matchId: id, playerId } },
-            create: { matchId: id, playerId, assessedByCoachId: coachId, ...ratings },
+            create: { matchId: id, playerId, academyId: match.academyId, assessedByCoachId: coachId, ...ratings },
             update: { assessedByCoachId: coachId, ...ratings },
         });
         return this.getMatchOrThrow(id);
@@ -136,6 +143,7 @@ exports.MatchesService = MatchesService;
 exports.MatchesService = MatchesService = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [prisma_service_1.PrismaService,
-        coach_context_service_1.CoachContextService])
+        coach_context_service_1.CoachContextService,
+        tenant_context_service_1.TenantContextService])
 ], MatchesService);
 //# sourceMappingURL=matches.service.js.map

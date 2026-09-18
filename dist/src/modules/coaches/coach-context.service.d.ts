@@ -1,8 +1,10 @@
 import { PrismaService } from '../prisma/prisma.service';
+import { TenantContextService } from '../../common/tenant-context/tenant-context.service';
 import { RequestUser } from '../auth/types';
 export declare class CoachContextService {
     private readonly prisma;
-    constructor(prisma: PrismaService);
+    private readonly tenantContext;
+    constructor(prisma: PrismaService, tenantContext: TenantContextService);
     resolveCoachId(userId: string): Promise<string>;
     resolveOptionalCoachId(userId: string): Promise<string | null>;
     assertOwnsTeam(coachId: string, teamId: string): Promise<void>;

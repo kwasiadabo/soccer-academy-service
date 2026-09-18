@@ -1,11 +1,13 @@
 import { IssueStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { TenantContextService } from '../../common/tenant-context/tenant-context.service';
 import { GuardianContextService } from '../guardians/guardian-context.service';
 import { CreateIssueDto } from './dto/create-issue.dto';
 export declare class IssuesService {
     private readonly prisma;
     private readonly guardianContext;
-    constructor(prisma: PrismaService, guardianContext: GuardianContextService);
+    private readonly tenantContext;
+    constructor(prisma: PrismaService, guardianContext: GuardianContextService, tenantContext: TenantContextService);
     createIssue(userId: string, dto: CreateIssueDto): Promise<{
         guardian: {
             id: string;

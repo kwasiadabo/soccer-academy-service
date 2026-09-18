@@ -1,11 +1,13 @@
 import { PrismaService } from '../prisma/prisma.service';
+import { TenantContextService } from '../../common/tenant-context/tenant-context.service';
 import { CreateSeasonDto, UpdateSeasonDto } from './dto/season.dto';
 import { CreateAgeCategoryDto, UpdateAgeCategoryDto } from './dto/age-category.dto';
 import { CreateTeamDto, UpdateTeamDto } from './dto/team.dto';
 import { CreateTrainingGroupDto, UpdateTrainingGroupDto } from './dto/training-group.dto';
 export declare class AcademyConfigService {
     private readonly prisma;
-    constructor(prisma: PrismaService);
+    private readonly tenantContext;
+    constructor(prisma: PrismaService, tenantContext: TenantContextService);
     listSeasons(): import(".prisma/client").Prisma.PrismaPromise<{
         id: string;
         name: string;

@@ -12,13 +12,17 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.AuditService = void 0;
 const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../prisma/prisma.service");
+const tenant_context_service_1 = require("../../common/tenant-context/tenant-context.service");
 let AuditService = class AuditService {
-    constructor(prisma) {
+    constructor(prisma, tenantContext) {
         this.prisma = prisma;
+        this.tenantContext = tenantContext;
     }
     async record(entry) {
+        const academyId = this.tenantContext.getAcademyId();
         await this.prisma.auditLog.create({
             data: {
+                academyId,
                 actorUserId: entry.actorUserId ?? null,
                 action: entry.action,
                 entityType: entry.entityType,
@@ -33,6 +37,7 @@ let AuditService = class AuditService {
 exports.AuditService = AuditService;
 exports.AuditService = AuditService = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [prisma_service_1.PrismaService])
+    __metadata("design:paramtypes", [prisma_service_1.PrismaService,
+        tenant_context_service_1.TenantContextService])
 ], AuditService);
 //# sourceMappingURL=audit.service.js.map

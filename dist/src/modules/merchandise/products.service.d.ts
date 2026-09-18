@@ -1,4 +1,5 @@
 import { PrismaService } from '../prisma/prisma.service';
+import { TenantContextService } from '../../common/tenant-context/tenant-context.service';
 import { StorageService } from '../storage/storage.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
@@ -7,7 +8,8 @@ import { UpdateVariantDto } from './dto/update-variant.dto';
 export declare class ProductsService {
     private readonly prisma;
     private readonly storage;
-    constructor(prisma: PrismaService, storage: StorageService);
+    private readonly tenantContext;
+    constructor(prisma: PrismaService, storage: StorageService, tenantContext: TenantContextService);
     findAll(includeInactive?: boolean): import(".prisma/client").Prisma.PrismaPromise<({
         images: {
             id: string;

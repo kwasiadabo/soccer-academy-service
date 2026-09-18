@@ -1,4 +1,5 @@
 import { PrismaService } from '../prisma/prisma.service';
+import { TenantContextService } from '../../common/tenant-context/tenant-context.service';
 import { AuthService } from '../auth/auth.service';
 import { CreateCoachDto, UpdateCoachDto } from './dto/coach.dto';
 import { GrantCoachPortalAccessDto } from './dto/grant-portal-access.dto';
@@ -7,7 +8,8 @@ import { CreateCoachAssignmentDto, EndCoachAssignmentDto } from './dto/coach-ass
 export declare class CoachesService {
     private readonly prisma;
     private readonly authService;
-    constructor(prisma: PrismaService, authService: AuthService);
+    private readonly tenantContext;
+    constructor(prisma: PrismaService, authService: AuthService, tenantContext: TenantContextService);
     findAll(search?: string): Promise<({
         user: {
             id: string;

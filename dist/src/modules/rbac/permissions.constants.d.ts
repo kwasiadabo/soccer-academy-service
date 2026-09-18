@@ -17,6 +17,7 @@ export declare const PERMISSIONS: {
     readonly MATCHES_MANAGE: "matches:manage";
     readonly COACHES_MANAGE: "coaches:manage";
     readonly TEAMS_MANAGE: "teams:manage";
+    readonly AGE_CATEGORIES_MANAGE: "age-categories:manage";
     readonly PLAYERS_TEAM_ASSIGN: "players:team-assign";
     readonly PLAYERS_STATUS_MANAGE: "players:status-manage";
     readonly PARENT_PORTAL_ACCESS: "parent-portal:access";

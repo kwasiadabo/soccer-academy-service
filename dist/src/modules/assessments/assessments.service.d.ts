@@ -1,5 +1,6 @@
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { TenantContextService } from '../../common/tenant-context/tenant-context.service';
 import { CoachContextService } from '../coaches/coach-context.service';
 import { RequestUser } from '../auth/types';
 import { CreateAssessmentCriteriaInputDto, CreateAssessmentTemplateDto, UpdateAssessmentTemplateDto } from './dto/assessment-template.dto';
@@ -8,7 +9,8 @@ import { CreateCoachRemarkDto } from './dto/coach-remark.dto';
 export declare class AssessmentsService {
     private readonly prisma;
     private readonly coachContext;
-    constructor(prisma: PrismaService, coachContext: CoachContextService);
+    private readonly tenantContext;
+    constructor(prisma: PrismaService, coachContext: CoachContextService, tenantContext: TenantContextService);
     private canViewAll;
     findAllTemplates(): Prisma.PrismaPromise<({
         criteria: {

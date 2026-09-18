@@ -12,27 +12,32 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.GuardianContextService = void 0;
 const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../prisma/prisma.service");
+const tenant_context_service_1 = require("../../common/tenant-context/tenant-context.service");
 let GuardianContextService = class GuardianContextService {
-    constructor(prisma) {
+    constructor(prisma, tenantContext) {
         this.prisma = prisma;
+        this.tenantContext = tenantContext;
     }
     async resolveGuardianId(userId) {
-        const guardian = await this.prisma.guardian.findFirst({ where: { userId, deletedAt: null } });
+        const academyId = this.tenantContext.getAcademyId();
+        const guardian = await this.prisma.guardian.findFirst({ where: { userId, academyId, deletedAt: null } });
         if (!guardian) {
             throw new common_1.ForbiddenException('No guardian profile is linked to this account');
         }
         return guardian.id;
     }
     async resolvePlayerIds(guardianId) {
+        const academyId = this.tenantContext.getAcademyId();
         const links = await this.prisma.playerGuardian.findMany({
-            where: { guardianId },
+            where: { guardianId, academyId },
             select: { playerId: true },
         });
         return links.map((l) => l.playerId);
     }
     async assertOwnsPlayer(guardianId, playerId) {
+        const academyId = this.tenantContext.getAcademyId();
         const link = await this.prisma.playerGuardian.findUnique({
-            where: { playerId_guardianId: { playerId, guardianId } },
+            where: { playerId_guardianId: { playerId, guardianId }, academyId },
         });
         if (!link) {
             throw new common_1.ForbiddenException('This player is not linked to your account');
@@ -42,6 +47,7 @@ let GuardianContextService = class GuardianContextService {
 exports.GuardianContextService = GuardianContextService;
 exports.GuardianContextService = GuardianContextService = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [prisma_service_1.PrismaService])
+    __metadata("design:paramtypes", [prisma_service_1.PrismaService,
+        tenant_context_service_1.TenantContextService])
 ], GuardianContextService);
 //# sourceMappingURL=guardian-context.service.js.map

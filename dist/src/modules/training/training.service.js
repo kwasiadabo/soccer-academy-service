@@ -40,7 +40,6 @@ const SESSION_INCLUDE = {
     },
     sessionActivities: { orderBy: { sortOrder: 'asc' } },
 };
-const DEFAULT_TRAINING_DAY_OF_WEEK = 6;
 const DEFAULT_TRAINING_START_TIME = '08:00';
 const DEFAULT_TRAINING_END_TIME = '10:00';
 let TrainingService = TrainingService_1 = class TrainingService {
@@ -56,25 +55,27 @@ let TrainingService = TrainingService_1 = class TrainingService {
         return user.permissions.includes(permissions_constants_1.PERMISSIONS.TRAINING_APPROVE);
     }
     async listTeamsForPicker(user) {
+        const academyId = this.tenantContext.getAcademyId();
         if (this.coachContext.isCoachOnly(user)) {
             const coachId = await this.coachContext.resolveCoachId(user.userId);
             const teamIds = await this.coachContext.getAssignedTeamIds(coachId);
             if (teamIds.length > 0) {
                 return this.prisma.team.findMany({
-                    where: { isActive: true, id: { in: teamIds } },
+                    where: { academyId, isActive: true, id: { in: teamIds } },
                     select: { id: true, name: true },
                     orderBy: { name: 'asc' },
                 });
             }
         }
         return this.prisma.team.findMany({
-            where: { isActive: true },
+            where: { academyId, isActive: true },
             select: { id: true, name: true },
             orderBy: { name: 'asc' },
         });
     }
     async getPlanOrThrow(id) {
-        const plan = await this.prisma.trainingPlan.findUnique({ where: { id }, include: PLAN_INCLUDE });
+        const academyId = this.tenantContext.getAcademyId();
+        const plan = await this.prisma.trainingPlan.findFirst({ where: { id, academyId }, include: PLAN_INCLUDE });
         if (!plan) {
             throw new common_1.NotFoundException('Training plan not found');
         }
@@ -86,16 +87,17 @@ let TrainingService = TrainingService_1 = class TrainingService {
         }
     }
     async findAllPlans(user, status) {
+        const academyId = this.tenantContext.getAcademyId();
         if (this.canApprove(user)) {
             return this.prisma.trainingPlan.findMany({
-                where: { approvalStatus: status },
+                where: { academyId, approvalStatus: status },
                 include: PLAN_INCLUDE,
                 orderBy: { scheduledDate: 'desc' },
             });
         }
         const coachId = await this.coachContext.resolveCoachId(user.userId);
         return this.prisma.trainingPlan.findMany({
-            where: { coachId, approvalStatus: status },
+            where: { academyId, coachId, approvalStatus: status },
             include: PLAN_INCLUDE,
             orderBy: { scheduledDate: 'desc' },
         });
@@ -111,15 +113,17 @@ let TrainingService = TrainingService_1 = class TrainingService {
         return plan;
     }
     async createPlan(userId, dto) {
+        const academyId = this.tenantContext.getAcademyId();
         const coachId = await this.coachContext.resolveCoachId(userId);
         const { activities, scheduledDate, ...rest } = dto;
         const plan = await this.prisma.trainingPlan.create({
             data: {
                 ...rest,
+                academyId,
                 scheduledDate: new Date(scheduledDate),
                 coachId,
                 approvalStatus: 'DRAFT',
-                activities: activities?.length ? { create: activities } : undefined,
+                activities: activities?.length ? { create: activities.map((a) => ({ ...a, academyId })) } : undefined,
             },
             include: PLAN_INCLUDE,
         });
@@ -138,7 +142,7 @@ let TrainingService = TrainingService_1 = class TrainingService {
         this.assertEditable(plan.approvalStatus);
         const { scheduledDate, ...rest } = dto;
         await this.prisma.trainingPlan.update({
-            where: { id },
+            where: { id, academyId: plan.academyId },
             data: { ...rest, scheduledDate: scheduledDate ? new Date(scheduledDate) : undefined },
         });
         return this.getPlanOrThrow(id);
@@ -146,14 +150,16 @@ let TrainingService = TrainingService_1 = class TrainingService {
     async addActivity(planId, userId, dto) {
         const plan = await this.assertOwnPlan(planId, userId);
         this.assertEditable(plan.approvalStatus);
-        await this.prisma.trainingActivity.create({ data: { ...dto, trainingPlanId: planId } });
+        await this.prisma.trainingActivity.create({
+            data: { ...dto, trainingPlanId: planId, academyId: plan.academyId },
+        });
         return this.getPlanOrThrow(planId);
     }
     async updateActivity(planId, activityId, userId, dto) {
         const plan = await this.assertOwnPlan(planId, userId);
         this.assertEditable(plan.approvalStatus);
         const activity = await this.prisma.trainingActivity.findFirst({
-            where: { id: activityId, trainingPlanId: planId },
+            where: { id: activityId, trainingPlanId: planId, academyId: plan.academyId },
         });
         if (!activity) {
             throw new common_1.NotFoundException('Training activity not found');
@@ -165,7 +171,7 @@ let TrainingService = TrainingService_1 = class TrainingService {
         const plan = await this.assertOwnPlan(planId, userId);
         this.assertEditable(plan.approvalStatus);
         const activity = await this.prisma.trainingActivity.findFirst({
-            where: { id: activityId, trainingPlanId: planId },
+            where: { id: activityId, trainingPlanId: planId, academyId: plan.academyId },
         });
         if (!activity) {
             throw new common_1.NotFoundException('Training activity not found');
@@ -174,8 +180,9 @@ let TrainingService = TrainingService_1 = class TrainingService {
         return this.getPlanOrThrow(planId);
     }
     async getActivityOrThrow(activityId) {
-        const activity = await this.prisma.trainingActivity.findUnique({
-            where: { id: activityId },
+        const academyId = this.tenantContext.getAcademyId();
+        const activity = await this.prisma.trainingActivity.findFirst({
+            where: { id: activityId, academyId },
             include: { trainingPlan: true },
         });
         if (!activity) {
@@ -190,24 +197,27 @@ let TrainingService = TrainingService_1 = class TrainingService {
         await this.coachContext.assertOwnsPlan(coachId, plan);
     }
     async getActivityMarks(activityId, user) {
+        const academyId = this.tenantContext.getAcademyId();
         const activity = await this.getActivityOrThrow(activityId);
         await this.assertMarksAccess(user, activity.trainingPlan);
         const [roster, marks] = await Promise.all([
             this.rosterFor(activity.trainingPlan),
             this.prisma.trainingActivityMark.findMany({
-                where: { trainingActivityId: activityId },
+                where: { trainingActivityId: activityId, academyId },
                 include: { ratedByCoach: { select: { id: true, firstName: true, lastName: true } } },
             }),
         ]);
         return { activity, roster, marks };
     }
     async upsertActivityMarks(activityId, user, dto) {
+        const academyId = this.tenantContext.getAcademyId();
         const activity = await this.getActivityOrThrow(activityId);
         await this.assertMarksAccess(user, activity.trainingPlan);
         const ratedByCoachId = await this.coachContext.resolveCoachId(user.userId);
         await this.prisma.$transaction(dto.records.map((record) => this.prisma.trainingActivityMark.upsert({
             where: { trainingActivityId_playerId: { trainingActivityId: activityId, playerId: record.playerId } },
             create: {
+                academyId,
                 trainingActivityId: activityId,
                 playerId: record.playerId,
                 ratedByCoachId,
@@ -219,10 +229,11 @@ let TrainingService = TrainingService_1 = class TrainingService {
         return this.getActivityMarks(activityId, user);
     }
     async getPlayerMarks(playerId, user) {
+        const academyId = this.tenantContext.getAcademyId();
         if (this.coachContext.isCoachOnly(user)) {
             const coachId = await this.coachContext.resolveCoachId(user.userId);
-            const player = await this.prisma.player.findUnique({
-                where: { id: playerId },
+            const player = await this.prisma.player.findFirst({
+                where: { id: playerId, academyId },
                 select: { teamId: true, trainingGroupId: true },
             });
             if (!player) {
@@ -231,7 +242,7 @@ let TrainingService = TrainingService_1 = class TrainingService {
             await this.coachContext.assertOwnsPlayer(coachId, player);
         }
         return this.prisma.trainingActivityMark.findMany({
-            where: { playerId },
+            where: { playerId, academyId },
             include: {
                 trainingActivity: {
                     include: { trainingPlan: { select: { title: true, scheduledDate: true } } },
@@ -242,12 +253,13 @@ let TrainingService = TrainingService_1 = class TrainingService {
         });
     }
     async getTeamMarks(teamId, user) {
+        const academyId = this.tenantContext.getAcademyId();
         if (this.coachContext.isCoachOnly(user)) {
             const coachId = await this.coachContext.resolveCoachId(user.userId);
             await this.coachContext.assertOwnsTeam(coachId, teamId);
         }
         return this.prisma.trainingActivityMark.findMany({
-            where: { player: { teamId } },
+            where: { academyId, player: { teamId } },
             select: {
                 id: true,
                 playerId: true,
@@ -265,8 +277,10 @@ let TrainingService = TrainingService_1 = class TrainingService {
             throw new common_1.BadRequestException(`Cannot submit a training plan in status ${plan.approvalStatus}`);
         }
         await this.prisma.$transaction([
-            this.prisma.trainingPlan.update({ where: { id }, data: { approvalStatus: 'SUBMITTED' } }),
-            this.prisma.trainingApproval.create({ data: { trainingPlanId: id, submittedByUserId: userId } }),
+            this.prisma.trainingPlan.update({ where: { id, academyId: plan.academyId }, data: { approvalStatus: 'SUBMITTED' } }),
+            this.prisma.trainingApproval.create({
+                data: { academyId: plan.academyId, trainingPlanId: id, submittedByUserId: userId },
+            }),
         ]);
         return this.getPlanOrThrow(id);
     }
@@ -276,14 +290,14 @@ let TrainingService = TrainingService_1 = class TrainingService {
             throw new common_1.BadRequestException(`Cannot record a decision for a plan in status ${plan.approvalStatus}`);
         }
         const pendingApproval = await this.prisma.trainingApproval.findFirst({
-            where: { trainingPlanId: id, decision: 'SUBMITTED' },
+            where: { trainingPlanId: id, decision: 'SUBMITTED', academyId: plan.academyId },
             orderBy: { submittedAt: 'desc' },
         });
         if (!pendingApproval) {
             throw new common_1.NotFoundException('No pending approval found for this plan');
         }
         await this.prisma.$transaction([
-            this.prisma.trainingPlan.update({ where: { id }, data: { approvalStatus: dto.decision } }),
+            this.prisma.trainingPlan.update({ where: { id, academyId: plan.academyId }, data: { approvalStatus: dto.decision } }),
             this.prisma.trainingApproval.update({
                 where: { id: pendingApproval.id },
                 data: {
@@ -297,7 +311,8 @@ let TrainingService = TrainingService_1 = class TrainingService {
         return this.getPlanOrThrow(id);
     }
     async getSessionOrThrow(id) {
-        const session = await this.prisma.trainingSession.findUnique({ where: { id }, include: SESSION_INCLUDE });
+        const academyId = this.tenantContext.getAcademyId();
+        const session = await this.prisma.trainingSession.findFirst({ where: { id, academyId }, include: SESSION_INCLUDE });
         if (!session) {
             throw new common_1.NotFoundException('Training session not found');
         }
@@ -314,8 +329,10 @@ let TrainingService = TrainingService_1 = class TrainingService {
         return session;
     }
     async rosterFor(session) {
+        const academyId = this.tenantContext.getAcademyId();
         return this.prisma.player.findMany({
             where: {
+                academyId,
                 status: 'ACTIVE',
                 deletedAt: null,
                 teamId: session.teamId,
@@ -325,47 +342,89 @@ let TrainingService = TrainingService_1 = class TrainingService {
             orderBy: { lastName: 'asc' },
         });
     }
-    async getSchedule() {
+    async listSchedule() {
         const academyId = this.tenantContext.getAcademyId();
-        const settings = await this.prisma.academySettings.findUnique({ where: { academyId } });
-        return {
-            dayOfWeek: settings?.trainingDayOfWeek ?? DEFAULT_TRAINING_DAY_OF_WEEK,
-            startTime: settings?.trainingStartTime ?? DEFAULT_TRAINING_START_TIME,
-            endTime: settings?.trainingEndTime ?? DEFAULT_TRAINING_END_TIME,
-            location: settings?.trainingLocation ?? null,
-        };
+        return this.prisma.trainingScheduleSlot.findMany({
+            where: { academyId },
+            orderBy: [{ dayOfWeek: 'asc' }, { startTime: 'asc' }],
+        });
     }
-    async updateSchedule(dto) {
-        const current = await this.getSchedule();
-        const startTime = dto.startTime ?? current.startTime;
-        const endTime = dto.endTime ?? current.endTime;
-        if (startTime >= endTime) {
+    async addScheduleSlot(dto) {
+        if (dto.startTime >= dto.endTime) {
             throw new common_1.BadRequestException('Start time must be before end time');
         }
         const academyId = this.tenantContext.getAcademyId();
-        await this.prisma.academySettings.update({
-            where: { academyId },
+        return this.prisma.trainingScheduleSlot.create({
             data: {
-                ...(dto.dayOfWeek !== undefined ? { trainingDayOfWeek: dto.dayOfWeek } : {}),
-                ...(dto.startTime ? { trainingStartTime: dto.startTime } : {}),
-                ...(dto.endTime ? { trainingEndTime: dto.endTime } : {}),
-                ...(dto.location !== undefined ? { trainingLocation: dto.location } : {}),
+                academyId,
+                dayOfWeek: dto.dayOfWeek,
+                startTime: dto.startTime,
+                endTime: dto.endTime,
+                location: dto.location,
             },
         });
-        return this.getSchedule();
     }
-    async ensureThisWeeksWeeklySessions(teamIds, schedule) {
-        if (teamIds.length === 0) {
+    async updateScheduleSlot(id, dto) {
+        const academyId = this.tenantContext.getAcademyId();
+        const existing = await this.prisma.trainingScheduleSlot.findFirst({ where: { id, academyId } });
+        if (!existing) {
+            throw new common_1.NotFoundException('Training schedule slot not found');
+        }
+        const startTime = dto.startTime ?? existing.startTime;
+        const endTime = dto.endTime ?? existing.endTime;
+        if (startTime >= endTime) {
+            throw new common_1.BadRequestException('Start time must be before end time');
+        }
+        return this.prisma.trainingScheduleSlot.update({
+            where: { id, academyId },
+            data: {
+                dayOfWeek: dto.dayOfWeek,
+                startTime: dto.startTime,
+                endTime: dto.endTime,
+                location: dto.location,
+            },
+        });
+    }
+    async removeScheduleSlot(id) {
+        const academyId = this.tenantContext.getAcademyId();
+        const existing = await this.prisma.trainingScheduleSlot.findFirst({ where: { id, academyId } });
+        if (!existing) {
+            throw new common_1.NotFoundException('Training schedule slot not found');
+        }
+        await this.prisma.trainingScheduleSlot.delete({ where: { id, academyId } });
+    }
+    pickRelevantSlot(slots, dateStr) {
+        if (slots.length === 0) {
+            throw new common_1.BadRequestException('No weekly training schedule is configured for this academy yet');
+        }
+        const referenceDay = (dateStr ? new Date(dateStr) : new Date()).getUTCDay();
+        const exactMatch = slots.find((s) => s.dayOfWeek === referenceDay);
+        if (exactMatch)
+            return exactMatch;
+        let best = slots[0];
+        let bestDate = this.resolveFixtureDate(best.dayOfWeek, dateStr);
+        for (const slot of slots.slice(1)) {
+            const candidateDate = this.resolveFixtureDate(slot.dayOfWeek, dateStr);
+            if (candidateDate.getTime() > bestDate.getTime()) {
+                best = slot;
+                bestDate = candidateDate;
+            }
+        }
+        return best;
+    }
+    async ensureThisWeeksWeeklySessions(teamIds, slots) {
+        if (teamIds.length === 0 || slots.length === 0) {
             return;
         }
-        await Promise.all(teamIds.map((teamId) => this.getOrCreateWeeklySessionRecord(teamId, schedule)));
+        await Promise.all(teamIds.flatMap((teamId) => slots.map((slot) => this.getOrCreateWeeklySessionRecord(teamId, slot))));
     }
     async findAllSessions(user) {
-        const schedule = await this.getSchedule();
+        const academyId = this.tenantContext.getAcademyId();
+        const slots = await this.listSchedule();
         if (!this.coachContext.isCoachOnly(user)) {
-            const allTeamIds = await this.prisma.team.findMany({ where: { isActive: true }, select: { id: true } });
-            await this.ensureThisWeeksWeeklySessions(allTeamIds.map((t) => t.id), schedule);
-            return this.prisma.trainingSession.findMany({ include: SESSION_INCLUDE, orderBy: { date: 'desc' } });
+            const allTeamIds = await this.prisma.team.findMany({ where: { academyId, isActive: true }, select: { id: true } });
+            await this.ensureThisWeeksWeeklySessions(allTeamIds.map((t) => t.id), slots);
+            return this.prisma.trainingSession.findMany({ where: { academyId }, include: SESSION_INCLUDE, orderBy: { date: 'desc' } });
         }
         const coachId = await this.coachContext.resolveCoachId(user.userId);
         const [teamIds, trainingGroupIds] = await Promise.all([
@@ -375,9 +434,10 @@ let TrainingService = TrainingService_1 = class TrainingService {
         if (teamIds.length === 0 && trainingGroupIds.length === 0) {
             return [];
         }
-        await this.ensureThisWeeksWeeklySessions(teamIds, schedule);
+        await this.ensureThisWeeksWeeklySessions(teamIds, slots);
         return this.prisma.trainingSession.findMany({
             where: {
+                academyId,
                 OR: [
                     teamIds.length > 0 ? { teamId: { in: teamIds } } : undefined,
                     trainingGroupIds.length > 0 ? { trainingGroupId: { in: trainingGroupIds } } : undefined,
@@ -393,20 +453,21 @@ let TrainingService = TrainingService_1 = class TrainingService {
         return { ...session, roster };
     }
     async createSession(user, dto) {
+        const academyId = this.tenantContext.getAcademyId();
         const coachId = this.coachContext.isCoachOnly(user)
             ? await this.coachContext.resolveCoachId(user.userId)
             : await this.coachContext.resolveOptionalCoachId(user.userId);
         const { date, ...rest } = dto;
         return this.prisma.trainingSession.create({
-            data: { ...rest, date: new Date(date), conductedByCoachId: coachId ?? undefined, status: 'SCHEDULED' },
+            data: { ...rest, academyId, date: new Date(date), conductedByCoachId: coachId ?? undefined, status: 'SCHEDULED' },
             include: SESSION_INCLUDE,
         });
     }
     async updateSession(id, user, dto) {
-        await this.assertOwnSession(id, user);
+        const session = await this.assertOwnSession(id, user);
         const { date, ...rest } = dto;
         await this.prisma.trainingSession.update({
-            where: { id },
+            where: { id, academyId: session.academyId },
             data: { ...rest, date: date ? new Date(date) : undefined },
         });
         return this.getSessionOrThrow(id);
@@ -417,25 +478,31 @@ let TrainingService = TrainingService_1 = class TrainingService {
         const daysSince = (day - dayOfWeek + 7) % 7;
         return new Date(Date.UTC(base.getUTCFullYear(), base.getUTCMonth(), base.getUTCDate() - daysSince));
     }
-    async getOrCreateWeeklySessionRecord(teamId, schedule, dateStr) {
-        const date = this.resolveFixtureDate(schedule.dayOfWeek, dateStr);
-        const existing = await this.prisma.trainingSession.findFirst({ where: { teamId, date }, include: SESSION_INCLUDE });
+    async getOrCreateWeeklySessionRecord(teamId, slot, dateStr) {
+        const academyId = this.tenantContext.getAcademyId();
+        const date = this.resolveFixtureDate(slot.dayOfWeek, dateStr);
+        const existing = await this.prisma.trainingSession.findFirst({
+            where: { teamId, date, startTime: slot.startTime, academyId },
+            include: SESSION_INCLUDE,
+        });
         return (existing ??
             this.prisma.trainingSession.create({
                 data: {
+                    academyId,
                     teamId,
                     date,
-                    startTime: schedule.startTime,
-                    endTime: schedule.endTime,
-                    location: schedule.location ?? undefined,
+                    startTime: slot.startTime,
+                    endTime: slot.endTime,
+                    location: slot.location ?? undefined,
                     status: 'SCHEDULED',
                 },
                 include: SESSION_INCLUDE,
             }));
     }
     async getOrCreateSaturdaySession(teamId, dateStr) {
-        const schedule = await this.getSchedule();
-        const session = await this.getOrCreateWeeklySessionRecord(teamId, schedule, dateStr);
+        const slots = await this.listSchedule();
+        const slot = this.pickRelevantSlot(slots, dateStr);
+        const session = await this.getOrCreateWeeklySessionRecord(teamId, slot, dateStr);
         const roster = await this.rosterFor(session);
         return { ...session, roster };
     }
@@ -449,39 +516,48 @@ let TrainingService = TrainingService_1 = class TrainingService {
         }
     }
     async provisionSaturdaySessions() {
-        const schedule = await this.getSchedule();
-        if (new Date().getUTCDay() !== schedule.dayOfWeek) {
+        const academyId = this.tenantContext.getAcademyId();
+        const slots = await this.listSchedule();
+        const todaysSlots = slots.filter((slot) => slot.dayOfWeek === new Date().getUTCDay());
+        if (todaysSlots.length === 0) {
             return { created: 0, skipped: 0 };
         }
-        const teams = await this.prisma.team.findMany({ where: { isActive: true }, select: { id: true, name: true } });
-        const date = this.resolveFixtureDate(schedule.dayOfWeek);
+        const teams = await this.prisma.team.findMany({ where: { academyId, isActive: true }, select: { id: true, name: true } });
         let created = 0;
         let skipped = 0;
-        for (const team of teams) {
-            const existing = await this.prisma.trainingSession.findFirst({ where: { teamId: team.id, date } });
-            if (existing) {
-                skipped++;
-                continue;
+        for (const slot of todaysSlots) {
+            const date = this.resolveFixtureDate(slot.dayOfWeek);
+            for (const team of teams) {
+                const existing = await this.prisma.trainingSession.findFirst({
+                    where: { teamId: team.id, date, startTime: slot.startTime, academyId },
+                });
+                if (existing) {
+                    skipped++;
+                    continue;
+                }
+                const session = await this.prisma.trainingSession.create({
+                    data: {
+                        academyId,
+                        teamId: team.id,
+                        date,
+                        startTime: slot.startTime,
+                        endTime: slot.endTime,
+                        location: slot.location ?? undefined,
+                        status: 'SCHEDULED',
+                    },
+                });
+                created++;
+                await this.alertCoachesOfSaturdaySession(session, team.name);
             }
-            const session = await this.prisma.trainingSession.create({
-                data: {
-                    teamId: team.id,
-                    date,
-                    startTime: schedule.startTime,
-                    endTime: schedule.endTime,
-                    location: schedule.location ?? undefined,
-                    status: 'SCHEDULED',
-                },
-            });
-            created++;
-            await this.alertCoachesOfSaturdaySession(session, team.name);
         }
         return { created, skipped };
     }
     async alertCoachesOfSaturdaySession(session, teamName) {
+        const academyId = this.tenantContext.getAcademyId();
         const [assignments, headCoachRoles] = await Promise.all([
             this.prisma.coachAssignment.findMany({
                 where: {
+                    academyId,
                     effectiveTo: null,
                     coach: { isActive: true, deletedAt: null },
                     OR: [{ teamId: session.teamId }, { trainingGroup: { teamId: session.teamId } }],
@@ -489,7 +565,7 @@ let TrainingService = TrainingService_1 = class TrainingService {
                 include: { coach: true },
             }),
             this.prisma.userRole.findMany({
-                where: { role: { name: permissions_constants_1.ROLE_NAMES.HEAD_COACH }, user: { status: 'ACTIVE', deletedAt: null } },
+                where: { role: { name: permissions_constants_1.ROLE_NAMES.HEAD_COACH }, user: { academyId, status: 'ACTIVE', deletedAt: null } },
                 include: { user: true },
             }),
         ]);
@@ -525,7 +601,8 @@ let TrainingService = TrainingService_1 = class TrainingService {
         ])));
     }
     async quickMarkAttendance(playerId, user, status = 'PRESENT') {
-        const player = await this.prisma.player.findUnique({ where: { id: playerId } });
+        const academyId = this.tenantContext.getAcademyId();
+        const player = await this.prisma.player.findFirst({ where: { id: playerId, academyId } });
         if (!player || player.deletedAt) {
             throw new common_1.NotFoundException('Player not found');
         }
@@ -539,12 +616,13 @@ let TrainingService = TrainingService_1 = class TrainingService {
             const coachId = await this.coachContext.resolveCoachId(user.userId);
             await this.coachContext.assertOwnsPlayer(coachId, player);
         }
-        const schedule = await this.getSchedule();
-        const session = await this.getOrCreateWeeklySessionRecord(player.teamId, schedule);
+        const slots = await this.listSchedule();
+        const slot = this.pickRelevantSlot(slots);
+        const session = await this.getOrCreateWeeklySessionRecord(player.teamId, slot);
         const recordedAt = new Date();
         return this.prisma.trainingAttendance.upsert({
             where: { trainingSessionId_playerId: { trainingSessionId: session.id, playerId } },
-            create: { trainingSessionId: session.id, playerId, status, recordedByUserId: user.userId, recordedAt },
+            create: { academyId, trainingSessionId: session.id, playerId, status, recordedByUserId: user.userId, recordedAt },
             update: { status, recordedByUserId: user.userId, recordedAt },
             include: {
                 player: { select: { id: true, firstName: true, lastName: true, playerCode: true } },
@@ -563,6 +641,7 @@ let TrainingService = TrainingService_1 = class TrainingService {
         await this.prisma.$transaction(dto.records.map((record) => this.prisma.trainingAttendance.upsert({
             where: { trainingSessionId_playerId: { trainingSessionId: id, playerId: record.playerId } },
             create: {
+                academyId: session.academyId,
                 trainingSessionId: id,
                 playerId: record.playerId,
                 status: record.status,
@@ -583,17 +662,17 @@ let TrainingService = TrainingService_1 = class TrainingService {
         return session;
     }
     async addSessionActivity(sessionId, user, dto) {
-        await this.assertCanManageSession(sessionId, user);
+        const session = await this.assertCanManageSession(sessionId, user);
         const sortOrder = await this.prisma.trainingSessionActivity.count({ where: { trainingSessionId: sessionId } });
         await this.prisma.trainingSessionActivity.create({
-            data: { trainingSessionId: sessionId, name: dto.name, sortOrder },
+            data: { academyId: session.academyId, trainingSessionId: sessionId, name: dto.name, sortOrder },
         });
         return this.findOneSession(sessionId);
     }
     async removeSessionActivity(sessionId, activityId, user) {
-        await this.assertCanManageSession(sessionId, user);
+        const session = await this.assertCanManageSession(sessionId, user);
         const activity = await this.prisma.trainingSessionActivity.findFirst({
-            where: { id: activityId, trainingSessionId: sessionId },
+            where: { id: activityId, trainingSessionId: sessionId, academyId: session.academyId },
             include: { _count: { select: { ratings: true } } },
         });
         if (!activity) {

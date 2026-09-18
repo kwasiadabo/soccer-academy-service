@@ -13,6 +13,7 @@ exports.ProductsService = void 0;
 const common_1 = require("@nestjs/common");
 const client_1 = require("@prisma/client");
 const prisma_service_1 = require("../prisma/prisma.service");
+const tenant_context_service_1 = require("../../common/tenant-context/tenant-context.service");
 const storage_service_1 = require("../storage/storage.service");
 const ALLOWED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
@@ -21,20 +22,23 @@ const PRODUCT_INCLUDE = {
     images: { orderBy: { sortOrder: 'asc' } },
 };
 let ProductsService = class ProductsService {
-    constructor(prisma, storage) {
+    constructor(prisma, storage, tenantContext) {
         this.prisma = prisma;
         this.storage = storage;
+        this.tenantContext = tenantContext;
     }
     findAll(includeInactive = true) {
+        const academyId = this.tenantContext.getAcademyId();
         return this.prisma.product.findMany({
-            where: { deletedAt: null, ...(includeInactive ? {} : { isActive: true }) },
+            where: { academyId, deletedAt: null, ...(includeInactive ? {} : { isActive: true }) },
             include: PRODUCT_INCLUDE,
             orderBy: { name: 'asc' },
         });
     }
     async findOne(id, includeInactive = true) {
+        const academyId = this.tenantContext.getAcademyId();
         const product = await this.prisma.product.findFirst({
-            where: { id, deletedAt: null, ...(includeInactive ? {} : { isActive: true }) },
+            where: { id, academyId, deletedAt: null, ...(includeInactive ? {} : { isActive: true }) },
             include: PRODUCT_INCLUDE,
         });
         if (!product) {
@@ -43,16 +47,20 @@ let ProductsService = class ProductsService {
         return product;
     }
     create(dto) {
-        return this.prisma.product.create({ data: dto, include: PRODUCT_INCLUDE });
+        const academyId = this.tenantContext.getAcademyId();
+        return this.prisma.product.create({ data: { ...dto, academyId }, include: PRODUCT_INCLUDE });
     }
     async update(id, dto) {
+        const academyId = this.tenantContext.getAcademyId();
         await this.findOne(id);
-        return this.prisma.product.update({ where: { id }, data: dto, include: PRODUCT_INCLUDE });
+        return this.prisma.product.update({ where: { id, academyId }, data: dto, include: PRODUCT_INCLUDE });
     }
     async addVariant(productId, dto) {
+        const academyId = this.tenantContext.getAcademyId();
         await this.findOne(productId);
         await this.prisma.productVariant.create({
             data: {
+                academyId,
                 productId,
                 sizeLabel: dto.sizeLabel,
                 priceOverride: dto.priceOverride,
@@ -62,11 +70,14 @@ let ProductsService = class ProductsService {
         return this.findOne(productId);
     }
     async updateVariant(productId, variantId, dto) {
-        const variant = await this.prisma.productVariant.findUnique({ where: { id: variantId } });
-        if (!variant || variant.productId !== productId) {
+        const academyId = this.tenantContext.getAcademyId();
+        const variant = await this.prisma.productVariant.findFirst({
+            where: { id: variantId, productId, academyId },
+        });
+        if (!variant) {
             throw new common_1.NotFoundException('Variant not found');
         }
-        await this.prisma.productVariant.update({ where: { id: variantId }, data: dto });
+        await this.prisma.productVariant.update({ where: { id: variantId, academyId }, data: dto });
         return this.findOne(productId);
     }
     async addImage(productId, file, uploadedByUserId) {
@@ -80,6 +91,7 @@ let ProductsService = class ProductsService {
         const stored = await this.storage.save(file.originalname, file.mimetype, file.buffer);
         const document = await this.prisma.document.create({
             data: {
+                academyId: product.academyId,
                 ownerType: client_1.DocumentOwnerType.PRODUCT,
                 ownerId: product.id,
                 documentType: client_1.DocumentType.PHOTO,
@@ -91,22 +103,32 @@ let ProductsService = class ProductsService {
             },
         });
         const nextSortOrder = product.images.length > 0 ? Math.max(...product.images.map((i) => i.sortOrder)) + 1 : 0;
-        await this.prisma.productImage.create({ data: { productId, documentId: document.id, sortOrder: nextSortOrder } });
+        await this.prisma.productImage.create({
+            data: { academyId: product.academyId, productId, documentId: document.id, sortOrder: nextSortOrder },
+        });
         return this.findOne(productId);
     }
     async removeImage(productId, imageId) {
-        const image = await this.prisma.productImage.findUnique({ where: { id: imageId }, include: { document: true } });
-        if (!image || image.productId !== productId) {
+        const academyId = this.tenantContext.getAcademyId();
+        const image = await this.prisma.productImage.findFirst({
+            where: { id: imageId, productId, academyId },
+            include: { document: true },
+        });
+        if (!image) {
             throw new common_1.NotFoundException('Image not found');
         }
-        await this.prisma.productImage.delete({ where: { id: imageId } });
+        await this.prisma.productImage.delete({ where: { id: imageId, academyId } });
         await this.storage.delete(image.document.storageKey).catch(() => undefined);
-        await this.prisma.document.delete({ where: { id: image.documentId } }).catch(() => undefined);
+        await this.prisma.document.delete({ where: { id: image.documentId, academyId } }).catch(() => undefined);
         return this.findOne(productId);
     }
     async getImage(productId, imageId) {
-        const image = await this.prisma.productImage.findUnique({ where: { id: imageId }, include: { document: true } });
-        if (!image || image.productId !== productId) {
+        const academyId = this.tenantContext.getAcademyId();
+        const image = await this.prisma.productImage.findFirst({
+            where: { id: imageId, productId, academyId },
+            include: { document: true },
+        });
+        if (!image) {
             throw new common_1.NotFoundException('Image not found');
         }
         const buffer = await this.storage.read(image.document.storageKey);
@@ -117,6 +139,7 @@ exports.ProductsService = ProductsService;
 exports.ProductsService = ProductsService = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [prisma_service_1.PrismaService,
-        storage_service_1.StorageService])
+        storage_service_1.StorageService,
+        tenant_context_service_1.TenantContextService])
 ], ProductsService);
 //# sourceMappingURL=products.service.js.map

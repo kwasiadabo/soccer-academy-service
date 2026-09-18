@@ -13,6 +13,7 @@ exports.PlayersService = void 0;
 const common_1 = require("@nestjs/common");
 const client_1 = require("@prisma/client");
 const prisma_service_1 = require("../prisma/prisma.service");
+const tenant_context_service_1 = require("../../common/tenant-context/tenant-context.service");
 const storage_service_1 = require("../storage/storage.service");
 const paystack_service_1 = require("../paystack/paystack.service");
 const coach_context_service_1 = require("../coaches/coach-context.service");
@@ -30,18 +31,21 @@ const PROFILE_INCLUDE = {
 const ALLOWED_PHOTO_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
 const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
 let PlayersService = class PlayersService {
-    constructor(prisma, storage, playerIdService, paystack, receipts, coachContext) {
+    constructor(prisma, storage, playerIdService, paystack, receipts, coachContext, tenantContext) {
         this.prisma = prisma;
         this.storage = storage;
         this.playerIdService = playerIdService;
         this.paystack = paystack;
         this.receipts = receipts;
         this.coachContext = coachContext;
+        this.tenantContext = tenantContext;
     }
     async findAll(filter, user) {
+        const academyId = this.tenantContext.getAcademyId();
         const scopeFilter = await this.buildCoachScopeFilter(user);
         const players = await this.prisma.player.findMany({
             where: {
+                academyId,
                 deletedAt: null,
                 status: filter.status ? filter.status : undefined,
                 teamId: filter.teamId || undefined,
@@ -83,8 +87,9 @@ let PlayersService = class PlayersService {
         };
     }
     async listBirthdays(withinDays) {
+        const academyId = this.tenantContext.getAcademyId();
         const players = await this.prisma.player.findMany({
-            where: { status: 'ACTIVE', deletedAt: null },
+            where: { academyId, status: 'ACTIVE', deletedAt: null },
             select: { id: true, firstName: true, lastName: true, playerCode: true, dateOfBirth: true },
         });
         const today = new Date();
@@ -103,8 +108,9 @@ let PlayersService = class PlayersService {
             .sort((a, b) => a.daysUntil - b.daysUntil);
     }
     async findOne(id) {
+        const academyId = this.tenantContext.getAcademyId();
         const player = await this.prisma.player.findFirst({
-            where: { id, deletedAt: null },
+            where: { id, academyId, deletedAt: null },
             include: PROFILE_INCLUDE,
         });
         if (!player) {
@@ -113,12 +119,14 @@ let PlayersService = class PlayersService {
         return player;
     }
     async create(dto) {
+        const academyId = this.tenantContext.getAcademyId();
         const primaryGuardians = dto.guardians.filter((g) => g.isPrimary);
         if (primaryGuardians.length > 1) {
             throw new common_1.BadRequestException('Only one guardian can be marked as primary');
         }
         const player = await this.prisma.player.create({
             data: {
+                academyId,
                 firstName: dto.firstName,
                 middleName: dto.middleName,
                 lastName: dto.lastName,
@@ -136,10 +144,12 @@ let PlayersService = class PlayersService {
                 status: 'DRAFT',
                 guardians: {
                     create: dto.guardians.map((g) => ({
+                        academyId,
                         relationship: g.relationship,
                         isPrimary: g.isPrimary ?? false,
                         guardian: {
                             create: {
+                                academyId,
                                 firstName: g.firstName,
                                 lastName: g.lastName,
                                 phone: g.phone,
@@ -149,7 +159,7 @@ let PlayersService = class PlayersService {
                         },
                     })),
                 },
-                registrations: { create: { status: 'DRAFT' } },
+                registrations: { create: { academyId, status: 'DRAFT' } },
             },
             include: PROFILE_INCLUDE,
         });
@@ -161,7 +171,7 @@ let PlayersService = class PlayersService {
             throw new common_1.BadRequestException('Team assignment requires the registration payment to be collected first');
         }
         return this.prisma.player.update({
-            where: { id },
+            where: { id, academyId: player.academyId },
             data: {
                 ...dto,
                 dateOfBirth: dto.dateOfBirth ? new Date(dto.dateOfBirth) : undefined,
@@ -177,7 +187,7 @@ let PlayersService = class PlayersService {
             throw new common_1.BadRequestException('Team assignment requires the registration payment to be collected first');
         }
         return this.prisma.player.update({
-            where: { id },
+            where: { id, academyId: player.academyId },
             data: {
                 teamId: dto.teamId,
                 trainingGroupId: dto.trainingGroupId,
@@ -191,33 +201,37 @@ let PlayersService = class PlayersService {
             throw new common_1.BadRequestException('Only a fully registered player can be suspended, withdrawn, or reinstated');
         }
         return this.prisma.player.update({
-            where: { id },
+            where: { id, academyId: player.academyId },
             data: { status },
             include: PROFILE_INCLUDE,
         });
     }
     async addGuardian(playerId, dto) {
+        const academyId = this.tenantContext.getAcademyId();
         await this.findOne(playerId);
         if (dto.isPrimary) {
             await this.prisma.playerGuardian.updateMany({
-                where: { playerId },
+                where: { playerId, academyId },
                 data: { isPrimary: false },
             });
         }
+        const guardian = await this.prisma.guardian.create({
+            data: {
+                academyId,
+                firstName: dto.firstName,
+                lastName: dto.lastName,
+                phone: dto.phone,
+                email: dto.email,
+                address: dto.address,
+            },
+        });
         await this.prisma.playerGuardian.create({
             data: {
-                player: { connect: { id: playerId } },
+                academyId,
+                playerId,
+                guardianId: guardian.id,
                 relationship: dto.relationship,
                 isPrimary: dto.isPrimary ?? false,
-                guardian: {
-                    create: {
-                        firstName: dto.firstName,
-                        lastName: dto.lastName,
-                        phone: dto.phone,
-                        email: dto.email,
-                        address: dto.address,
-                    },
-                },
             },
         });
         return this.findOne(playerId);
@@ -229,7 +243,7 @@ let PlayersService = class PlayersService {
         }
         const registration = player.registrations[0];
         await this.prisma.$transaction([
-            this.prisma.player.update({ where: { id }, data: { status: 'SUBMITTED' } }),
+            this.prisma.player.update({ where: { id, academyId: player.academyId }, data: { status: 'SUBMITTED' } }),
             this.prisma.playerRegistration.update({
                 where: { id: registration.id },
                 data: { status: 'SUBMITTED', submittedAt: new Date() },
@@ -238,10 +252,11 @@ let PlayersService = class PlayersService {
         return this.findOne(id);
     }
     async approve(id, reviewerUserId, dto = {}) {
+        const academyId = this.tenantContext.getAcademyId();
         const player = await this.findOne(id);
         const existingInvoiceId = player.registrations[0]?.registrationFeeInvoiceId;
         const hasValidInvoice = existingInvoiceId
-            ? await this.prisma.invoice.findUnique({ where: { id: existingInvoiceId } })
+            ? await this.prisma.invoice.findFirst({ where: { id: existingInvoiceId, academyId } })
             : null;
         const canProceed = ['DRAFT', 'PENDING_PARENT_INFO', 'SUBMITTED'].includes(player.status) ||
             (player.status === 'PENDING_REGISTRATION_PAYMENT' && !hasValidInvoice);
@@ -252,7 +267,7 @@ let PlayersService = class PlayersService {
             throw new common_1.BadRequestException('Assign an age category before proceeding to payment');
         }
         const registrationFeeType = await this.prisma.feeType.findFirst({
-            where: { isRegistrationFee: true, isActive: true },
+            where: { academyId, isRegistrationFee: true, isActive: true },
             include: { items: { include: { feeItem: true } } },
         });
         if (!registrationFeeType) {
@@ -271,6 +286,7 @@ let PlayersService = class PlayersService {
         dueDate.setDate(dueDate.getDate() + 14);
         const invoice = await this.prisma.invoice.create({
             data: {
+                academyId,
                 invoiceNumber: (0, finance_utils_1.generateInvoiceNumber)(),
                 playerId: player.id,
                 feeTypeId: registrationFeeType.id,
@@ -284,7 +300,7 @@ let PlayersService = class PlayersService {
             },
         });
         await this.prisma.$transaction([
-            this.prisma.player.update({ where: { id }, data: { status: 'PENDING_REGISTRATION_PAYMENT' } }),
+            this.prisma.player.update({ where: { id, academyId }, data: { status: 'PENDING_REGISTRATION_PAYMENT' } }),
             this.prisma.playerRegistration.update({
                 where: { id: registration.id },
                 data: {
@@ -299,8 +315,10 @@ let PlayersService = class PlayersService {
     }
     async confirmPayment(id, receptionistUserId, dto) {
         const { player, registration, invoice } = await this.getPendingRegistrationInvoice(id);
+        const academyId = player.academyId;
         const payment = await this.prisma.payment.create({
             data: {
+                academyId,
                 receiptNumber: (0, finance_utils_1.generateReceiptNumber)(),
                 playerId: player.id,
                 amount: invoice.amount,
@@ -308,15 +326,15 @@ let PlayersService = class PlayersService {
                 reference: dto.reference,
                 receivedByUserId: receptionistUserId,
                 allocations: {
-                    create: { invoiceId: invoice.id, amount: invoice.amount },
+                    create: { academyId, invoiceId: invoice.id, amount: invoice.amount },
                 },
             },
         });
         const playerCode = await this.generateUniquePlayerCode(player.ageCategoryId, player.dateOfBirth);
         await this.prisma.$transaction([
-            this.prisma.invoice.update({ where: { id: invoice.id }, data: { status: 'PAID' } }),
+            this.prisma.invoice.update({ where: { id: invoice.id, academyId }, data: { status: 'PAID' } }),
             this.prisma.player.update({
-                where: { id },
+                where: { id, academyId },
                 data: { status: 'ACTIVE', playerCode },
             }),
             this.prisma.playerRegistration.update({
@@ -328,8 +346,9 @@ let PlayersService = class PlayersService {
         return { player: await this.findOne(id), payment };
     }
     async activateAfterRegistrationPayment(playerId) {
-        const player = await this.prisma.player.findUnique({
-            where: { id: playerId },
+        const academyId = this.tenantContext.getAcademyId();
+        const player = await this.prisma.player.findFirst({
+            where: { id: playerId, academyId },
             include: { registrations: { orderBy: { createdAt: 'desc' }, take: 1 } },
         });
         if (!player || player.status !== 'PENDING_REGISTRATION_PAYMENT')
@@ -337,12 +356,14 @@ let PlayersService = class PlayersService {
         const registration = player.registrations[0];
         if (!registration?.registrationFeeInvoiceId)
             return;
-        const invoice = await this.prisma.invoice.findUnique({ where: { id: registration.registrationFeeInvoiceId } });
+        const invoice = await this.prisma.invoice.findFirst({
+            where: { id: registration.registrationFeeInvoiceId, academyId },
+        });
         if (!invoice || invoice.status !== 'PAID')
             return;
         const playerCode = await this.generateUniquePlayerCode(player.ageCategoryId, player.dateOfBirth);
         await this.prisma.$transaction([
-            this.prisma.player.update({ where: { id: playerId }, data: { status: 'ACTIVE', playerCode } }),
+            this.prisma.player.update({ where: { id: playerId, academyId }, data: { status: 'ACTIVE', playerCode } }),
             this.prisma.playerRegistration.update({ where: { id: registration.id }, data: { status: 'ACTIVE' } }),
         ]);
     }
@@ -355,8 +376,8 @@ let PlayersService = class PlayersService {
         if (!registration.registrationFeeInvoiceId) {
             throw new common_1.BadRequestException('No registration invoice found for this player');
         }
-        const invoice = await this.prisma.invoice.findUniqueOrThrow({
-            where: { id: registration.registrationFeeInvoiceId },
+        const invoice = await this.prisma.invoice.findFirstOrThrow({
+            where: { id: registration.registrationFeeInvoiceId, academyId: player.academyId },
             include: { feeType: { include: { items: { include: { feeItem: true } } } } },
         });
         return { player, registration, invoice };
@@ -387,10 +408,11 @@ let PlayersService = class PlayersService {
         return { confirmed: true, status: verification.status, ...result };
     }
     async generateUniquePlayerCode(ageCategoryId, dateOfBirth) {
-        const ageCategory = await this.prisma.ageCategory.findUniqueOrThrow({ where: { id: ageCategoryId } });
+        const academyId = this.tenantContext.getAcademyId();
+        const ageCategory = await this.prisma.ageCategory.findFirstOrThrow({ where: { id: ageCategoryId, academyId } });
         for (let attempt = 0; attempt < 5; attempt++) {
             const candidate = await this.playerIdService.generate(ageCategory.code, dateOfBirth);
-            const exists = await this.prisma.player.findFirst({ where: { playerCode: candidate } });
+            const exists = await this.prisma.player.findFirst({ where: { playerCode: candidate, academyId } });
             if (!exists)
                 return candidate;
         }
@@ -404,9 +426,11 @@ let PlayersService = class PlayersService {
             throw new common_1.BadRequestException('Photo must be smaller than 5MB');
         }
         const player = await this.findOne(id);
+        const academyId = player.academyId;
         const stored = await this.storage.save(file.originalname, file.mimetype, file.buffer);
         const document = await this.prisma.document.create({
             data: {
+                academyId,
                 ownerType: client_1.DocumentOwnerType.PLAYER,
                 ownerId: player.id,
                 documentType: client_1.DocumentType.PHOTO,
@@ -418,9 +442,9 @@ let PlayersService = class PlayersService {
             },
         });
         const previousDocumentId = player.photoDocumentId;
-        await this.prisma.player.update({ where: { id }, data: { photoDocumentId: document.id } });
+        await this.prisma.player.update({ where: { id, academyId }, data: { photoDocumentId: document.id } });
         if (previousDocumentId) {
-            const previous = await this.prisma.document.findUnique({ where: { id: previousDocumentId } });
+            const previous = await this.prisma.document.findFirst({ where: { id: previousDocumentId, academyId } });
             if (previous) {
                 await this.storage.delete(previous.storageKey).catch(() => undefined);
                 await this.prisma.document.delete({ where: { id: previousDocumentId } }).catch(() => undefined);
@@ -429,8 +453,9 @@ let PlayersService = class PlayersService {
         return this.findOne(id);
     }
     async getPhoto(id) {
+        const academyId = this.tenantContext.getAcademyId();
         const player = await this.prisma.player.findFirst({
-            where: { id, deletedAt: null },
+            where: { id, academyId, deletedAt: null },
             include: { photo: true },
         });
         if (!player?.photo) {
@@ -448,6 +473,7 @@ exports.PlayersService = PlayersService = __decorate([
         player_id_service_1.PlayerIdService,
         paystack_service_1.PaystackService,
         receipts_service_1.ReceiptsService,
-        coach_context_service_1.CoachContextService])
+        coach_context_service_1.CoachContextService,
+        tenant_context_service_1.TenantContextService])
 ], PlayersService);
 //# sourceMappingURL=players.service.js.map

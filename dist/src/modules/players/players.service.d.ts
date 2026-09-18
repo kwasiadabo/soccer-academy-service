@@ -1,5 +1,6 @@
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { TenantContextService } from '../../common/tenant-context/tenant-context.service';
 import { StorageService } from '../storage/storage.service';
 import { PaystackService } from '../paystack/paystack.service';
 import { CoachContextService } from '../coaches/coach-context.service';
@@ -20,7 +21,8 @@ export declare class PlayersService {
     private readonly paystack;
     private readonly receipts;
     private readonly coachContext;
-    constructor(prisma: PrismaService, storage: StorageService, playerIdService: PlayerIdService, paystack: PaystackService, receipts: ReceiptsService, coachContext: CoachContextService);
+    private readonly tenantContext;
+    constructor(prisma: PrismaService, storage: StorageService, playerIdService: PlayerIdService, paystack: PaystackService, receipts: ReceiptsService, coachContext: CoachContextService, tenantContext: TenantContextService);
     findAll(filter: {
         status?: string;
         search?: string;

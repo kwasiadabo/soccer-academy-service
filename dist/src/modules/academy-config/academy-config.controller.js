@@ -110,7 +110,7 @@ __decorate([
 ], AcademyConfigController.prototype, "listAgeCategories", null);
 __decorate([
     (0, common_1.Post)('age-categories'),
-    (0, permissions_decorator_1.RequirePermissions)(permissions_constants_1.PERMISSIONS.ACADEMY_CONFIG_MANAGE),
+    (0, permissions_decorator_1.RequireAnyPermission)(permissions_constants_1.PERMISSIONS.ACADEMY_CONFIG_MANAGE, permissions_constants_1.PERMISSIONS.AGE_CATEGORIES_MANAGE),
     (0, audit_log_decorator_1.AuditLog)({ action: 'AGE_CATEGORY_CREATE', entityType: 'AgeCategory' }),
     (0, swagger_1.ApiOperation)({ summary: 'Create an age category.' }),
     (0, swagger_1.ApiCreatedResponse)({ description: 'Age category created.' }),
@@ -121,7 +121,7 @@ __decorate([
 ], AcademyConfigController.prototype, "createAgeCategory", null);
 __decorate([
     (0, common_1.Patch)('age-categories/:id'),
-    (0, permissions_decorator_1.RequirePermissions)(permissions_constants_1.PERMISSIONS.ACADEMY_CONFIG_MANAGE),
+    (0, permissions_decorator_1.RequireAnyPermission)(permissions_constants_1.PERMISSIONS.ACADEMY_CONFIG_MANAGE, permissions_constants_1.PERMISSIONS.AGE_CATEGORIES_MANAGE),
     (0, audit_log_decorator_1.AuditLog)({ action: 'AGE_CATEGORY_UPDATE', entityType: 'AgeCategory' }),
     (0, swagger_1.ApiOperation)({ summary: 'Update an age category.' }),
     (0, swagger_1.ApiOkResponse)({ description: 'Age category updated.' }),

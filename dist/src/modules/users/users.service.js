@@ -47,6 +47,7 @@ const common_1 = require("@nestjs/common");
 const bcrypt = __importStar(require("bcrypt"));
 const prisma_service_1 = require("../prisma/prisma.service");
 const auth_service_1 = require("../auth/auth.service");
+const tenant_context_service_1 = require("../../common/tenant-context/tenant-context.service");
 const userListSelect = {
     id: true,
     email: true,
@@ -60,21 +61,24 @@ const userListSelect = {
     roles: { select: { role: { select: { name: true } } } },
 };
 let UsersService = class UsersService {
-    constructor(prisma, authService) {
+    constructor(prisma, authService, tenantContext) {
         this.prisma = prisma;
         this.authService = authService;
+        this.tenantContext = tenantContext;
     }
     async findAll() {
+        const academyId = this.tenantContext.getAcademyId();
         const users = await this.prisma.user.findMany({
-            where: { deletedAt: null },
+            where: { academyId, deletedAt: null },
             select: userListSelect,
             orderBy: { createdAt: 'desc' },
         });
         return users.map(this.serialize);
     }
     async findOne(id) {
+        const academyId = this.tenantContext.getAcademyId();
         const user = await this.prisma.user.findFirst({
-            where: { id, deletedAt: null },
+            where: { id, academyId, deletedAt: null },
             select: userListSelect,
         });
         if (!user) {
@@ -92,14 +96,17 @@ let UsersService = class UsersService {
         return roles;
     }
     async create(dto) {
-        const coach = await this.prisma.coach.findFirst({ where: { id: dto.coachId, deletedAt: null } });
+        const academyId = this.tenantContext.getAcademyId();
+        const coach = await this.prisma.coach.findFirst({ where: { id: dto.coachId, academyId, deletedAt: null } });
         if (!coach) {
             throw new common_1.NotFoundException('Staff member not found');
         }
         if (coach.userId) {
             throw new common_1.BadRequestException('This staff member already has a user account');
         }
-        const existing = await this.prisma.user.findFirst({ where: { email: dto.email } });
+        const existing = await this.prisma.user.findUnique({
+            where: { academyId_email: { academyId, email: dto.email } },
+        });
         if (existing) {
             throw new common_1.ConflictException('A user with this email already exists');
         }
@@ -108,6 +115,7 @@ let UsersService = class UsersService {
         const passwordHash = await bcrypt.hash(dto.password, 10);
         const created = await this.prisma.user.create({
             data: {
+                academyId,
                 email: dto.email,
                 passwordHash,
                 firstName: coach.firstName,
@@ -118,16 +126,19 @@ let UsersService = class UsersService {
             },
             select: userListSelect,
         });
-        await this.prisma.coach.update({ where: { id: coach.id }, data: { userId: created.id } });
+        await this.prisma.coach.update({ where: { id: coach.id, academyId }, data: { userId: created.id } });
         return this.serialize(created);
     }
     async update(id, dto) {
-        const existing = await this.prisma.user.findFirst({ where: { id, deletedAt: null } });
+        const academyId = this.tenantContext.getAcademyId();
+        const existing = await this.prisma.user.findFirst({ where: { id, academyId, deletedAt: null } });
         if (!existing) {
             throw new common_1.NotFoundException('User not found');
         }
         if (dto.email && dto.email !== existing.email) {
-            const emailTaken = await this.prisma.user.findFirst({ where: { email: dto.email } });
+            const emailTaken = await this.prisma.user.findUnique({
+                where: { academyId_email: { academyId, email: dto.email } },
+            });
             if (emailTaken) {
                 throw new common_1.ConflictException('A user with this email already exists');
             }
@@ -135,11 +146,13 @@ let UsersService = class UsersService {
         const roles = dto.roleNames ? await this.resolveRoles(dto.roleNames) : null;
         const user = await this.prisma.$transaction(async (tx) => {
             if (roles) {
-                await tx.userRole.deleteMany({ where: { userId: id } });
-                await tx.userRole.createMany({ data: roles.map((role) => ({ userId: id, roleId: role.id })) });
+                await tx.userRole.deleteMany({ where: { userId: id, academyId } });
+                await tx.userRole.createMany({
+                    data: roles.map((role) => ({ userId: id, roleId: role.id, academyId })),
+                });
             }
             return tx.user.update({
-                where: { id },
+                where: { id, academyId },
                 data: {
                     firstName: dto.firstName,
                     lastName: dto.lastName,
@@ -156,24 +169,26 @@ let UsersService = class UsersService {
         if (id === requestingUserId) {
             throw new common_1.BadRequestException('You cannot delete your own account');
         }
-        const existing = await this.prisma.user.findFirst({ where: { id, deletedAt: null } });
+        const academyId = this.tenantContext.getAcademyId();
+        const existing = await this.prisma.user.findFirst({ where: { id, academyId, deletedAt: null } });
         if (!existing) {
             throw new common_1.NotFoundException('User not found');
         }
         await this.prisma.user.update({
-            where: { id },
+            where: { id, academyId },
             data: { deletedAt: new Date(), refreshTokenHash: null },
         });
     }
     async resetPassword(id, dto) {
-        const user = await this.prisma.user.findFirst({ where: { id, deletedAt: null } });
+        const academyId = this.tenantContext.getAcademyId();
+        const user = await this.prisma.user.findFirst({ where: { id, academyId, deletedAt: null } });
         if (!user) {
             throw new common_1.NotFoundException('User not found');
         }
         if (dto.password) {
             const passwordHash = await bcrypt.hash(dto.password, 10);
             await this.prisma.user.update({
-                where: { id },
+                where: { id, academyId },
                 data: { passwordHash, mustChangePassword: true, refreshTokenHash: null },
             });
             return { mode: 'temporary-password' };
@@ -200,6 +215,7 @@ exports.UsersService = UsersService;
 exports.UsersService = UsersService = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [prisma_service_1.PrismaService,
-        auth_service_1.AuthService])
+        auth_service_1.AuthService,
+        tenant_context_service_1.TenantContextService])
 ], UsersService);
 //# sourceMappingURL=users.service.js.map

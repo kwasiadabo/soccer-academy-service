@@ -12,17 +12,21 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.GalleryService = void 0;
 const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../prisma/prisma.service");
+const tenant_context_service_1 = require("../../common/tenant-context/tenant-context.service");
 const storage_service_1 = require("../storage/storage.service");
 const ALLOWED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 const MAX_FILES_PER_UPLOAD = 20;
 let GalleryService = class GalleryService {
-    constructor(prisma, storage) {
+    constructor(prisma, storage, tenantContext) {
         this.prisma = prisma;
         this.storage = storage;
+        this.tenantContext = tenantContext;
     }
     async findPublic() {
+        const academyId = this.tenantContext.getAcademyId();
         const photos = await this.prisma.galleryPhoto.findMany({
+            where: { academyId },
             orderBy: [{ context: 'asc' }, { sortOrder: 'asc' }],
         });
         return photos.map((photo) => ({
@@ -35,6 +39,7 @@ let GalleryService = class GalleryService {
         }));
     }
     async replaceForContext(context, files, sessionDate, details, uploadedByUserId) {
+        const academyId = this.tenantContext.getAcademyId();
         if (!files || files.length === 0) {
             throw new common_1.BadRequestException('At least one photo is required');
         }
@@ -49,10 +54,11 @@ let GalleryService = class GalleryService {
                 throw new common_1.BadRequestException('Each photo must be smaller than 5MB');
             }
         }
-        const previousPhotos = await this.prisma.galleryPhoto.findMany({ where: { context } });
+        const previousPhotos = await this.prisma.galleryPhoto.findMany({ where: { context, academyId } });
         const uploaded = await Promise.all(files.map((file) => this.storage.save(file.originalname, file.mimetype, file.buffer)));
         await this.prisma.galleryPhoto.createMany({
             data: uploaded.map((stored, index) => ({
+                academyId,
                 context,
                 storageKey: stored.storageKey,
                 sortOrder: index,
@@ -62,7 +68,9 @@ let GalleryService = class GalleryService {
             })),
         });
         if (previousPhotos.length > 0) {
-            await this.prisma.galleryPhoto.deleteMany({ where: { id: { in: previousPhotos.map((p) => p.id) } } });
+            await this.prisma.galleryPhoto.deleteMany({
+                where: { id: { in: previousPhotos.map((p) => p.id) }, academyId },
+            });
             await Promise.all(previousPhotos.map((photo) => this.storage.delete(photo.storageKey).catch(() => undefined)));
         }
         return this.findPublic();
@@ -72,6 +80,7 @@ exports.GalleryService = GalleryService;
 exports.GalleryService = GalleryService = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [prisma_service_1.PrismaService,
-        storage_service_1.StorageService])
+        storage_service_1.StorageService,
+        tenant_context_service_1.TenantContextService])
 ], GalleryService);
 //# sourceMappingURL=gallery.service.js.map

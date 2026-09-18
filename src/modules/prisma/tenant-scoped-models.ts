@@ -36,6 +36,7 @@ export const TENANT_SCOPED_MODELS = new Set<string>([
   'TrainingActivityMark',
   'TrainingApproval',
   'TrainingSession',
+  'TrainingScheduleSlot',
   'PlayerOfTheWeek',
   'GalleryPhoto',
   'TrainingSessionActivity',

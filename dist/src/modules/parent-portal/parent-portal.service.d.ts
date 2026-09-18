@@ -1,4 +1,5 @@
 import { PrismaService } from '../prisma/prisma.service';
+import { TenantContextService } from '../../common/tenant-context/tenant-context.service';
 import { GuardianContextService } from '../guardians/guardian-context.service';
 import { StorageService } from '../storage/storage.service';
 import { CreateCoachFeedbackDto } from './dto/coach-feedback.dto';
@@ -6,7 +7,8 @@ export declare class ParentPortalService {
     private readonly prisma;
     private readonly guardianContext;
     private readonly storage;
-    constructor(prisma: PrismaService, guardianContext: GuardianContextService, storage: StorageService);
+    private readonly tenantContext;
+    constructor(prisma: PrismaService, guardianContext: GuardianContextService, storage: StorageService, tenantContext: TenantContextService);
     listChildren(userId: string): Promise<{
         id: string;
         status: import(".prisma/client").$Enums.PlayerStatus;
@@ -85,14 +87,14 @@ export declare class ParentPortalService {
             createdAt: Date;
             updatedAt: Date;
             academyId: string;
+            startTime: string | null;
+            endTime: string | null;
+            location: string | null;
             teamId: string;
             trainingGroupId: string | null;
-            location: string | null;
             trainingPlanId: string | null;
             conductedByCoachId: string | null;
             date: Date;
-            startTime: string | null;
-            endTime: string | null;
         };
     } & {
         id: string;

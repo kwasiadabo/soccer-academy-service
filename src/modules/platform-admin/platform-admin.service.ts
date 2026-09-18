@@ -89,6 +89,12 @@ export class PlatformAdminService {
       await this.prisma.academySettings.create({
         data: { academyId: academy.id, brandName: params.brandName ?? params.name, logoUrl },
       });
+      // Every academy launches with the same "every Saturday" fixture as a starting
+      // point — Head Coach/Admin can add more slots or change this one afterward
+      // (see TrainingService#listSchedule/addScheduleSlot).
+      await this.prisma.trainingScheduleSlot.create({
+        data: { academyId: academy.id, dayOfWeek: 6, startTime: '08:00', endTime: '10:00' },
+      });
 
       const adminRole = await this.prisma.role.findUniqueOrThrow({ where: { name: ROLE_NAMES.ADMIN } });
       const user = await this.prisma.user.create({

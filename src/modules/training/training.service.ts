@@ -18,7 +18,7 @@ import { TrainingPlanDecisionDto } from './dto/training-decision.dto';
 import { CreateTrainingSessionDto, RecordAttendanceDto, UpdateTrainingSessionDto } from './dto/training-session.dto';
 import { UpsertActivityMarksDto } from './dto/training-activity-mark.dto';
 import { CreateSessionActivityDto } from './dto/training-session-activity.dto';
-import { UpdateTrainingScheduleDto } from './dto/training-schedule.dto';
+import { CreateTrainingScheduleSlotDto, UpdateTrainingScheduleSlotDto } from './dto/training-schedule.dto';
 
 const EDITABLE_STATUSES: TrainingApprovalStatus[] = ['DRAFT', 'CHANGES_REQUESTED'];
 
@@ -44,15 +44,15 @@ const SESSION_INCLUDE = {
   sessionActivities: { orderBy: { sortOrder: 'asc' as const } },
 } satisfies Prisma.TrainingSessionInclude;
 
-// Training is a recurring academy-wide fixture — by default every Saturday, 08:00-10:00 —
-// so sessions are auto-provisioned per team rather than manually scheduled. The Head
-// Coach/Admin can change the day/time/location (see get/updateSchedule below); these are
-// only the fallback used if an academy somehow has no AcademySettings row.
-const DEFAULT_TRAINING_DAY_OF_WEEK = 6; // 0 = Sunday .. 6 = Saturday
+// Training is a recurring academy-wide fixture, possibly more than once a week (e.g.
+// Tuesday evenings AND Saturday mornings) — so sessions are auto-provisioned per team per
+// configured slot rather than manually scheduled. The Head Coach/Admin manages the list of
+// slots (see listSchedule/add/update/removeScheduleSlot below).
 const DEFAULT_TRAINING_START_TIME = '08:00';
 const DEFAULT_TRAINING_END_TIME = '10:00';
 
-export interface TrainingSchedule {
+export interface TrainingScheduleSlot {
+  id: string;
   dayOfWeek: number;
   startTime: string;
   endTime: string;
@@ -420,60 +420,110 @@ export class TrainingService {
     });
   }
 
-  // Reads the academy's recurring weekly training fixture (falls back to the
-  // every-Saturday-08:00-10:00 defaults if this academy somehow has no settings row).
-  async getSchedule(): Promise<TrainingSchedule> {
+  // Reads the academy's recurring weekly training fixture(s) — may be empty, one, or
+  // several (e.g. Tuesday evenings AND Saturday mornings).
+  async listSchedule(): Promise<TrainingScheduleSlot[]> {
     const academyId = this.tenantContext.getAcademyId();
-    const settings = await this.prisma.academySettings.findUnique({ where: { academyId } });
-    return {
-      dayOfWeek: settings?.trainingDayOfWeek ?? DEFAULT_TRAINING_DAY_OF_WEEK,
-      startTime: settings?.trainingStartTime ?? DEFAULT_TRAINING_START_TIME,
-      endTime: settings?.trainingEndTime ?? DEFAULT_TRAINING_END_TIME,
-      location: settings?.trainingLocation ?? null,
-    };
+    return this.prisma.trainingScheduleSlot.findMany({
+      where: { academyId },
+      orderBy: [{ dayOfWeek: 'asc' }, { startTime: 'asc' }],
+    });
   }
 
-  async updateSchedule(dto: UpdateTrainingScheduleDto): Promise<TrainingSchedule> {
-    const current = await this.getSchedule();
-    const startTime = dto.startTime ?? current.startTime;
-    const endTime = dto.endTime ?? current.endTime;
+  async addScheduleSlot(dto: CreateTrainingScheduleSlotDto): Promise<TrainingScheduleSlot> {
+    if (dto.startTime >= dto.endTime) {
+      throw new BadRequestException('Start time must be before end time');
+    }
+    const academyId = this.tenantContext.getAcademyId();
+    return this.prisma.trainingScheduleSlot.create({
+      data: {
+        academyId,
+        dayOfWeek: dto.dayOfWeek,
+        startTime: dto.startTime,
+        endTime: dto.endTime,
+        location: dto.location,
+      },
+    });
+  }
+
+  async updateScheduleSlot(id: string, dto: UpdateTrainingScheduleSlotDto): Promise<TrainingScheduleSlot> {
+    const academyId = this.tenantContext.getAcademyId();
+    const existing = await this.prisma.trainingScheduleSlot.findFirst({ where: { id, academyId } });
+    if (!existing) {
+      throw new NotFoundException('Training schedule slot not found');
+    }
+    const startTime = dto.startTime ?? existing.startTime;
+    const endTime = dto.endTime ?? existing.endTime;
     if (startTime >= endTime) {
       throw new BadRequestException('Start time must be before end time');
     }
-
-    const academyId = this.tenantContext.getAcademyId();
-    await this.prisma.academySettings.update({
-      where: { academyId },
+    return this.prisma.trainingScheduleSlot.update({
+      where: { id, academyId },
       data: {
-        ...(dto.dayOfWeek !== undefined ? { trainingDayOfWeek: dto.dayOfWeek } : {}),
-        ...(dto.startTime ? { trainingStartTime: dto.startTime } : {}),
-        ...(dto.endTime ? { trainingEndTime: dto.endTime } : {}),
-        ...(dto.location !== undefined ? { trainingLocation: dto.location } : {}),
+        dayOfWeek: dto.dayOfWeek,
+        startTime: dto.startTime,
+        endTime: dto.endTime,
+        location: dto.location,
       },
     });
-    return this.getSchedule();
+  }
+
+  async removeScheduleSlot(id: string): Promise<void> {
+    const academyId = this.tenantContext.getAcademyId();
+    const existing = await this.prisma.trainingScheduleSlot.findFirst({ where: { id, academyId } });
+    if (!existing) {
+      throw new NotFoundException('Training schedule slot not found');
+    }
+    await this.prisma.trainingScheduleSlot.delete({ where: { id, academyId } });
+  }
+
+  // Picks which slot a "just mark/find today's session for this team" shortcut (quick
+  // attendance, the /sessions/saturday resolver) should act on: the slot whose day matches
+  // the reference date if one does, otherwise whichever slot's most recent occurrence is
+  // closest to that date. Route/DTO names elsewhere still say "Saturday" for API stability
+  // even though the schedule is now a configurable, possibly multi-slot list.
+  private pickRelevantSlot(slots: TrainingScheduleSlot[], dateStr?: string): TrainingScheduleSlot {
+    if (slots.length === 0) {
+      throw new BadRequestException('No weekly training schedule is configured for this academy yet');
+    }
+    const referenceDay = (dateStr ? new Date(dateStr) : new Date()).getUTCDay();
+    const exactMatch = slots.find((s) => s.dayOfWeek === referenceDay);
+    if (exactMatch) return exactMatch;
+
+    let best = slots[0];
+    let bestDate = this.resolveFixtureDate(best.dayOfWeek, dateStr);
+    for (const slot of slots.slice(1)) {
+      const candidateDate = this.resolveFixtureDate(slot.dayOfWeek, dateStr);
+      if (candidateDate.getTime() > bestDate.getTime()) {
+        best = slot;
+        bestDate = candidateDate;
+      }
+    }
+    return best;
   }
 
   // The current week's fixture session should always be there to take attendance against —
   // not just once the configured day actually arrives — so materialize it for every relevant
   // team up front, any day of the week, rather than waiting for someone to hit
   // quick-mark-attendance or the /sessions/saturday endpoint for a given team.
-  private async ensureThisWeeksWeeklySessions(teamIds: string[], schedule: TrainingSchedule) {
-    if (teamIds.length === 0) {
+  private async ensureThisWeeksWeeklySessions(teamIds: string[], slots: TrainingScheduleSlot[]) {
+    if (teamIds.length === 0 || slots.length === 0) {
       return;
     }
-    await Promise.all(teamIds.map((teamId) => this.getOrCreateWeeklySessionRecord(teamId, schedule)));
+    await Promise.all(
+      teamIds.flatMap((teamId) => slots.map((slot) => this.getOrCreateWeeklySessionRecord(teamId, slot))),
+    );
   }
 
-  // Training is a shared academy-wide fixture (every Saturday, by default), so Receptionist/
-  // Head Coach/Admin see every session — but a plain Coach is scoped to only their own
-  // team(s)/group(s).
+  // Training is a shared academy-wide fixture (possibly more than once a week), so
+  // Receptionist/Head Coach/Admin see every session — but a plain Coach is scoped to only
+  // their own team(s)/group(s).
   async findAllSessions(user: RequestUser) {
     const academyId = this.tenantContext.getAcademyId();
-    const schedule = await this.getSchedule();
+    const slots = await this.listSchedule();
     if (!this.coachContext.isCoachOnly(user)) {
       const allTeamIds = await this.prisma.team.findMany({ where: { academyId, isActive: true }, select: { id: true } });
-      await this.ensureThisWeeksWeeklySessions(allTeamIds.map((t) => t.id), schedule);
+      await this.ensureThisWeeksWeeklySessions(allTeamIds.map((t) => t.id), slots);
       return this.prisma.trainingSession.findMany({ where: { academyId }, include: SESSION_INCLUDE, orderBy: { date: 'desc' } });
     }
 
@@ -485,7 +535,7 @@ export class TrainingService {
     if (teamIds.length === 0 && trainingGroupIds.length === 0) {
       return [];
     }
-    await this.ensureThisWeeksWeeklySessions(teamIds, schedule);
+    await this.ensureThisWeeksWeeklySessions(teamIds, slots);
 
     return this.prisma.trainingSession.findMany({
       where: {
@@ -539,11 +589,14 @@ export class TrainingService {
     return new Date(Date.UTC(base.getUTCFullYear(), base.getUTCMonth(), base.getUTCDate() - daysSince));
   }
 
-  private async getOrCreateWeeklySessionRecord(teamId: string, schedule: TrainingSchedule, dateStr?: string) {
+  // Two slots on the same day-of-week (e.g. a morning and evening session) still need to
+  // resolve to distinct sessions, so the identity of "this slot's session for this week" is
+  // (teamId, date, startTime) rather than just (teamId, date).
+  private async getOrCreateWeeklySessionRecord(teamId: string, slot: TrainingScheduleSlot, dateStr?: string) {
     const academyId = this.tenantContext.getAcademyId();
-    const date = this.resolveFixtureDate(schedule.dayOfWeek, dateStr);
+    const date = this.resolveFixtureDate(slot.dayOfWeek, dateStr);
     const existing = await this.prisma.trainingSession.findFirst({
-      where: { teamId, date, academyId },
+      where: { teamId, date, startTime: slot.startTime, academyId },
       include: SESSION_INCLUDE,
     });
     return (
@@ -553,9 +606,9 @@ export class TrainingService {
           academyId,
           teamId,
           date,
-          startTime: schedule.startTime,
-          endTime: schedule.endTime,
-          location: schedule.location ?? undefined,
+          startTime: slot.startTime,
+          endTime: slot.endTime,
+          location: slot.location ?? undefined,
           status: 'SCHEDULED',
         },
         include: SESSION_INCLUDE,
@@ -563,19 +616,21 @@ export class TrainingService {
     );
   }
 
-  // Finds (or creates) this team's recurring weekly fixture session so staff never have to
-  // manually schedule it — they just jump straight to marking attendance for it. Route/DTO
-  // names kept as "Saturday" for API stability even though the day is now configurable.
+  // Finds (or creates) this team's recurring weekly fixture session for whichever slot is
+  // relevant to the given/current date, so staff never have to manually schedule it — they
+  // just jump straight to marking attendance for it. Route/DTO names kept as "Saturday" for
+  // API stability even though the schedule is now a configurable, possibly multi-slot list.
   async getOrCreateSaturdaySession(teamId: string, dateStr?: string) {
-    const schedule = await this.getSchedule();
-    const session = await this.getOrCreateWeeklySessionRecord(teamId, schedule, dateStr);
+    const slots = await this.listSchedule();
+    const slot = this.pickRelevantSlot(slots, dateStr);
+    const session = await this.getOrCreateWeeklySessionRecord(teamId, slot, dateStr);
     const roster = await this.rosterFor(session);
     return { ...session, roster };
   }
 
-  // Runs daily at 06:00 UTC and, for each academy, provisions this week's fixture session
-  // only on the day that academy has configured — ahead of kickoff so the session already
-  // exists when players/staff show up, whichever day of the week that is.
+  // Runs daily at 06:00 UTC and, for each academy, provisions this week's fixture session(s)
+  // only for the slot(s) that fall on today — ahead of kickoff so the session already exists
+  // when players/staff show up, whichever day(s) of the week those are.
   @Cron('0 6 * * *')
   async handleSaturdaySessionsCron() {
     const academies = await this.prisma.academy.findMany({ where: { status: 'ACTIVE' } });
@@ -591,36 +646,41 @@ export class TrainingService {
 
   async provisionSaturdaySessions(): Promise<{ created: number; skipped: number }> {
     const academyId = this.tenantContext.getAcademyId();
-    const schedule = await this.getSchedule();
-    if (new Date().getUTCDay() !== schedule.dayOfWeek) {
+    const slots = await this.listSchedule();
+    const todaysSlots = slots.filter((slot) => slot.dayOfWeek === new Date().getUTCDay());
+    if (todaysSlots.length === 0) {
       return { created: 0, skipped: 0 };
     }
 
     const teams = await this.prisma.team.findMany({ where: { academyId, isActive: true }, select: { id: true, name: true } });
-    const date = this.resolveFixtureDate(schedule.dayOfWeek);
     let created = 0;
     let skipped = 0;
 
-    for (const team of teams) {
-      const existing = await this.prisma.trainingSession.findFirst({ where: { teamId: team.id, date, academyId } });
-      if (existing) {
-        skipped++;
-        continue;
-      }
+    for (const slot of todaysSlots) {
+      const date = this.resolveFixtureDate(slot.dayOfWeek);
+      for (const team of teams) {
+        const existing = await this.prisma.trainingSession.findFirst({
+          where: { teamId: team.id, date, startTime: slot.startTime, academyId },
+        });
+        if (existing) {
+          skipped++;
+          continue;
+        }
 
-      const session = await this.prisma.trainingSession.create({
-        data: {
-          academyId,
-          teamId: team.id,
-          date,
-          startTime: schedule.startTime,
-          endTime: schedule.endTime,
-          location: schedule.location ?? undefined,
-          status: 'SCHEDULED',
-        },
-      });
-      created++;
-      await this.alertCoachesOfSaturdaySession(session, team.name);
+        const session = await this.prisma.trainingSession.create({
+          data: {
+            academyId,
+            teamId: team.id,
+            date,
+            startTime: slot.startTime,
+            endTime: slot.endTime,
+            location: slot.location ?? undefined,
+            status: 'SCHEDULED',
+          },
+        });
+        created++;
+        await this.alertCoachesOfSaturdaySession(session, team.name);
+      }
     }
 
     return { created, skipped };
@@ -707,8 +767,9 @@ export class TrainingService {
       await this.coachContext.assertOwnsPlayer(coachId, player);
     }
 
-    const schedule = await this.getSchedule();
-    const session = await this.getOrCreateWeeklySessionRecord(player.teamId, schedule);
+    const slots = await this.listSchedule();
+    const slot = this.pickRelevantSlot(slots);
+    const session = await this.getOrCreateWeeklySessionRecord(player.teamId, slot);
     const recordedAt = new Date();
 
     return this.prisma.trainingAttendance.upsert({

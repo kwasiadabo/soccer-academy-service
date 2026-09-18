@@ -369,6 +369,7 @@ model Academy {
   publicInquiries           PublicInquiry[]
   settings                  AcademySettings?
   subscription              AcademySubscription?
+  trainingScheduleSlots     TrainingScheduleSlot[]
 
   @@map("academies")
 }
@@ -406,21 +407,37 @@ model AcademySettings {
   // academies configured before this field existed.
   contactEmail      String?
   contactPhone      String?
+  // Public-facing "where do you train" shown on the marketing page/login screen —
+  // independent of the recurring schedule below, which can now have several slots
+  // that each carry their own location.
   trainingLocation  String?
-  // The academy's recurring weekly training fixture — day 0 (Sunday) to 6
-  // (Saturday), defaulting to the academy-wide "every Saturday" fixture every
-  // academy launched with. Head Coach/Admin-editable; drives both the
-  // auto-provisioning cron and the lazy get-or-create paths in
-  // TrainingService, so a change here reschedules the fixture for every team.
-  trainingDayOfWeek Int      @default(6)
-  trainingStartTime String   @default("08:00")
-  trainingEndTime   String   @default("10:00")
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
   academy Academy @relation(fields: [academyId], references: [id], onDelete: Cascade)
 
   @@map("academy_settings")
+}
+
+// The academy's recurring weekly training fixture(s) — an academy can train more than
+// once a week (e.g. Tuesday evenings AND Saturday mornings), so this is a list rather
+// than a single day/time on AcademySettings. Head Coach/Admin-editable; each slot drives
+// both the auto-provisioning cron and the lazy get-or-create paths in TrainingService,
+// so adding/editing/removing a slot reschedules that fixture for every active team.
+model TrainingScheduleSlot {
+  id        String   @id @default(uuid())
+  academyId String   @default(dbgenerated("current_setting('app.current_academy_id'::text, true)"))
+  dayOfWeek Int // 0 = Sunday .. 6 = Saturday
+  startTime String
+  endTime   String
+  location  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  academy Academy @relation(fields: [academyId], references: [id])
+
+  @@index([academyId])
+  @@map("training_schedule_slots")
 }
 
 // SAMS's own price list — not per-academy. A single mutable row: changing it

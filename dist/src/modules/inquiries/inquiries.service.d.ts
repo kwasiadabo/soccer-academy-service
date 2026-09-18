@@ -1,9 +1,11 @@
 import { PrismaService } from '../prisma/prisma.service';
+import { TenantContextService } from '../../common/tenant-context/tenant-context.service';
 import { CreateInquiryDto } from './dto/create-inquiry.dto';
 import { UpdateInquiryStatusDto } from './dto/update-inquiry-status.dto';
 export declare class InquiriesService {
     private readonly prisma;
-    constructor(prisma: PrismaService);
+    private readonly tenantContext;
+    constructor(prisma: PrismaService, tenantContext: TenantContextService);
     create(dto: CreateInquiryDto): import(".prisma/client").Prisma.Prisma__PublicInquiryClient<{
         id: string;
         status: import(".prisma/client").$Enums.InquiryStatus;

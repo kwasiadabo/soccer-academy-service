@@ -1,10 +1,12 @@
 import { PrismaService } from '../prisma/prisma.service';
 import { AuthService } from '../auth/auth.service';
+import { TenantContextService } from '../../common/tenant-context/tenant-context.service';
 import { GrantGuardianPortalAccessDto } from './dto/grant-portal-access.dto';
 export declare class GuardiansService {
     private readonly prisma;
     private readonly authService;
-    constructor(prisma: PrismaService, authService: AuthService);
+    private readonly tenantContext;
+    constructor(prisma: PrismaService, authService: AuthService, tenantContext: TenantContextService);
     findAll(search?: string): Promise<({
         players: ({
             player: {

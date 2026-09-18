@@ -1,4 +1,5 @@
 import { PrismaService } from '../prisma/prisma.service';
+import { TenantContextService } from '../../common/tenant-context/tenant-context.service';
 export interface AuditEntry {
     actorUserId?: string | null;
     action: string;
@@ -10,6 +11,7 @@ export interface AuditEntry {
 }
 export declare class AuditService {
     private readonly prisma;
-    constructor(prisma: PrismaService);
+    private readonly tenantContext;
+    constructor(prisma: PrismaService, tenantContext: TenantContextService);
     record(entry: AuditEntry): Promise<void>;
 }

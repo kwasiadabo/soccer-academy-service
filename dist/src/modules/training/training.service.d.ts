@@ -11,8 +11,9 @@ import { TrainingPlanDecisionDto } from './dto/training-decision.dto';
 import { CreateTrainingSessionDto, RecordAttendanceDto, UpdateTrainingSessionDto } from './dto/training-session.dto';
 import { UpsertActivityMarksDto } from './dto/training-activity-mark.dto';
 import { CreateSessionActivityDto } from './dto/training-session-activity.dto';
-import { UpdateTrainingScheduleDto } from './dto/training-schedule.dto';
-export interface TrainingSchedule {
+import { CreateTrainingScheduleSlotDto, UpdateTrainingScheduleSlotDto } from './dto/training-schedule.dto';
+export interface TrainingScheduleSlot {
+    id: string;
     dayOfWeek: number;
     startTime: string;
     endTime: string;
@@ -100,6 +101,7 @@ export declare class TrainingService {
         updatedAt: Date;
         assessmentCriteria: string | null;
         academyId: string;
+        location: string | null;
         teamId: string;
         trainingGroupId: string | null;
         coachId: string;
@@ -108,7 +110,6 @@ export declare class TrainingService {
         scheduledDate: Date;
         scheduledStart: string | null;
         scheduledEnd: string | null;
-        location: string | null;
         requiredEquipment: string | null;
         skillsFocus: string | null;
         approvalStatus: import(".prisma/client").$Enums.TrainingApprovalStatus;
@@ -181,6 +182,7 @@ export declare class TrainingService {
         updatedAt: Date;
         assessmentCriteria: string | null;
         academyId: string;
+        location: string | null;
         teamId: string;
         trainingGroupId: string | null;
         coachId: string;
@@ -189,7 +191,6 @@ export declare class TrainingService {
         scheduledDate: Date;
         scheduledStart: string | null;
         scheduledEnd: string | null;
-        location: string | null;
         requiredEquipment: string | null;
         skillsFocus: string | null;
         approvalStatus: import(".prisma/client").$Enums.TrainingApprovalStatus;
@@ -262,6 +263,7 @@ export declare class TrainingService {
         updatedAt: Date;
         assessmentCriteria: string | null;
         academyId: string;
+        location: string | null;
         teamId: string;
         trainingGroupId: string | null;
         coachId: string;
@@ -270,7 +272,6 @@ export declare class TrainingService {
         scheduledDate: Date;
         scheduledStart: string | null;
         scheduledEnd: string | null;
-        location: string | null;
         requiredEquipment: string | null;
         skillsFocus: string | null;
         approvalStatus: import(".prisma/client").$Enums.TrainingApprovalStatus;
@@ -344,6 +345,7 @@ export declare class TrainingService {
         updatedAt: Date;
         assessmentCriteria: string | null;
         academyId: string;
+        location: string | null;
         teamId: string;
         trainingGroupId: string | null;
         coachId: string;
@@ -352,7 +354,6 @@ export declare class TrainingService {
         scheduledDate: Date;
         scheduledStart: string | null;
         scheduledEnd: string | null;
-        location: string | null;
         requiredEquipment: string | null;
         skillsFocus: string | null;
         approvalStatus: import(".prisma/client").$Enums.TrainingApprovalStatus;
@@ -425,6 +426,7 @@ export declare class TrainingService {
         updatedAt: Date;
         assessmentCriteria: string | null;
         academyId: string;
+        location: string | null;
         teamId: string;
         trainingGroupId: string | null;
         coachId: string;
@@ -433,7 +435,6 @@ export declare class TrainingService {
         scheduledDate: Date;
         scheduledStart: string | null;
         scheduledEnd: string | null;
-        location: string | null;
         requiredEquipment: string | null;
         skillsFocus: string | null;
         approvalStatus: import(".prisma/client").$Enums.TrainingApprovalStatus;
@@ -506,6 +507,7 @@ export declare class TrainingService {
         updatedAt: Date;
         assessmentCriteria: string | null;
         academyId: string;
+        location: string | null;
         teamId: string;
         trainingGroupId: string | null;
         coachId: string;
@@ -514,7 +516,6 @@ export declare class TrainingService {
         scheduledDate: Date;
         scheduledStart: string | null;
         scheduledEnd: string | null;
-        location: string | null;
         requiredEquipment: string | null;
         skillsFocus: string | null;
         approvalStatus: import(".prisma/client").$Enums.TrainingApprovalStatus;
@@ -587,6 +588,7 @@ export declare class TrainingService {
         updatedAt: Date;
         assessmentCriteria: string | null;
         academyId: string;
+        location: string | null;
         teamId: string;
         trainingGroupId: string | null;
         coachId: string;
@@ -595,7 +597,6 @@ export declare class TrainingService {
         scheduledDate: Date;
         scheduledStart: string | null;
         scheduledEnd: string | null;
-        location: string | null;
         requiredEquipment: string | null;
         skillsFocus: string | null;
         approvalStatus: import(".prisma/client").$Enums.TrainingApprovalStatus;
@@ -611,6 +612,7 @@ export declare class TrainingService {
                 updatedAt: Date;
                 assessmentCriteria: string | null;
                 academyId: string;
+                location: string | null;
                 teamId: string;
                 trainingGroupId: string | null;
                 coachId: string;
@@ -619,7 +621,6 @@ export declare class TrainingService {
                 scheduledDate: Date;
                 scheduledStart: string | null;
                 scheduledEnd: string | null;
-                location: string | null;
                 requiredEquipment: string | null;
                 skillsFocus: string | null;
                 approvalStatus: import(".prisma/client").$Enums.TrainingApprovalStatus;
@@ -668,6 +669,7 @@ export declare class TrainingService {
                 updatedAt: Date;
                 assessmentCriteria: string | null;
                 academyId: string;
+                location: string | null;
                 teamId: string;
                 trainingGroupId: string | null;
                 coachId: string;
@@ -676,7 +678,6 @@ export declare class TrainingService {
                 scheduledDate: Date;
                 scheduledStart: string | null;
                 scheduledEnd: string | null;
-                location: string | null;
                 requiredEquipment: string | null;
                 skillsFocus: string | null;
                 approvalStatus: import(".prisma/client").$Enums.TrainingApprovalStatus;
@@ -827,6 +828,7 @@ export declare class TrainingService {
         updatedAt: Date;
         assessmentCriteria: string | null;
         academyId: string;
+        location: string | null;
         teamId: string;
         trainingGroupId: string | null;
         coachId: string;
@@ -835,7 +837,6 @@ export declare class TrainingService {
         scheduledDate: Date;
         scheduledStart: string | null;
         scheduledEnd: string | null;
-        location: string | null;
         requiredEquipment: string | null;
         skillsFocus: string | null;
         approvalStatus: import(".prisma/client").$Enums.TrainingApprovalStatus;
@@ -908,6 +909,7 @@ export declare class TrainingService {
         updatedAt: Date;
         assessmentCriteria: string | null;
         academyId: string;
+        location: string | null;
         teamId: string;
         trainingGroupId: string | null;
         coachId: string;
@@ -916,7 +918,6 @@ export declare class TrainingService {
         scheduledDate: Date;
         scheduledStart: string | null;
         scheduledEnd: string | null;
-        location: string | null;
         requiredEquipment: string | null;
         skillsFocus: string | null;
         approvalStatus: import(".prisma/client").$Enums.TrainingApprovalStatus;
@@ -925,8 +926,11 @@ export declare class TrainingService {
     private getSessionOrThrow;
     private assertOwnSession;
     private rosterFor;
-    getSchedule(): Promise<TrainingSchedule>;
-    updateSchedule(dto: UpdateTrainingScheduleDto): Promise<TrainingSchedule>;
+    listSchedule(): Promise<TrainingScheduleSlot[]>;
+    addScheduleSlot(dto: CreateTrainingScheduleSlotDto): Promise<TrainingScheduleSlot>;
+    updateScheduleSlot(id: string, dto: UpdateTrainingScheduleSlotDto): Promise<TrainingScheduleSlot>;
+    removeScheduleSlot(id: string): Promise<void>;
+    private pickRelevantSlot;
     private ensureThisWeeksWeeklySessions;
     findAllSessions(user: RequestUser): Promise<({
         team: {
@@ -958,6 +962,7 @@ export declare class TrainingService {
             updatedAt: Date;
             assessmentCriteria: string | null;
             academyId: string;
+            location: string | null;
             teamId: string;
             trainingGroupId: string | null;
             coachId: string;
@@ -966,7 +971,6 @@ export declare class TrainingService {
             scheduledDate: Date;
             scheduledStart: string | null;
             scheduledEnd: string | null;
-            location: string | null;
             requiredEquipment: string | null;
             skillsFocus: string | null;
             approvalStatus: import(".prisma/client").$Enums.TrainingApprovalStatus;
@@ -1025,14 +1029,14 @@ export declare class TrainingService {
         createdAt: Date;
         updatedAt: Date;
         academyId: string;
+        startTime: string | null;
+        endTime: string | null;
+        location: string | null;
         teamId: string;
         trainingGroupId: string | null;
-        location: string | null;
         trainingPlanId: string | null;
         conductedByCoachId: string | null;
         date: Date;
-        startTime: string | null;
-        endTime: string | null;
     })[]>;
     findOneSession(id: string): Promise<{
         roster: {
@@ -1071,6 +1075,7 @@ export declare class TrainingService {
             updatedAt: Date;
             assessmentCriteria: string | null;
             academyId: string;
+            location: string | null;
             teamId: string;
             trainingGroupId: string | null;
             coachId: string;
@@ -1079,7 +1084,6 @@ export declare class TrainingService {
             scheduledDate: Date;
             scheduledStart: string | null;
             scheduledEnd: string | null;
-            location: string | null;
             requiredEquipment: string | null;
             skillsFocus: string | null;
             approvalStatus: import(".prisma/client").$Enums.TrainingApprovalStatus;
@@ -1137,14 +1141,14 @@ export declare class TrainingService {
         createdAt: Date;
         updatedAt: Date;
         academyId: string;
+        startTime: string | null;
+        endTime: string | null;
+        location: string | null;
         teamId: string;
         trainingGroupId: string | null;
-        location: string | null;
         trainingPlanId: string | null;
         conductedByCoachId: string | null;
         date: Date;
-        startTime: string | null;
-        endTime: string | null;
     }>;
     createSession(user: RequestUser, dto: CreateTrainingSessionDto): Promise<{
         team: {
@@ -1176,6 +1180,7 @@ export declare class TrainingService {
             updatedAt: Date;
             assessmentCriteria: string | null;
             academyId: string;
+            location: string | null;
             teamId: string;
             trainingGroupId: string | null;
             coachId: string;
@@ -1184,7 +1189,6 @@ export declare class TrainingService {
             scheduledDate: Date;
             scheduledStart: string | null;
             scheduledEnd: string | null;
-            location: string | null;
             requiredEquipment: string | null;
             skillsFocus: string | null;
             approvalStatus: import(".prisma/client").$Enums.TrainingApprovalStatus;
@@ -1243,14 +1247,14 @@ export declare class TrainingService {
         createdAt: Date;
         updatedAt: Date;
         academyId: string;
+        startTime: string | null;
+        endTime: string | null;
+        location: string | null;
         teamId: string;
         trainingGroupId: string | null;
-        location: string | null;
         trainingPlanId: string | null;
         conductedByCoachId: string | null;
         date: Date;
-        startTime: string | null;
-        endTime: string | null;
     }>;
     updateSession(id: string, user: RequestUser, dto: UpdateTrainingSessionDto): Promise<{
         team: {
@@ -1282,6 +1286,7 @@ export declare class TrainingService {
             updatedAt: Date;
             assessmentCriteria: string | null;
             academyId: string;
+            location: string | null;
             teamId: string;
             trainingGroupId: string | null;
             coachId: string;
@@ -1290,7 +1295,6 @@ export declare class TrainingService {
             scheduledDate: Date;
             scheduledStart: string | null;
             scheduledEnd: string | null;
-            location: string | null;
             requiredEquipment: string | null;
             skillsFocus: string | null;
             approvalStatus: import(".prisma/client").$Enums.TrainingApprovalStatus;
@@ -1349,14 +1353,14 @@ export declare class TrainingService {
         createdAt: Date;
         updatedAt: Date;
         academyId: string;
+        startTime: string | null;
+        endTime: string | null;
+        location: string | null;
         teamId: string;
         trainingGroupId: string | null;
-        location: string | null;
         trainingPlanId: string | null;
         conductedByCoachId: string | null;
         date: Date;
-        startTime: string | null;
-        endTime: string | null;
     }>;
     private resolveFixtureDate;
     private getOrCreateWeeklySessionRecord;
@@ -1397,6 +1401,7 @@ export declare class TrainingService {
             updatedAt: Date;
             assessmentCriteria: string | null;
             academyId: string;
+            location: string | null;
             teamId: string;
             trainingGroupId: string | null;
             coachId: string;
@@ -1405,7 +1410,6 @@ export declare class TrainingService {
             scheduledDate: Date;
             scheduledStart: string | null;
             scheduledEnd: string | null;
-            location: string | null;
             requiredEquipment: string | null;
             skillsFocus: string | null;
             approvalStatus: import(".prisma/client").$Enums.TrainingApprovalStatus;
@@ -1463,14 +1467,14 @@ export declare class TrainingService {
         createdAt: Date;
         updatedAt: Date;
         academyId: string;
+        startTime: string | null;
+        endTime: string | null;
+        location: string | null;
         teamId: string;
         trainingGroupId: string | null;
-        location: string | null;
         trainingPlanId: string | null;
         conductedByCoachId: string | null;
         date: Date;
-        startTime: string | null;
-        endTime: string | null;
     }>;
     handleSaturdaySessionsCron(): Promise<void>;
     provisionSaturdaySessions(): Promise<{
@@ -1496,14 +1500,14 @@ export declare class TrainingService {
             createdAt: Date;
             updatedAt: Date;
             academyId: string;
+            startTime: string | null;
+            endTime: string | null;
+            location: string | null;
             teamId: string;
             trainingGroupId: string | null;
-            location: string | null;
             trainingPlanId: string | null;
             conductedByCoachId: string | null;
             date: Date;
-            startTime: string | null;
-            endTime: string | null;
         };
         recordedByUser: {
             id: string;
@@ -1550,6 +1554,7 @@ export declare class TrainingService {
             updatedAt: Date;
             assessmentCriteria: string | null;
             academyId: string;
+            location: string | null;
             teamId: string;
             trainingGroupId: string | null;
             coachId: string;
@@ -1558,7 +1563,6 @@ export declare class TrainingService {
             scheduledDate: Date;
             scheduledStart: string | null;
             scheduledEnd: string | null;
-            location: string | null;
             requiredEquipment: string | null;
             skillsFocus: string | null;
             approvalStatus: import(".prisma/client").$Enums.TrainingApprovalStatus;
@@ -1617,14 +1621,14 @@ export declare class TrainingService {
         createdAt: Date;
         updatedAt: Date;
         academyId: string;
+        startTime: string | null;
+        endTime: string | null;
+        location: string | null;
         teamId: string;
         trainingGroupId: string | null;
-        location: string | null;
         trainingPlanId: string | null;
         conductedByCoachId: string | null;
         date: Date;
-        startTime: string | null;
-        endTime: string | null;
     }>;
     private assertCanManageSession;
     addSessionActivity(sessionId: string, user: RequestUser, dto: CreateSessionActivityDto): Promise<{
@@ -1664,6 +1668,7 @@ export declare class TrainingService {
             updatedAt: Date;
             assessmentCriteria: string | null;
             academyId: string;
+            location: string | null;
             teamId: string;
             trainingGroupId: string | null;
             coachId: string;
@@ -1672,7 +1677,6 @@ export declare class TrainingService {
             scheduledDate: Date;
             scheduledStart: string | null;
             scheduledEnd: string | null;
-            location: string | null;
             requiredEquipment: string | null;
             skillsFocus: string | null;
             approvalStatus: import(".prisma/client").$Enums.TrainingApprovalStatus;
@@ -1730,14 +1734,14 @@ export declare class TrainingService {
         createdAt: Date;
         updatedAt: Date;
         academyId: string;
+        startTime: string | null;
+        endTime: string | null;
+        location: string | null;
         teamId: string;
         trainingGroupId: string | null;
-        location: string | null;
         trainingPlanId: string | null;
         conductedByCoachId: string | null;
         date: Date;
-        startTime: string | null;
-        endTime: string | null;
     }>;
     removeSessionActivity(sessionId: string, activityId: string, user: RequestUser): Promise<{
         roster: {
@@ -1776,6 +1780,7 @@ export declare class TrainingService {
             updatedAt: Date;
             assessmentCriteria: string | null;
             academyId: string;
+            location: string | null;
             teamId: string;
             trainingGroupId: string | null;
             coachId: string;
@@ -1784,7 +1789,6 @@ export declare class TrainingService {
             scheduledDate: Date;
             scheduledStart: string | null;
             scheduledEnd: string | null;
-            location: string | null;
             requiredEquipment: string | null;
             skillsFocus: string | null;
             approvalStatus: import(".prisma/client").$Enums.TrainingApprovalStatus;
@@ -1842,13 +1846,13 @@ export declare class TrainingService {
         createdAt: Date;
         updatedAt: Date;
         academyId: string;
+        startTime: string | null;
+        endTime: string | null;
+        location: string | null;
         teamId: string;
         trainingGroupId: string | null;
-        location: string | null;
         trainingPlanId: string | null;
         conductedByCoachId: string | null;
         date: Date;
-        startTime: string | null;
-        endTime: string | null;
     }>;
 }

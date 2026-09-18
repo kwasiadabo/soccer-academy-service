@@ -88,6 +88,13 @@ async function main() {
       create: { academyId: academy.id, brandName: SEED_ACADEMY_NAME },
     });
 
+    const hasScheduleSlot = await tx.trainingScheduleSlot.findFirst({ where: { academyId: academy.id } });
+    if (!hasScheduleSlot) {
+      await tx.trainingScheduleSlot.create({
+        data: { academyId: academy.id, dayOfWeek: 6, startTime: '08:00', endTime: '10:00' },
+      });
+    }
+
     console.log('Seeding admin user...');
     const user = await tx.user.upsert({
       where: { academyId_email: { academyId: academy.id, email: adminEmail } },

@@ -12,6 +12,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.AssessmentsService = void 0;
 const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../prisma/prisma.service");
+const tenant_context_service_1 = require("../../common/tenant-context/tenant-context.service");
 const coach_context_service_1 = require("../coaches/coach-context.service");
 const permissions_constants_1 = require("../rbac/permissions.constants");
 const TEMPLATE_INCLUDE = {
@@ -27,53 +28,61 @@ const ASSESSMENT_OVERSIGHT_INCLUDE = {
     player: { select: { id: true, firstName: true, lastName: true, team: { select: { id: true, name: true } } } },
 };
 let AssessmentsService = class AssessmentsService {
-    constructor(prisma, coachContext) {
+    constructor(prisma, coachContext, tenantContext) {
         this.prisma = prisma;
         this.coachContext = coachContext;
+        this.tenantContext = tenantContext;
     }
     canViewAll(user) {
         return user.permissions.includes(permissions_constants_1.PERMISSIONS.ASSESSMENTS_VIEW);
     }
     findAllTemplates() {
+        const academyId = this.tenantContext.getAcademyId();
         return this.prisma.assessmentTemplate.findMany({
-            where: { isActive: true },
+            where: { isActive: true, academyId },
             include: TEMPLATE_INCLUDE,
             orderBy: { name: 'asc' },
         });
     }
     async createTemplate(dto) {
+        const academyId = this.tenantContext.getAcademyId();
         const { criteria, ...rest } = dto;
         return this.prisma.assessmentTemplate.create({
             data: {
                 ...rest,
-                criteria: criteria?.length ? { create: criteria } : undefined,
+                academyId,
+                criteria: criteria?.length ? { create: criteria.map((c) => ({ ...c, academyId })) } : undefined,
             },
             include: TEMPLATE_INCLUDE,
         });
     }
     async updateTemplate(id, dto) {
-        await this.getTemplateOrThrow(id);
-        return this.prisma.assessmentTemplate.update({ where: { id }, data: dto, include: TEMPLATE_INCLUDE });
+        const academyId = this.tenantContext.getAcademyId();
+        await this.getTemplateOrThrow(id, academyId);
+        return this.prisma.assessmentTemplate.update({ where: { id, academyId }, data: dto, include: TEMPLATE_INCLUDE });
     }
     async addCriteria(templateId, dto) {
-        await this.getTemplateOrThrow(templateId);
-        await this.prisma.assessmentCriteria.create({ data: { ...dto, templateId } });
-        return this.prisma.assessmentTemplate.findUniqueOrThrow({
-            where: { id: templateId },
+        const academyId = this.tenantContext.getAcademyId();
+        await this.getTemplateOrThrow(templateId, academyId);
+        await this.prisma.assessmentCriteria.create({ data: { ...dto, templateId, academyId } });
+        return this.prisma.assessmentTemplate.findFirstOrThrow({
+            where: { id: templateId, academyId },
             include: TEMPLATE_INCLUDE,
         });
     }
-    async getTemplateOrThrow(id) {
-        const template = await this.prisma.assessmentTemplate.findUnique({ where: { id } });
+    async getTemplateOrThrow(id, academyId) {
+        const template = await this.prisma.assessmentTemplate.findFirst({ where: { id, academyId } });
         if (!template) {
             throw new common_1.NotFoundException('Assessment template not found');
         }
         return template;
     }
     findAllOversight(teamId, trainingSessionId) {
+        const academyId = this.tenantContext.getAcademyId();
         const isScoped = !!teamId || !!trainingSessionId;
         return this.prisma.playerAssessment.findMany({
             where: {
+                academyId,
                 deletedAt: null,
                 player: teamId ? { teamId } : undefined,
                 trainingSessionId: trainingSessionId || undefined,
@@ -84,9 +93,11 @@ let AssessmentsService = class AssessmentsService {
         });
     }
     async findForPlayer(playerId, user) {
+        const academyId = this.tenantContext.getAcademyId();
         return this.prisma.playerAssessment.findMany({
             where: {
                 playerId,
+                academyId,
                 deletedAt: null,
                 assessedByCoachId: this.canViewAll(user) ? undefined : await this.coachContext.resolveCoachId(user.userId),
             },
@@ -94,7 +105,7 @@ let AssessmentsService = class AssessmentsService {
             orderBy: { assessmentDate: 'desc' },
         });
     }
-    async assertValidRatings(ratings, templateId, trainingSessionId) {
+    async assertValidRatings(academyId, ratings, templateId, trainingSessionId) {
         if (templateId) {
             if (ratings.some((r) => r.sessionActivityId)) {
                 throw new common_1.BadRequestException('Ratings cannot reference a session activity when a template is used');
@@ -115,15 +126,15 @@ let AssessmentsService = class AssessmentsService {
         }
         const activityIds = [...new Set(ratings.map((r) => r.sessionActivityId))];
         const matching = await this.prisma.trainingSessionActivity.findMany({
-            where: { id: { in: activityIds }, trainingSessionId },
+            where: { id: { in: activityIds }, trainingSessionId, academyId },
             select: { id: true },
         });
         if (matching.length !== activityIds.length) {
             throw new common_1.BadRequestException('One or more activities do not belong to this training session');
         }
     }
-    async assertPlayerIsActive(playerId) {
-        const player = await this.prisma.player.findUnique({ where: { id: playerId }, select: { status: true } });
+    async assertPlayerIsActive(playerId, academyId) {
+        const player = await this.prisma.player.findFirst({ where: { id: playerId, academyId }, select: { status: true } });
         if (!player) {
             throw new common_1.NotFoundException('Player not found');
         }
@@ -131,10 +142,10 @@ let AssessmentsService = class AssessmentsService {
             throw new common_1.BadRequestException('This player cannot be assessed until their registration payment is complete');
         }
     }
-    async assertCanAssessPlayer(coachId, playerId, trainingSessionId) {
+    async assertCanAssessPlayer(coachId, playerId, trainingSessionId, academyId) {
         if (trainingSessionId) {
-            const session = await this.prisma.trainingSession.findUnique({
-                where: { id: trainingSessionId },
+            const session = await this.prisma.trainingSession.findFirst({
+                where: { id: trainingSessionId, academyId },
                 select: { teamId: true, trainingGroupId: true, conductedByCoachId: true },
             });
             if (!session) {
@@ -143,8 +154,8 @@ let AssessmentsService = class AssessmentsService {
             await this.coachContext.assertOwnsOrConductedSession(coachId, session);
             return;
         }
-        const player = await this.prisma.player.findUnique({
-            where: { id: playerId },
+        const player = await this.prisma.player.findFirst({
+            where: { id: playerId, academyId },
             select: { teamId: true, trainingGroupId: true },
         });
         if (!player) {
@@ -153,45 +164,50 @@ let AssessmentsService = class AssessmentsService {
         await this.coachContext.assertOwnsPlayer(coachId, player);
     }
     async createAssessment(playerId, userId, dto) {
+        const academyId = this.tenantContext.getAcademyId();
         const coachId = await this.coachContext.resolveCoachId(userId);
-        await this.assertCanAssessPlayer(coachId, playerId, dto.trainingSessionId);
-        await this.assertPlayerIsActive(playerId);
+        await this.assertCanAssessPlayer(coachId, playerId, dto.trainingSessionId, academyId);
+        await this.assertPlayerIsActive(playerId, academyId);
         const { ratings, ...rest } = dto;
-        await this.assertValidRatings(ratings, dto.templateId, dto.trainingSessionId);
+        await this.assertValidRatings(academyId, ratings, dto.templateId, dto.trainingSessionId);
         return this.prisma.playerAssessment.create({
             data: {
                 ...rest,
                 playerId,
+                academyId,
                 assessedByCoachId: coachId,
-                ratings: { create: ratings },
+                ratings: { create: ratings.map((r) => ({ ...r, academyId })) },
             },
             include: ASSESSMENT_INCLUDE,
         });
     }
     async updateAssessment(playerId, assessmentId, userId, dto) {
-        const existing = await this.prisma.playerAssessment.findUnique({ where: { id: assessmentId } });
+        const academyId = this.tenantContext.getAcademyId();
+        const existing = await this.prisma.playerAssessment.findFirst({ where: { id: assessmentId, academyId } });
         if (!existing || existing.playerId !== playerId || existing.deletedAt) {
             throw new common_1.NotFoundException('Assessment not found');
         }
         const coachId = await this.coachContext.resolveCoachId(userId);
-        await this.assertCanAssessPlayer(coachId, playerId, existing.trainingSessionId);
+        await this.assertCanAssessPlayer(coachId, playerId, existing.trainingSessionId, academyId);
         const { ratings, ...rest } = dto;
-        await this.assertValidRatings(ratings, existing.templateId, existing.trainingSessionId);
+        await this.assertValidRatings(academyId, ratings, existing.templateId, existing.trainingSessionId);
         return this.prisma.playerAssessment.update({
-            where: { id: assessmentId },
+            where: { id: assessmentId, academyId },
             data: {
                 ...rest,
                 assessedByCoachId: coachId,
                 assessmentDate: new Date(),
-                ratings: { deleteMany: {}, create: ratings },
+                ratings: { deleteMany: {}, create: ratings.map((r) => ({ ...r, academyId })) },
             },
             include: ASSESSMENT_INCLUDE,
         });
     }
     async findRemarksForPlayer(playerId, user) {
+        const academyId = this.tenantContext.getAcademyId();
         return this.prisma.coachRemark.findMany({
             where: {
                 playerId,
+                academyId,
                 coachId: this.canViewAll(user) ? undefined : await this.coachContext.resolveCoachId(user.userId),
             },
             include: { coach: { select: { id: true, firstName: true, lastName: true } } },
@@ -199,9 +215,10 @@ let AssessmentsService = class AssessmentsService {
         });
     }
     async createRemark(playerId, userId, dto) {
+        const academyId = this.tenantContext.getAcademyId();
         const coachId = await this.coachContext.resolveCoachId(userId);
-        const player = await this.prisma.player.findUnique({
-            where: { id: playerId },
+        const player = await this.prisma.player.findFirst({
+            where: { id: playerId, academyId },
             select: { teamId: true, trainingGroupId: true, status: true },
         });
         if (!player) {
@@ -212,7 +229,7 @@ let AssessmentsService = class AssessmentsService {
             throw new common_1.BadRequestException('This player cannot be assessed until their registration payment is complete');
         }
         return this.prisma.coachRemark.create({
-            data: { ...dto, playerId, coachId },
+            data: { ...dto, playerId, coachId, academyId },
             include: { coach: { select: { id: true, firstName: true, lastName: true } } },
         });
     }
@@ -221,6 +238,7 @@ exports.AssessmentsService = AssessmentsService;
 exports.AssessmentsService = AssessmentsService = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [prisma_service_1.PrismaService,
-        coach_context_service_1.CoachContextService])
+        coach_context_service_1.CoachContextService,
+        tenant_context_service_1.TenantContextService])
 ], AssessmentsService);
 //# sourceMappingURL=assessments.service.js.map

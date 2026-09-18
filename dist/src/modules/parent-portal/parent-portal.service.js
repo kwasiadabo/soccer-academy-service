@@ -12,6 +12,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.ParentPortalService = void 0;
 const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../prisma/prisma.service");
+const tenant_context_service_1 = require("../../common/tenant-context/tenant-context.service");
 const guardian_context_service_1 = require("../guardians/guardian-context.service");
 const storage_service_1 = require("../storage/storage.service");
 const finance_utils_1 = require("../finance/finance.utils");
@@ -27,27 +28,30 @@ const CHILD_SELECT = {
     team: { select: { id: true, name: true } },
 };
 let ParentPortalService = class ParentPortalService {
-    constructor(prisma, guardianContext, storage) {
+    constructor(prisma, guardianContext, storage, tenantContext) {
         this.prisma = prisma;
         this.guardianContext = guardianContext;
         this.storage = storage;
+        this.tenantContext = tenantContext;
     }
     async listChildren(userId) {
+        const academyId = this.tenantContext.getAcademyId();
         const guardianId = await this.guardianContext.resolveGuardianId(userId);
         const playerIds = await this.guardianContext.resolvePlayerIds(guardianId);
         return this.prisma.player.findMany({
-            where: { id: { in: playerIds }, deletedAt: null },
+            where: { id: { in: playerIds }, academyId, deletedAt: null },
             select: CHILD_SELECT,
             orderBy: { firstName: 'asc' },
         });
     }
     async getPlayerOfTheWeekAwards(userId) {
+        const academyId = this.tenantContext.getAcademyId();
         const guardianId = await this.guardianContext.resolveGuardianId(userId);
         const playerIds = await this.guardianContext.resolvePlayerIds(guardianId);
         if (playerIds.length === 0)
             return [];
         return this.prisma.playerOfTheWeek.findMany({
-            where: { playerId: { in: playerIds } },
+            where: { playerId: { in: playerIds }, academyId },
             include: { team: { select: { name: true } } },
             orderBy: { weekOf: 'desc' },
             take: 20,
@@ -60,12 +64,14 @@ let ParentPortalService = class ParentPortalService {
     }
     async getChild(userId, playerId) {
         await this.assertAccess(userId, playerId);
-        return this.prisma.player.findUniqueOrThrow({ where: { id: playerId }, select: CHILD_SELECT });
+        const academyId = this.tenantContext.getAcademyId();
+        return this.prisma.player.findFirstOrThrow({ where: { id: playerId, academyId }, select: CHILD_SELECT });
     }
     async getPhoto(userId, playerId) {
         await this.assertAccess(userId, playerId);
+        const academyId = this.tenantContext.getAcademyId();
         const player = await this.prisma.player.findFirst({
-            where: { id: playerId, deletedAt: null },
+            where: { id: playerId, academyId, deletedAt: null },
             include: { photo: true },
         });
         if (!player?.photo) {
@@ -76,12 +82,14 @@ let ParentPortalService = class ParentPortalService {
     }
     async getCoaches(userId, playerId) {
         await this.assertAccess(userId, playerId);
-        const player = await this.prisma.player.findUniqueOrThrow({
-            where: { id: playerId },
+        const academyId = this.tenantContext.getAcademyId();
+        const player = await this.prisma.player.findFirstOrThrow({
+            where: { id: playerId, academyId },
             select: { teamId: true, trainingGroupId: true, primaryCoachId: true },
         });
         const assignments = await this.prisma.coachAssignment.findMany({
             where: {
+                academyId,
                 effectiveTo: null,
                 OR: [
                     player.teamId ? { teamId: player.teamId } : undefined,
@@ -92,8 +100,8 @@ let ParentPortalService = class ParentPortalService {
         });
         const coaches = new Map(assignments.map((a) => [a.coach.id, a.coach]));
         if (player.primaryCoachId) {
-            const primaryCoach = await this.prisma.coach.findUnique({
-                where: { id: player.primaryCoachId },
+            const primaryCoach = await this.prisma.coach.findFirst({
+                where: { id: player.primaryCoachId, academyId },
                 select: { id: true, firstName: true, lastName: true },
             });
             if (primaryCoach)
@@ -103,8 +111,9 @@ let ParentPortalService = class ParentPortalService {
     }
     async getAttendance(userId, playerId) {
         await this.assertAccess(userId, playerId);
+        const academyId = this.tenantContext.getAcademyId();
         return this.prisma.trainingAttendance.findMany({
-            where: { playerId },
+            where: { playerId, academyId },
             include: { trainingSession: { include: { team: true } } },
             orderBy: { recordedAt: 'desc' },
             take: 50,
@@ -112,8 +121,9 @@ let ParentPortalService = class ParentPortalService {
     }
     async getAssessments(userId, playerId) {
         await this.assertAccess(userId, playerId);
+        const academyId = this.tenantContext.getAcademyId();
         return this.prisma.playerAssessment.findMany({
-            where: { playerId, deletedAt: null },
+            where: { playerId, academyId, deletedAt: null },
             include: {
                 ratings: { include: { criteria: true, sessionActivity: true } },
                 assessedByCoach: { select: { id: true, firstName: true, lastName: true } },
@@ -125,8 +135,9 @@ let ParentPortalService = class ParentPortalService {
     }
     async getActivityMarks(userId, playerId) {
         await this.assertAccess(userId, playerId);
+        const academyId = this.tenantContext.getAcademyId();
         return this.prisma.trainingActivityMark.findMany({
-            where: { playerId },
+            where: { playerId, academyId },
             include: {
                 trainingActivity: {
                     select: { name: true, trainingPlan: { select: { title: true, scheduledDate: true } } },
@@ -138,8 +149,9 @@ let ParentPortalService = class ParentPortalService {
     }
     async getMatches(userId, playerId) {
         await this.assertAccess(userId, playerId);
+        const academyId = this.tenantContext.getAcademyId();
         return this.prisma.matchParticipation.findMany({
-            where: { playerId },
+            where: { playerId, academyId },
             include: { match: { include: { team: true, opponent: true } } },
             orderBy: { match: { matchDate: 'desc' } },
             take: 50,
@@ -147,12 +159,13 @@ let ParentPortalService = class ParentPortalService {
     }
     async getFinanceSummary(userId, playerId) {
         await this.assertAccess(userId, playerId);
+        const academyId = this.tenantContext.getAcademyId();
         const invoices = await this.prisma.invoice.findMany({
-            where: { playerId, deletedAt: null },
+            where: { playerId, academyId, deletedAt: null },
             include: { allocations: true },
         });
         const payments = await this.prisma.payment.findMany({
-            where: { playerId, status: 'COMPLETED' },
+            where: { playerId, academyId, status: 'COMPLETED' },
         });
         let totalDue = 0;
         let nextDueDate = null;
@@ -181,13 +194,14 @@ let ParentPortalService = class ParentPortalService {
     }
     async getStatement(userId, playerId) {
         await this.assertAccess(userId, playerId);
+        const academyId = this.tenantContext.getAcademyId();
         const invoices = await this.prisma.invoice.findMany({
-            where: { playerId, deletedAt: null },
+            where: { playerId, academyId, deletedAt: null },
             include: { feeType: true, allocations: true },
             orderBy: { issuedAt: 'asc' },
         });
         const paymentAllocations = await this.prisma.paymentAllocation.findMany({
-            where: { payment: { playerId, status: 'COMPLETED' } },
+            where: { academyId, payment: { playerId, status: 'COMPLETED' } },
             include: {
                 payment: true,
                 invoice: { include: { feeType: true } },
@@ -220,10 +234,12 @@ let ParentPortalService = class ParentPortalService {
     }
     async submitFeedback(userId, playerId, dto) {
         await this.assertAccess(userId, playerId);
+        const academyId = this.tenantContext.getAcademyId();
         const { criteria, ...rest } = dto;
         return this.prisma.coachFeedback.create({
             data: {
                 ...rest,
+                academyId,
                 playerId,
                 submittedByUserId: userId,
                 criteria: criteria?.length ? { create: criteria } : undefined,
@@ -237,6 +253,7 @@ exports.ParentPortalService = ParentPortalService = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [prisma_service_1.PrismaService,
         guardian_context_service_1.GuardianContextService,
-        storage_service_1.StorageService])
+        storage_service_1.StorageService,
+        tenant_context_service_1.TenantContextService])
 ], ParentPortalService);
 //# sourceMappingURL=parent-portal.service.js.map
