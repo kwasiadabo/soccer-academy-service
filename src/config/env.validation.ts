@@ -31,6 +31,13 @@ export const envSchema = z.object({
 	// pair is unrelated and still only used for that academy's own parent comms.
 	EMAIL_USER: z.string().optional(),
 	EMAIL_APP_PASSWORD: z.string().optional(),
+	// PlatformEmailService's actual transport — a personal Gmail relay is
+	// unreliable for third-party inboxes (Yahoo in particular tends to
+	// silently drop it with no bounce), so platform email goes through Resend
+	// with a verified sending domain instead. EMAIL_USER/EMAIL_APP_PASSWORD
+	// above are kept only as a fallback for when this isn't configured.
+	RESEND_API_KEY: z.string().optional(),
+	RESEND_FROM_EMAIL: z.string().optional(),
 });
 
 export type EnvConfig = z.infer<typeof envSchema>;

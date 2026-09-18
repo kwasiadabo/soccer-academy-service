@@ -21,6 +21,8 @@ export declare const envSchema: z.ZodObject<{
     NALO_ENDPOINT: z.ZodOptional<z.ZodString>;
     EMAIL_USER: z.ZodOptional<z.ZodString>;
     EMAIL_APP_PASSWORD: z.ZodOptional<z.ZodString>;
+    RESEND_API_KEY: z.ZodOptional<z.ZodString>;
+    RESEND_FROM_EMAIL: z.ZodOptional<z.ZodString>;
 }, "strip", z.ZodTypeAny, {
     DATABASE_URL: string;
     JWT_ACCESS_SECRET: string;
@@ -43,6 +45,8 @@ export declare const envSchema: z.ZodObject<{
     NALO_ENDPOINT?: string | undefined;
     EMAIL_USER?: string | undefined;
     EMAIL_APP_PASSWORD?: string | undefined;
+    RESEND_API_KEY?: string | undefined;
+    RESEND_FROM_EMAIL?: string | undefined;
 }, {
     DATABASE_URL: string;
     JWT_ACCESS_SECRET: string;
@@ -65,6 +69,8 @@ export declare const envSchema: z.ZodObject<{
     NALO_ENDPOINT?: string | undefined;
     EMAIL_USER?: string | undefined;
     EMAIL_APP_PASSWORD?: string | undefined;
+    RESEND_API_KEY?: string | undefined;
+    RESEND_FROM_EMAIL?: string | undefined;
 }>;
 export type EnvConfig = z.infer<typeof envSchema>;
 export declare function validateEnv(config: Record<string, unknown>): EnvConfig;
