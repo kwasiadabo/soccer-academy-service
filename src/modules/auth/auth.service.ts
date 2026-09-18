@@ -8,6 +8,7 @@ import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { createHash, randomBytes } from 'crypto';
+import { PlatformEmailService } from '../billing/platform-email.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { JwtPayload } from './types';
 
@@ -27,6 +28,7 @@ export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
+    private readonly platformEmail: PlatformEmailService,
   ) {
     this.accessTokenJwt = new JwtService({
       secret: this.config.get<string>('JWT_ACCESS_SECRET'),
@@ -188,9 +190,19 @@ export class AuthService {
     const appUrl = this.config.get<string>('CORS_ORIGIN') ?? 'http://localhost:5173';
     const resetLink = `${appUrl}/reset-password?token=${rawToken}`;
 
-    // No email provider is wired up yet: log the link so it can be used
-    // manually in development until real delivery is added.
-    this.logger.log(`Password reset requested for ${user.email}: ${resetLink}`);
+    const sent = await this.platformEmail.send({
+      to: user.email,
+      subject: 'Reset your SAMS password',
+      html: `<p>We received a request to reset your SAMS password.</p>
+        <p><a href="${resetLink}">Click here to choose a new password</a>. This link expires in 1 hour.</p>
+        <p>If you didn't request this, you can safely ignore this email.</p>`,
+    });
+
+    // Falls back to logging the link so it's still usable when no platform
+    // email account is configured (e.g. local dev without EMAIL_USER set).
+    if (!sent) {
+      this.logger.log(`Password reset requested for ${user.email}: ${resetLink}`);
+    }
   }
 
   async resetPassword(token: string, newPassword: string): Promise<void> {

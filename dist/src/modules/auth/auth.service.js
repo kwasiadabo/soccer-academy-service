@@ -49,12 +49,14 @@ const config_1 = require("@nestjs/config");
 const jwt_1 = require("@nestjs/jwt");
 const bcrypt = __importStar(require("bcrypt"));
 const crypto_1 = require("crypto");
+const platform_email_service_1 = require("../billing/platform-email.service");
 const prisma_service_1 = require("../prisma/prisma.service");
 const RESET_TOKEN_TTL_MS = 60 * 60 * 1000;
 let AuthService = AuthService_1 = class AuthService {
-    constructor(prisma, config) {
+    constructor(prisma, config, platformEmail) {
         this.prisma = prisma;
         this.config = config;
+        this.platformEmail = platformEmail;
         this.logger = new common_1.Logger(AuthService_1.name);
         this.accessTokenJwt = new jwt_1.JwtService({
             secret: this.config.get('JWT_ACCESS_SECRET'),
@@ -172,7 +174,16 @@ let AuthService = AuthService_1 = class AuthService {
         ]);
         const appUrl = this.config.get('CORS_ORIGIN') ?? 'http://localhost:5173';
         const resetLink = `${appUrl}/reset-password?token=${rawToken}`;
-        this.logger.log(`Password reset requested for ${user.email}: ${resetLink}`);
+        const sent = await this.platformEmail.send({
+            to: user.email,
+            subject: 'Reset your SAMS password',
+            html: `<p>We received a request to reset your SAMS password.</p>
+        <p><a href="${resetLink}">Click here to choose a new password</a>. This link expires in 1 hour.</p>
+        <p>If you didn't request this, you can safely ignore this email.</p>`,
+        });
+        if (!sent) {
+            this.logger.log(`Password reset requested for ${user.email}: ${resetLink}`);
+        }
     }
     async resetPassword(token, newPassword) {
         const tokenHash = (0, crypto_1.createHash)('sha256').update(token).digest('hex');
@@ -225,6 +236,7 @@ exports.AuthService = AuthService;
 exports.AuthService = AuthService = AuthService_1 = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [prisma_service_1.PrismaService,
-        config_1.ConfigService])
+        config_1.ConfigService,
+        platform_email_service_1.PlatformEmailService])
 ], AuthService);
 //# sourceMappingURL=auth.service.js.map
