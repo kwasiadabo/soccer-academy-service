@@ -12,6 +12,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.MerchandiseOrdersService = void 0;
 const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../prisma/prisma.service");
+const tenant_context_service_1 = require("../../common/tenant-context/tenant-context.service");
 const guardian_context_service_1 = require("../guardians/guardian-context.service");
 const finance_utils_1 = require("../finance/finance.utils");
 const MERCHANDISE_FEE_TYPE_ID = '00000000-0000-4000-8000-000000000004';
@@ -43,30 +44,34 @@ function describeOrderItems(items) {
     return items.map((i) => `${i.productVariant.product.name} (${i.productVariant.sizeLabel}) ×${i.quantity}`).join(', ');
 }
 let MerchandiseOrdersService = class MerchandiseOrdersService {
-    constructor(prisma, guardianContext) {
+    constructor(prisma, guardianContext, tenantContext) {
         this.prisma = prisma;
         this.guardianContext = guardianContext;
+        this.tenantContext = tenantContext;
     }
     async createOrder(userId, dto) {
+        const academyId = this.tenantContext.getAcademyId();
         const guardianId = await this.guardianContext.resolveGuardianId(userId);
         await this.guardianContext.assertOwnsPlayer(guardianId, dto.playerId);
         return this.prisma.$transaction(async (tx) => {
-            const { items, totalAmount } = await this.reserveItems(tx, dto.items);
+            const { items, totalAmount } = await this.reserveItems(tx, academyId, dto.items);
             return tx.merchandiseOrder.create({
                 data: {
+                    academyId,
                     guardianId,
                     submittedByUserId: userId,
                     playerId: dto.playerId,
                     totalAmount,
-                    items: { create: items },
+                    items: { create: items.map((item) => ({ ...item, academyId })) },
                 },
                 include: ORDER_INCLUDE,
             });
         });
     }
     async lookupPlayerByCode(playerCode) {
+        const academyId = this.tenantContext.getAcademyId();
         const player = await this.prisma.player.findFirst({
-            where: { playerCode, status: 'ACTIVE', deletedAt: null },
+            where: { academyId, playerCode, status: 'ACTIVE', deletedAt: null },
             select: { id: true, firstName: true, lastName: true, team: { select: { name: true } } },
         });
         if (!player) {
@@ -75,15 +80,16 @@ let MerchandiseOrdersService = class MerchandiseOrdersService {
         return player;
     }
     async createGuestOrder(dto) {
+        const academyId = this.tenantContext.getAcademyId();
         const player = await this.prisma.player.findFirst({
-            where: { playerCode: dto.playerCode, status: 'ACTIVE', deletedAt: null },
+            where: { academyId, playerCode: dto.playerCode, status: 'ACTIVE', deletedAt: null },
             select: { id: true },
         });
         if (!player) {
             throw new common_1.NotFoundException('No active player found with that code');
         }
         const playerGuardian = await this.prisma.playerGuardian.findFirst({
-            where: { playerId: player.id },
+            where: { academyId, playerId: player.id },
             orderBy: { isPrimary: 'desc' },
             select: { guardianId: true },
         });
@@ -91,33 +97,34 @@ let MerchandiseOrdersService = class MerchandiseOrdersService {
             throw new common_1.BadRequestException('This player has no guardian on file — visit the academy to place this order');
         }
         return this.prisma.$transaction(async (tx) => {
-            const { items, totalAmount } = await this.reserveItems(tx, dto.items);
+            const { items, totalAmount } = await this.reserveItems(tx, academyId, dto.items);
             return tx.merchandiseOrder.create({
                 data: {
+                    academyId,
                     guardianId: playerGuardian.guardianId,
                     playerId: player.id,
                     guestName: dto.guestName,
                     guestPhone: dto.guestPhone,
                     guestEmail: dto.guestEmail,
                     totalAmount,
-                    items: { create: items },
+                    items: { create: items.map((item) => ({ ...item, academyId })) },
                 },
                 include: ORDER_INCLUDE,
             });
         });
     }
-    async reserveItems(tx, lines) {
+    async reserveItems(tx, academyId, lines) {
         const items = [];
         for (const line of lines) {
-            const variant = await tx.productVariant.findUnique({
-                where: { id: line.productVariantId },
+            const variant = await tx.productVariant.findFirst({
+                where: { id: line.productVariantId, academyId },
                 include: { product: true },
             });
             if (!variant || !variant.isActive || !variant.product.isActive || variant.product.deletedAt) {
                 throw new common_1.BadRequestException('One or more items are no longer available');
             }
             const result = await tx.productVariant.updateMany({
-                where: { id: variant.id, stockQuantity: { gte: line.quantity } },
+                where: { id: variant.id, academyId, stockQuantity: { gte: line.quantity } },
                 data: { stockQuantity: { decrement: line.quantity } },
             });
             if (result.count === 0) {
@@ -135,37 +142,42 @@ let MerchandiseOrdersService = class MerchandiseOrdersService {
         return { items, totalAmount };
     }
     async listMine(userId) {
+        const academyId = this.tenantContext.getAcademyId();
         const guardianId = await this.guardianContext.resolveGuardianId(userId);
         return this.prisma.merchandiseOrder.findMany({
-            where: { guardianId },
+            where: { academyId, guardianId },
             include: ORDER_INCLUDE,
             orderBy: { createdAt: 'desc' },
         });
     }
     async getMine(userId, orderId) {
+        const academyId = this.tenantContext.getAcademyId();
         const guardianId = await this.guardianContext.resolveGuardianId(userId);
-        const order = await this.prisma.merchandiseOrder.findUnique({ where: { id: orderId }, include: ORDER_INCLUDE });
+        const order = await this.prisma.merchandiseOrder.findFirst({ where: { id: orderId, academyId }, include: ORDER_INCLUDE });
         if (!order || order.guardianId !== guardianId) {
             throw new common_1.ForbiddenException('This order does not belong to your account');
         }
         return order;
     }
     listAll(status) {
+        const academyId = this.tenantContext.getAcademyId();
         return this.prisma.merchandiseOrder.findMany({
-            where: status ? { status } : undefined,
+            where: { academyId, ...(status ? { status } : {}) },
             include: ORDER_INCLUDE,
             orderBy: { createdAt: 'desc' },
         });
     }
     async getForStaff(orderId) {
-        const order = await this.prisma.merchandiseOrder.findUnique({ where: { id: orderId }, include: ORDER_INCLUDE });
+        const academyId = this.tenantContext.getAcademyId();
+        const order = await this.prisma.merchandiseOrder.findFirst({ where: { id: orderId, academyId }, include: ORDER_INCLUDE });
         if (!order) {
             throw new common_1.NotFoundException('Order not found');
         }
         return order;
     }
     pendingCount() {
-        return this.prisma.merchandiseOrder.count({ where: { status: 'PENDING' } });
+        const academyId = this.tenantContext.getAcademyId();
+        return this.prisma.merchandiseOrder.count({ where: { academyId, status: 'PENDING' } });
     }
     async getOrdersReport(from, to, status = 'SOLD') {
         const rows = status === 'SOLD' ? await this.getSoldOrderRows(from, to) : await this.getPendingOrderRows(from, to);
@@ -207,9 +219,11 @@ let MerchandiseOrdersService = class MerchandiseOrdersService {
         return filter;
     }
     async getSoldOrderRows(from, to) {
+        const academyId = this.tenantContext.getAcademyId();
         const paidAt = this.buildDateFilter(from, to);
         const orders = await this.prisma.merchandiseOrder.findMany({
             where: {
+                academyId,
                 invoice: {
                     status: 'PAID',
                     allocations: { some: { payment: { status: 'COMPLETED', ...(paidAt ? { paidAt } : {}) } } },
@@ -254,9 +268,11 @@ let MerchandiseOrdersService = class MerchandiseOrdersService {
         return rows;
     }
     async getPendingOrderRows(from, to) {
+        const academyId = this.tenantContext.getAcademyId();
         const createdAt = this.buildDateFilter(from, to);
         const orders = await this.prisma.merchandiseOrder.findMany({
             where: {
+                academyId,
                 status: { notIn: ['REJECTED', 'CANCELLED'] },
                 OR: [{ invoiceId: null }, { invoice: { status: { not: 'PAID' } } }],
                 ...(createdAt ? { createdAt } : {}),
@@ -289,8 +305,9 @@ let MerchandiseOrdersService = class MerchandiseOrdersService {
         return rows;
     }
     async updateStatus(orderId, status, staffNotes) {
-        const order = await this.prisma.merchandiseOrder.findUnique({
-            where: { id: orderId },
+        const academyId = this.tenantContext.getAcademyId();
+        const order = await this.prisma.merchandiseOrder.findFirst({
+            where: { id: orderId, academyId },
             include: {
                 items: { include: { productVariant: { include: { product: true } } } },
                 invoice: true,
@@ -304,6 +321,7 @@ let MerchandiseOrdersService = class MerchandiseOrdersService {
             if (status === 'APPROVED') {
                 const invoice = await tx.invoice.create({
                     data: {
+                        academyId,
                         invoiceNumber: (0, finance_utils_1.generateInvoiceNumber)(),
                         playerId: order.playerId,
                         feeTypeId: MERCHANDISE_FEE_TYPE_ID,
@@ -313,8 +331,8 @@ let MerchandiseOrdersService = class MerchandiseOrdersService {
                         status: 'PENDING',
                     },
                 });
-                await tx.merchandiseOrder.update({
-                    where: { id: orderId },
+                await tx.merchandiseOrder.updateMany({
+                    where: { id: orderId, academyId },
                     data: { status, invoiceId: invoice.id, staffNotes },
                 });
                 return;
@@ -323,14 +341,14 @@ let MerchandiseOrdersService = class MerchandiseOrdersService {
                 if (order.invoice && (order.invoice.status === 'PAID' || order.invoice.status === 'PARTIALLY_PAID')) {
                     throw new common_1.ConflictException('Payment has already been recorded for this order — void it first');
                 }
-                await this.restoreStock(tx, order.items);
+                await this.restoreStock(tx, academyId, order.items);
                 if (order.invoiceId) {
                     await tx.invoice.update({ where: { id: order.invoiceId }, data: { status: 'CANCELLED' } });
                 }
-                await tx.merchandiseOrder.update({ where: { id: orderId }, data: { status, staffNotes } });
+                await tx.merchandiseOrder.updateMany({ where: { id: orderId, academyId }, data: { status, staffNotes } });
                 return;
             }
-            await tx.merchandiseOrder.update({ where: { id: orderId }, data: { status, staffNotes } });
+            await tx.merchandiseOrder.updateMany({ where: { id: orderId, academyId }, data: { status, staffNotes } });
         });
         return this.getForStaff(orderId);
     }
@@ -347,10 +365,10 @@ let MerchandiseOrdersService = class MerchandiseOrdersService {
             throw new common_1.BadRequestException(`Cannot move an order from ${from} to ${to}`);
         }
     }
-    async restoreStock(tx, items) {
+    async restoreStock(tx, academyId, items) {
         for (const item of items) {
             await tx.productVariant.updateMany({
-                where: { id: item.productVariantId },
+                where: { id: item.productVariantId, academyId },
                 data: { stockQuantity: { increment: item.quantity } },
             });
         }
@@ -360,6 +378,7 @@ exports.MerchandiseOrdersService = MerchandiseOrdersService;
 exports.MerchandiseOrdersService = MerchandiseOrdersService = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [prisma_service_1.PrismaService,
-        guardian_context_service_1.GuardianContextService])
+        guardian_context_service_1.GuardianContextService,
+        tenant_context_service_1.TenantContextService])
 ], MerchandiseOrdersService);
 //# sourceMappingURL=merchandise-orders.service.js.map

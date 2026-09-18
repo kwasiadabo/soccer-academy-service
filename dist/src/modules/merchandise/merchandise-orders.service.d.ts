@@ -1,5 +1,6 @@
 import { MerchandiseOrderStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { TenantContextService } from '../../common/tenant-context/tenant-context.service';
 import { GuardianContextService } from '../guardians/guardian-context.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { CreateGuestOrderDto } from './dto/create-guest-order.dto';
@@ -38,7 +39,8 @@ export interface OrdersReport {
 export declare class MerchandiseOrdersService {
     private readonly prisma;
     private readonly guardianContext;
-    constructor(prisma: PrismaService, guardianContext: GuardianContextService);
+    private readonly tenantContext;
+    constructor(prisma: PrismaService, guardianContext: GuardianContextService, tenantContext: TenantContextService);
     createOrder(userId: string, dto: CreateOrderDto): Promise<{
         player: {
             id: string;

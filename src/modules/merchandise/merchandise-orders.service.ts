@@ -1,6 +1,7 @@
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { MerchandiseOrderStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { TenantContextService } from '../../common/tenant-context/tenant-context.service';
 import { GuardianContextService } from '../guardians/guardian-context.service';
 import { generateInvoiceNumber } from '../finance/finance.utils';
 import { CreateOrderDto } from './dto/create-order.dto';
@@ -69,23 +70,26 @@ export class MerchandiseOrdersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly guardianContext: GuardianContextService,
+    private readonly tenantContext: TenantContextService,
   ) {}
 
   // --- Parent-facing ---
 
   async createOrder(userId: string, dto: CreateOrderDto) {
+    const academyId = this.tenantContext.getAcademyId();
     const guardianId = await this.guardianContext.resolveGuardianId(userId);
     await this.guardianContext.assertOwnsPlayer(guardianId, dto.playerId);
 
     return this.prisma.$transaction(async (tx) => {
-      const { items, totalAmount } = await this.reserveItems(tx, dto.items);
+      const { items, totalAmount } = await this.reserveItems(tx, academyId, dto.items);
       return tx.merchandiseOrder.create({
         data: {
+          academyId,
           guardianId,
           submittedByUserId: userId,
           playerId: dto.playerId,
           totalAmount,
-          items: { create: items },
+          items: { create: items.map((item) => ({ ...item, academyId })) },
         },
         include: ORDER_INCLUDE,
       });
@@ -97,8 +101,9 @@ export class MerchandiseOrdersService {
   // Deliberately narrow: only enough to confirm the code matches a real, active
   // player before checkout — never returns a listable roster.
   async lookupPlayerByCode(playerCode: string) {
+    const academyId = this.tenantContext.getAcademyId();
     const player = await this.prisma.player.findFirst({
-      where: { playerCode, status: 'ACTIVE', deletedAt: null },
+      where: { academyId, playerCode, status: 'ACTIVE', deletedAt: null },
       select: { id: true, firstName: true, lastName: true, team: { select: { name: true } } },
     });
     if (!player) {
@@ -108,8 +113,9 @@ export class MerchandiseOrdersService {
   }
 
   async createGuestOrder(dto: CreateGuestOrderDto) {
+    const academyId = this.tenantContext.getAcademyId();
     const player = await this.prisma.player.findFirst({
-      where: { playerCode: dto.playerCode, status: 'ACTIVE', deletedAt: null },
+      where: { academyId, playerCode: dto.playerCode, status: 'ACTIVE', deletedAt: null },
       select: { id: true },
     });
     if (!player) {
@@ -119,7 +125,7 @@ export class MerchandiseOrdersService {
     // Every registered player has at least one guardian (enforced at registration) —
     // prefer the primary one so the order lands with whoever the family designated.
     const playerGuardian = await this.prisma.playerGuardian.findFirst({
-      where: { playerId: player.id },
+      where: { academyId, playerId: player.id },
       orderBy: { isPrimary: 'desc' },
       select: { guardianId: true },
     });
@@ -128,16 +134,17 @@ export class MerchandiseOrdersService {
     }
 
     return this.prisma.$transaction(async (tx) => {
-      const { items, totalAmount } = await this.reserveItems(tx, dto.items);
+      const { items, totalAmount } = await this.reserveItems(tx, academyId, dto.items);
       return tx.merchandiseOrder.create({
         data: {
+          academyId,
           guardianId: playerGuardian.guardianId,
           playerId: player.id,
           guestName: dto.guestName,
           guestPhone: dto.guestPhone,
           guestEmail: dto.guestEmail,
           totalAmount,
-          items: { create: items },
+          items: { create: items.map((item) => ({ ...item, academyId })) },
         },
         include: ORDER_INCLUDE,
       });
@@ -146,6 +153,7 @@ export class MerchandiseOrdersService {
 
   private async reserveItems(
     tx: Prisma.TransactionClient,
+    academyId: string,
     lines: { productVariantId: string; quantity: number }[],
   ): Promise<{
     items: { productVariantId: string; quantity: number; unitPriceAtOrder: number; lineTotal: number }[];
@@ -154,8 +162,8 @@ export class MerchandiseOrdersService {
     const items: { productVariantId: string; quantity: number; unitPriceAtOrder: number; lineTotal: number }[] = [];
 
     for (const line of lines) {
-      const variant = await tx.productVariant.findUnique({
-        where: { id: line.productVariantId },
+      const variant = await tx.productVariant.findFirst({
+        where: { id: line.productVariantId, academyId },
         include: { product: true },
       });
       if (!variant || !variant.isActive || !variant.product.isActive || variant.product.deletedAt) {
@@ -163,7 +171,7 @@ export class MerchandiseOrdersService {
       }
 
       const result = await tx.productVariant.updateMany({
-        where: { id: variant.id, stockQuantity: { gte: line.quantity } },
+        where: { id: variant.id, academyId, stockQuantity: { gte: line.quantity } },
         data: { stockQuantity: { decrement: line.quantity } },
       });
       if (result.count === 0) {
@@ -184,17 +192,19 @@ export class MerchandiseOrdersService {
   }
 
   async listMine(userId: string) {
+    const academyId = this.tenantContext.getAcademyId();
     const guardianId = await this.guardianContext.resolveGuardianId(userId);
     return this.prisma.merchandiseOrder.findMany({
-      where: { guardianId },
+      where: { academyId, guardianId },
       include: ORDER_INCLUDE,
       orderBy: { createdAt: 'desc' },
     });
   }
 
   async getMine(userId: string, orderId: string) {
+    const academyId = this.tenantContext.getAcademyId();
     const guardianId = await this.guardianContext.resolveGuardianId(userId);
-    const order = await this.prisma.merchandiseOrder.findUnique({ where: { id: orderId }, include: ORDER_INCLUDE });
+    const order = await this.prisma.merchandiseOrder.findFirst({ where: { id: orderId, academyId }, include: ORDER_INCLUDE });
     if (!order || order.guardianId !== guardianId) {
       throw new ForbiddenException('This order does not belong to your account');
     }
@@ -204,15 +214,17 @@ export class MerchandiseOrdersService {
   // --- Staff-facing ---
 
   listAll(status?: MerchandiseOrderStatus) {
+    const academyId = this.tenantContext.getAcademyId();
     return this.prisma.merchandiseOrder.findMany({
-      where: status ? { status } : undefined,
+      where: { academyId, ...(status ? { status } : {}) },
       include: ORDER_INCLUDE,
       orderBy: { createdAt: 'desc' },
     });
   }
 
   async getForStaff(orderId: string) {
-    const order = await this.prisma.merchandiseOrder.findUnique({ where: { id: orderId }, include: ORDER_INCLUDE });
+    const academyId = this.tenantContext.getAcademyId();
+    const order = await this.prisma.merchandiseOrder.findFirst({ where: { id: orderId, academyId }, include: ORDER_INCLUDE });
     if (!order) {
       throw new NotFoundException('Order not found');
     }
@@ -220,7 +232,8 @@ export class MerchandiseOrdersService {
   }
 
   pendingCount() {
-    return this.prisma.merchandiseOrder.count({ where: { status: 'PENDING' } });
+    const academyId = this.tenantContext.getAcademyId();
+    return this.prisma.merchandiseOrder.count({ where: { academyId, status: 'PENDING' } });
   }
 
   // --- Orders report: items ordered within a date range, either already paid for ("sold")
@@ -270,9 +283,11 @@ export class MerchandiseOrdersService {
 
   // Sold = invoice fully paid; the report date is when the last payment settling it landed.
   private async getSoldOrderRows(from?: string, to?: string): Promise<OrdersReportRow[]> {
+    const academyId = this.tenantContext.getAcademyId();
     const paidAt = this.buildDateFilter(from, to);
     const orders = await this.prisma.merchandiseOrder.findMany({
       where: {
+        academyId,
         invoice: {
           status: 'PAID',
           allocations: { some: { payment: { status: 'COMPLETED', ...(paidAt ? { paidAt } : {}) } } },
@@ -321,9 +336,11 @@ export class MerchandiseOrdersService {
 
   // Pending = not yet fully paid (and not rejected/cancelled); the report date is when the order was placed.
   private async getPendingOrderRows(from?: string, to?: string): Promise<OrdersReportRow[]> {
+    const academyId = this.tenantContext.getAcademyId();
     const createdAt = this.buildDateFilter(from, to);
     const orders = await this.prisma.merchandiseOrder.findMany({
       where: {
+        academyId,
         status: { notIn: ['REJECTED', 'CANCELLED'] },
         OR: [{ invoiceId: null }, { invoice: { status: { not: 'PAID' } } }],
         ...(createdAt ? { createdAt } : {}),
@@ -358,8 +375,9 @@ export class MerchandiseOrdersService {
   }
 
   async updateStatus(orderId: string, status: MerchandiseOrderStatus, staffNotes?: string) {
-    const order = await this.prisma.merchandiseOrder.findUnique({
-      where: { id: orderId },
+    const academyId = this.tenantContext.getAcademyId();
+    const order = await this.prisma.merchandiseOrder.findFirst({
+      where: { id: orderId, academyId },
       include: {
         items: { include: { productVariant: { include: { product: true } } } },
         invoice: true,
@@ -374,6 +392,7 @@ export class MerchandiseOrdersService {
       if (status === 'APPROVED') {
         const invoice = await tx.invoice.create({
           data: {
+            academyId,
             invoiceNumber: generateInvoiceNumber(),
             playerId: order.playerId,
             feeTypeId: MERCHANDISE_FEE_TYPE_ID,
@@ -383,8 +402,8 @@ export class MerchandiseOrdersService {
             status: 'PENDING',
           },
         });
-        await tx.merchandiseOrder.update({
-          where: { id: orderId },
+        await tx.merchandiseOrder.updateMany({
+          where: { id: orderId, academyId },
           data: { status, invoiceId: invoice.id, staffNotes },
         });
         return;
@@ -394,15 +413,15 @@ export class MerchandiseOrdersService {
         if (order.invoice && (order.invoice.status === 'PAID' || order.invoice.status === 'PARTIALLY_PAID')) {
           throw new ConflictException('Payment has already been recorded for this order — void it first');
         }
-        await this.restoreStock(tx, order.items);
+        await this.restoreStock(tx, academyId, order.items);
         if (order.invoiceId) {
           await tx.invoice.update({ where: { id: order.invoiceId }, data: { status: 'CANCELLED' } });
         }
-        await tx.merchandiseOrder.update({ where: { id: orderId }, data: { status, staffNotes } });
+        await tx.merchandiseOrder.updateMany({ where: { id: orderId, academyId }, data: { status, staffNotes } });
         return;
       }
 
-      await tx.merchandiseOrder.update({ where: { id: orderId }, data: { status, staffNotes } });
+      await tx.merchandiseOrder.updateMany({ where: { id: orderId, academyId }, data: { status, staffNotes } });
     });
 
     return this.getForStaff(orderId);
@@ -424,11 +443,12 @@ export class MerchandiseOrdersService {
 
   private async restoreStock(
     tx: Prisma.TransactionClient,
+    academyId: string,
     items: { productVariantId: string; quantity: number }[],
   ) {
     for (const item of items) {
       await tx.productVariant.updateMany({
-        where: { id: item.productVariantId },
+        where: { id: item.productVariantId, academyId },
         data: { stockQuantity: { increment: item.quantity } },
       });
     }
