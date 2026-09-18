@@ -167,13 +167,13 @@ async function main() {
     });
 
     return user;
-  });
+  }, { timeout: 20000 });
 
   console.log('Seeding gallery photos...');
   const galleryPhotoCount = await prisma.$transaction(async (tx) => {
     await tx.$executeRaw`SELECT set_config('app.current_academy_id', ${academy.id}, true)`;
     return tx.galleryPhoto.count();
-  });
+  }, { timeout: 20000 });
   if (galleryPhotoCount > 0) {
     console.log('Gallery already has photos — skipping.');
   } else if (!process.env.CLOUDINARY_URL) {
