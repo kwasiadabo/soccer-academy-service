@@ -1,5 +1,6 @@
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
+import { TenantContextService } from '../../common/tenant-context/tenant-context.service';
 import { PlatformEmailService } from '../billing/platform-email.service';
 import { PrismaService } from '../prisma/prisma.service';
 interface TokenPair {
@@ -10,10 +11,11 @@ export declare class AuthService {
     private readonly prisma;
     private readonly config;
     private readonly platformEmail;
+    private readonly tenantContext;
     private readonly logger;
     private readonly accessTokenJwt;
     private readonly refreshTokenJwt;
-    constructor(prisma: PrismaService, config: ConfigService, platformEmail: PlatformEmailService);
+    constructor(prisma: PrismaService, config: ConfigService, platformEmail: PlatformEmailService, tenantContext: TenantContextService);
     validateCredentials(email: string, password: string): Promise<{
         roles: ({
             role: {

@@ -8,6 +8,7 @@ import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { createHash, randomBytes } from 'crypto';
+import { TenantContextService } from '../../common/tenant-context/tenant-context.service';
 import { PlatformEmailService } from '../billing/platform-email.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { JwtPayload } from './types';
@@ -29,6 +30,7 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
     private readonly platformEmail: PlatformEmailService,
+    private readonly tenantContext: TenantContextService,
   ) {
     this.accessTokenJwt = new JwtService({
       secret: this.config.get<string>('JWT_ACCESS_SECRET'),
@@ -41,10 +43,14 @@ export class AuthService {
   }
 
   async validateCredentials(email: string, password: string) {
-    // findFirst rather than findUnique: email is only unique per-academy now, and
-    // row-level security already scopes this query to the current request's academy.
-    const user = await this.prisma.user.findFirst({
-      where: { email },
+    // Explicitly scoped by academyId rather than relying on row-level security
+    // alone: the connecting DB role currently has BYPASSRLS (see the RLS/role
+    // audit this surfaced), which makes every RLS policy a silent no-op, and
+    // email is only unique per-academy — an unscoped findFirst can match a
+    // same-email user in a different academy entirely.
+    const academyId = this.tenantContext.getAcademyId();
+    const user = await this.prisma.user.findUnique({
+      where: { academyId_email: { academyId, email } },
       include: {
         roles: {
           include: { role: { include: { permissions: { include: { permission: true } } } } },
@@ -163,7 +169,10 @@ export class AuthService {
   }
 
   async requestPasswordReset(email: string): Promise<void> {
-    const user = await this.prisma.user.findFirst({ where: { email } });
+    // See validateCredentials for why this must be explicitly scoped rather
+    // than relying on RLS alone.
+    const academyId = this.tenantContext.getAcademyId();
+    const user = await this.prisma.user.findUnique({ where: { academyId_email: { academyId, email } } });
 
     // Always behave the same whether or not the account exists, so the
     // response can't be used to enumerate registered emails.

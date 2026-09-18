@@ -49,14 +49,16 @@ const config_1 = require("@nestjs/config");
 const jwt_1 = require("@nestjs/jwt");
 const bcrypt = __importStar(require("bcrypt"));
 const crypto_1 = require("crypto");
+const tenant_context_service_1 = require("../../common/tenant-context/tenant-context.service");
 const platform_email_service_1 = require("../billing/platform-email.service");
 const prisma_service_1 = require("../prisma/prisma.service");
 const RESET_TOKEN_TTL_MS = 60 * 60 * 1000;
 let AuthService = AuthService_1 = class AuthService {
-    constructor(prisma, config, platformEmail) {
+    constructor(prisma, config, platformEmail, tenantContext) {
         this.prisma = prisma;
         this.config = config;
         this.platformEmail = platformEmail;
+        this.tenantContext = tenantContext;
         this.logger = new common_1.Logger(AuthService_1.name);
         this.accessTokenJwt = new jwt_1.JwtService({
             secret: this.config.get('JWT_ACCESS_SECRET'),
@@ -68,8 +70,9 @@ let AuthService = AuthService_1 = class AuthService {
         });
     }
     async validateCredentials(email, password) {
-        const user = await this.prisma.user.findFirst({
-            where: { email },
+        const academyId = this.tenantContext.getAcademyId();
+        const user = await this.prisma.user.findUnique({
+            where: { academyId_email: { academyId, email } },
             include: {
                 roles: {
                     include: { role: { include: { permissions: { include: { permission: true } } } } },
@@ -154,7 +157,8 @@ let AuthService = AuthService_1 = class AuthService {
         return this.accessTokenJwt;
     }
     async requestPasswordReset(email) {
-        const user = await this.prisma.user.findFirst({ where: { email } });
+        const academyId = this.tenantContext.getAcademyId();
+        const user = await this.prisma.user.findUnique({ where: { academyId_email: { academyId, email } } });
         if (!user || user.deletedAt || user.status !== 'ACTIVE') {
             return;
         }
@@ -237,6 +241,7 @@ exports.AuthService = AuthService = AuthService_1 = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [prisma_service_1.PrismaService,
         config_1.ConfigService,
-        platform_email_service_1.PlatformEmailService])
+        platform_email_service_1.PlatformEmailService,
+        tenant_context_service_1.TenantContextService])
 ], AuthService);
 //# sourceMappingURL=auth.service.js.map
