@@ -23,6 +23,10 @@ export const PERMISSIONS = {
   MATCHES_MANAGE: 'matches:manage',
   COACHES_MANAGE: 'coaches:manage',
   TEAMS_MANAGE: 'teams:manage',
+  // Narrower than ACADEMY_CONFIG_MANAGE (which also covers seasons/training groups) —
+  // carved out the same way TEAMS_MANAGE was, so a Head Coach can set up age
+  // categories without granting the rest of academy setup.
+  AGE_CATEGORIES_MANAGE: 'age-categories:manage',
   PLAYERS_TEAM_ASSIGN: 'players:team-assign',
   PLAYERS_STATUS_MANAGE: 'players:status-manage',
   PARENT_PORTAL_ACCESS: 'parent-portal:access',
@@ -86,6 +90,8 @@ export const ROLE_PERMISSIONS: Record<string, PermissionKey[]> = {
     // Narrower than ACADEMY_CONFIG_MANAGE (which also covers seasons/age categories) —
     // lets a Head Coach create/edit teams without granting the rest of academy setup.
     PERMISSIONS.TEAMS_MANAGE,
+    // Lets a Head Coach create/edit age categories, same carve-out as TEAMS_MANAGE.
+    PERMISSIONS.AGE_CATEGORIES_MANAGE,
     // Narrower than PLAYERS_MANAGE (which also covers editing a player's personal/medical/
     // guardian details) — lets a Head Coach move a player between teams/training groups,
     // or remove them from one, without granting full player-record editing.

@@ -65,7 +65,7 @@ export class AcademyConfigController {
   }
 
   @Post('age-categories')
-  @RequirePermissions(PERMISSIONS.ACADEMY_CONFIG_MANAGE)
+  @RequireAnyPermission(PERMISSIONS.ACADEMY_CONFIG_MANAGE, PERMISSIONS.AGE_CATEGORIES_MANAGE)
   @AuditLog({ action: 'AGE_CATEGORY_CREATE', entityType: 'AgeCategory' })
   @ApiOperation({ summary: 'Create an age category.' })
   @ApiCreatedResponse({ description: 'Age category created.' })
@@ -74,7 +74,7 @@ export class AcademyConfigController {
   }
 
   @Patch('age-categories/:id')
-  @RequirePermissions(PERMISSIONS.ACADEMY_CONFIG_MANAGE)
+  @RequireAnyPermission(PERMISSIONS.ACADEMY_CONFIG_MANAGE, PERMISSIONS.AGE_CATEGORIES_MANAGE)
   @AuditLog({ action: 'AGE_CATEGORY_UPDATE', entityType: 'AgeCategory' })
   @ApiOperation({ summary: 'Update an age category.' })
   @ApiOkResponse({ description: 'Age category updated.' })
