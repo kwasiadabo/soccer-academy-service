@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { TenantContextService } from '../../common/tenant-context/tenant-context.service';
 import { CreateSeasonDto, UpdateSeasonDto } from './dto/season.dto';
 import { CreateAgeCategoryDto, UpdateAgeCategoryDto } from './dto/age-category.dto';
 import { CreateTeamDto, UpdateTeamDto } from './dto/team.dto';
@@ -7,23 +8,29 @@ import { CreateTrainingGroupDto, UpdateTrainingGroupDto } from './dto/training-g
 
 @Injectable()
 export class AcademyConfigService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly tenantContext: TenantContextService,
+  ) {}
 
   // --- Seasons ---
   listSeasons() {
-    return this.prisma.season.findMany({ orderBy: { startDate: 'desc' } });
+    const academyId = this.tenantContext.getAcademyId();
+    return this.prisma.season.findMany({ where: { academyId }, orderBy: { startDate: 'desc' } });
   }
 
   async createSeason(dto: CreateSeasonDto) {
+    const academyId = this.tenantContext.getAcademyId();
     return this.prisma.season.create({
-      data: { name: dto.name, startDate: new Date(dto.startDate), endDate: new Date(dto.endDate) },
+      data: { academyId, name: dto.name, startDate: new Date(dto.startDate), endDate: new Date(dto.endDate) },
     });
   }
 
   async updateSeason(id: string, dto: UpdateSeasonDto) {
     await this.ensureExists('season', id);
+    const academyId = this.tenantContext.getAcademyId();
     return this.prisma.season.update({
-      where: { id },
+      where: { id, academyId },
       data: {
         name: dto.name,
         startDate: dto.startDate ? new Date(dto.startDate) : undefined,
@@ -35,12 +42,15 @@ export class AcademyConfigService {
 
   // --- Age Categories ---
   listAgeCategories() {
-    return this.prisma.ageCategory.findMany({ orderBy: { sortOrder: 'asc' } });
+    const academyId = this.tenantContext.getAcademyId();
+    return this.prisma.ageCategory.findMany({ where: { academyId }, orderBy: { sortOrder: 'asc' } });
   }
 
   createAgeCategory(dto: CreateAgeCategoryDto) {
+    const academyId = this.tenantContext.getAcademyId();
     return this.prisma.ageCategory.create({
       data: {
+        academyId,
         name: dto.name,
         code: dto.code,
         minAge: dto.minAge,
@@ -52,12 +62,15 @@ export class AcademyConfigService {
 
   async updateAgeCategory(id: string, dto: UpdateAgeCategoryDto) {
     await this.ensureExists('ageCategory', id);
-    return this.prisma.ageCategory.update({ where: { id }, data: dto });
+    const academyId = this.tenantContext.getAcademyId();
+    return this.prisma.ageCategory.update({ where: { id, academyId }, data: dto });
   }
 
   // --- Teams ---
   listTeams() {
+    const academyId = this.tenantContext.getAcademyId();
     return this.prisma.team.findMany({
+      where: { academyId },
       include: {
         ageCategory: true,
         season: true,
@@ -75,8 +88,10 @@ export class AcademyConfigService {
   }
 
   createTeam(dto: CreateTeamDto) {
+    const academyId = this.tenantContext.getAcademyId();
     return this.prisma.team.create({
       data: {
+        academyId,
         name: dto.name,
         ageCategoryId: dto.ageCategoryId,
         seasonId: dto.seasonId,
@@ -87,37 +102,43 @@ export class AcademyConfigService {
 
   async updateTeam(id: string, dto: UpdateTeamDto) {
     await this.ensureExists('team', id);
-    return this.prisma.team.update({ where: { id }, data: dto });
+    const academyId = this.tenantContext.getAcademyId();
+    return this.prisma.team.update({ where: { id, academyId }, data: dto });
   }
 
   // --- Training Groups ---
   listTrainingGroups() {
+    const academyId = this.tenantContext.getAcademyId();
     return this.prisma.trainingGroup.findMany({
+      where: { academyId },
       include: { team: true, primaryCoach: true },
       orderBy: { name: 'asc' },
     });
   }
 
   createTrainingGroup(dto: CreateTrainingGroupDto) {
+    const academyId = this.tenantContext.getAcademyId();
     return this.prisma.trainingGroup.create({
-      data: { name: dto.name, teamId: dto.teamId, primaryCoachId: dto.primaryCoachId },
+      data: { academyId, name: dto.name, teamId: dto.teamId, primaryCoachId: dto.primaryCoachId },
     });
   }
 
   async updateTrainingGroup(id: string, dto: UpdateTrainingGroupDto) {
     await this.ensureExists('trainingGroup', id);
-    return this.prisma.trainingGroup.update({ where: { id }, data: dto });
+    const academyId = this.tenantContext.getAcademyId();
+    return this.prisma.trainingGroup.update({ where: { id, academyId }, data: dto });
   }
 
   private async ensureExists(
     model: 'season' | 'ageCategory' | 'team' | 'trainingGroup',
     id: string,
   ): Promise<void> {
+    const academyId = this.tenantContext.getAcademyId();
     const finders: Record<typeof model, (id: string) => Promise<unknown>> = {
-      season: (recordId) => this.prisma.season.findUnique({ where: { id: recordId } }),
-      ageCategory: (recordId) => this.prisma.ageCategory.findUnique({ where: { id: recordId } }),
-      team: (recordId) => this.prisma.team.findUnique({ where: { id: recordId } }),
-      trainingGroup: (recordId) => this.prisma.trainingGroup.findUnique({ where: { id: recordId } }),
+      season: (recordId) => this.prisma.season.findFirst({ where: { id: recordId, academyId } }),
+      ageCategory: (recordId) => this.prisma.ageCategory.findFirst({ where: { id: recordId, academyId } }),
+      team: (recordId) => this.prisma.team.findFirst({ where: { id: recordId, academyId } }),
+      trainingGroup: (recordId) => this.prisma.trainingGroup.findFirst({ where: { id: recordId, academyId } }),
     };
 
     const record = await finders[model](id);

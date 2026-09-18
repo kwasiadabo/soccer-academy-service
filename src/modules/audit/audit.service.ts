@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { TenantContextService } from '../../common/tenant-context/tenant-context.service';
 
 export interface AuditEntry {
   actorUserId?: string | null;
@@ -13,11 +14,16 @@ export interface AuditEntry {
 
 @Injectable()
 export class AuditService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly tenantContext: TenantContextService,
+  ) {}
 
   async record(entry: AuditEntry): Promise<void> {
+    const academyId = this.tenantContext.getAcademyId();
     await this.prisma.auditLog.create({
       data: {
+        academyId,
         actorUserId: entry.actorUserId ?? null,
         action: entry.action,
         entityType: entry.entityType,

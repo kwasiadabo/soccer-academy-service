@@ -2,6 +2,7 @@ import { BadRequestException, ConflictException, Injectable, NotFoundException }
 import { randomBytes } from 'crypto';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
+import { TenantContextService } from '../../common/tenant-context/tenant-context.service';
 import { AuthService } from '../auth/auth.service';
 import { CreateCoachDto, UpdateCoachDto } from './dto/coach.dto';
 import { GrantCoachPortalAccessDto } from './dto/grant-portal-access.dto';
@@ -13,11 +14,14 @@ export class CoachesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly authService: AuthService,
+    private readonly tenantContext: TenantContextService,
   ) {}
 
   async findAll(search?: string) {
+    const academyId = this.tenantContext.getAcademyId();
     return this.prisma.coach.findMany({
       where: {
+        academyId,
         deletedAt: null,
         ...(search
           ? {
@@ -35,8 +39,9 @@ export class CoachesService {
   }
 
   async findOne(id: string) {
+    const academyId = this.tenantContext.getAcademyId();
     const coach = await this.prisma.coach.findFirst({
-      where: { id, deletedAt: null },
+      where: { id, academyId, deletedAt: null },
       include: {
         user: { select: { id: true, email: true, roles: { select: { role: { select: { name: true } } } } } },
         qualifications: true,
@@ -50,7 +55,8 @@ export class CoachesService {
   }
 
   create(dto: CreateCoachDto) {
-    return this.prisma.coach.create({ data: dto });
+    const academyId = this.tenantContext.getAcademyId();
+    return this.prisma.coach.create({ data: { ...dto, academyId } });
   }
 
   // Suspending a coach (isActive: false) also locks their portal login by suspending the
@@ -59,12 +65,13 @@ export class CoachesService {
   // portal access yet (userId is null) just get the flag with nothing further to touch.
   async update(id: string, dto: UpdateCoachDto) {
     const coach = await this.findOne(id);
+    const academyId = coach.academyId;
     const { isActive, ...rest } = dto;
     return this.prisma.$transaction(async (tx) => {
-      const updated = await tx.coach.update({ where: { id }, data: { ...rest, isActive } });
+      const updated = await tx.coach.update({ where: { id, academyId }, data: { ...rest, isActive } });
       if (isActive !== undefined && coach.userId) {
         await tx.user.update({
-          where: { id: coach.userId },
+          where: { id: coach.userId, academyId },
           data: { status: isActive ? 'ACTIVE' : 'SUSPENDED' },
         });
       }
@@ -74,15 +81,16 @@ export class CoachesService {
 
   async grantPortalAccess(id: string, dto: GrantCoachPortalAccessDto) {
     const coach = await this.findOne(id);
+    const academyId = coach.academyId;
     if (coach.userId) {
       throw new BadRequestException('This coach already has portal access');
     }
 
-    let user = await this.prisma.user.findFirst({ where: { email: dto.email } });
+    let user = await this.prisma.user.findFirst({ where: { email: dto.email, academyId } });
 
     if (user) {
-      const alreadyLinked = await this.prisma.coach.findFirst({ where: { userId: user.id } });
-      const linkedGuardian = await this.prisma.guardian.findFirst({ where: { userId: user.id } });
+      const alreadyLinked = await this.prisma.coach.findFirst({ where: { userId: user.id, academyId } });
+      const linkedGuardian = await this.prisma.guardian.findFirst({ where: { userId: user.id, academyId } });
       if (alreadyLinked || linkedGuardian) {
         throw new ConflictException('This email is already linked to a different portal profile');
       }
@@ -97,7 +105,7 @@ export class CoachesService {
         this.prisma.userRole.createMany({
           data: rolesToAdd.map((role) => ({ userId: user!.id, roleId: role.id })),
         }),
-        this.prisma.coach.update({ where: { id }, data: { userId: user.id } }),
+        this.prisma.coach.update({ where: { id, academyId }, data: { userId: user.id } }),
       ]);
     } else {
       const roles = await this.prisma.role.findMany({ where: { name: { in: dto.roleNames } } });
@@ -110,6 +118,7 @@ export class CoachesService {
       const passwordHash = await bcrypt.hash(randomBytes(32).toString('hex'), 10);
       user = await this.prisma.user.create({
         data: {
+          academyId,
           email: dto.email,
           passwordHash,
           firstName: coach.firstName,
@@ -119,7 +128,7 @@ export class CoachesService {
         },
       });
 
-      await this.prisma.coach.update({ where: { id }, data: { userId: user.id } });
+      await this.prisma.coach.update({ where: { id, academyId }, data: { userId: user.id } });
     }
 
     await this.authService.requestPasswordReset(dto.email);
@@ -128,9 +137,10 @@ export class CoachesService {
   }
 
   async addQualification(coachId: string, dto: CreateCoachQualificationDto) {
-    await this.findOne(coachId);
+    const coach = await this.findOne(coachId);
     await this.prisma.coachQualification.create({
       data: {
+        academyId: coach.academyId,
         coachId,
         title: dto.title,
         issuingBody: dto.issuingBody,
@@ -142,12 +152,24 @@ export class CoachesService {
   }
 
   async addAssignment(coachId: string, dto: CreateCoachAssignmentDto) {
-    await this.findOne(coachId);
+    const coach = await this.findOne(coachId);
     if (!dto.teamId && !dto.trainingGroupId) {
       throw new BadRequestException('Specify a team or a training group to assign this coach to');
     }
+    // Verify the team/training group being assigned actually belongs to this coach's
+    // academy — coachId alone doesn't guarantee that without this check.
+    const academyId = coach.academyId;
+    if (dto.teamId) {
+      const team = await this.prisma.team.findFirst({ where: { id: dto.teamId, academyId } });
+      if (!team) throw new NotFoundException('Team not found');
+    }
+    if (dto.trainingGroupId) {
+      const group = await this.prisma.trainingGroup.findFirst({ where: { id: dto.trainingGroupId, academyId } });
+      if (!group) throw new NotFoundException('Training group not found');
+    }
     await this.prisma.coachAssignment.create({
       data: {
+        academyId,
         coachId,
         teamId: dto.teamId,
         trainingGroupId: dto.trainingGroupId,
@@ -159,9 +181,9 @@ export class CoachesService {
   }
 
   async endAssignment(coachId: string, assignmentId: string, dto: EndCoachAssignmentDto) {
-    await this.findOne(coachId);
+    const coach = await this.findOne(coachId);
     const assignment = await this.prisma.coachAssignment.findFirst({
-      where: { id: assignmentId, coachId },
+      where: { id: assignmentId, coachId, academyId: coach.academyId },
     });
     if (!assignment) {
       throw new NotFoundException('Coach assignment not found');

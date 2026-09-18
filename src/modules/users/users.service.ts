@@ -2,6 +2,7 @@ import { BadRequestException, ConflictException, Injectable, NotFoundException }
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuthService } from '../auth/auth.service';
+import { TenantContextService } from '../../common/tenant-context/tenant-context.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { ResetUserPasswordDto } from './dto/reset-user-password.dto';
@@ -24,11 +25,13 @@ export class UsersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly authService: AuthService,
+    private readonly tenantContext: TenantContextService,
   ) {}
 
   async findAll() {
+    const academyId = this.tenantContext.getAcademyId();
     const users = await this.prisma.user.findMany({
-      where: { deletedAt: null },
+      where: { academyId, deletedAt: null },
       select: userListSelect,
       orderBy: { createdAt: 'desc' },
     });
@@ -36,8 +39,9 @@ export class UsersService {
   }
 
   async findOne(id: string) {
+    const academyId = this.tenantContext.getAcademyId();
     const user = await this.prisma.user.findFirst({
-      where: { id, deletedAt: null },
+      where: { id, academyId, deletedAt: null },
       select: userListSelect,
     });
     if (!user) {
@@ -60,7 +64,8 @@ export class UsersService {
   // member (see CreateUserDto) — firstName/lastName/phone always come from
   // that Coach record, never freely typed, so the two never drift apart.
   async create(dto: CreateUserDto) {
-    const coach = await this.prisma.coach.findFirst({ where: { id: dto.coachId, deletedAt: null } });
+    const academyId = this.tenantContext.getAcademyId();
+    const coach = await this.prisma.coach.findFirst({ where: { id: dto.coachId, academyId, deletedAt: null } });
     if (!coach) {
       throw new NotFoundException('Staff member not found');
     }
@@ -68,7 +73,11 @@ export class UsersService {
       throw new BadRequestException('This staff member already has a user account');
     }
 
-    const existing = await this.prisma.user.findFirst({ where: { email: dto.email } });
+    // email is only unique per-academy (see auth.service.ts's validateCredentials for why
+    // an unscoped lookup here would be a cross-academy bug), so check via the compound key.
+    const existing = await this.prisma.user.findUnique({
+      where: { academyId_email: { academyId, email: dto.email } },
+    });
     if (existing) {
       throw new ConflictException('A user with this email already exists');
     }
@@ -87,6 +96,7 @@ export class UsersService {
     const passwordHash = await bcrypt.hash(dto.password, 10);
     const created = await this.prisma.user.create({
       data: {
+        academyId,
         email: dto.email,
         passwordHash,
         firstName: coach.firstName,
@@ -97,19 +107,22 @@ export class UsersService {
       },
       select: userListSelect,
     });
-    await this.prisma.coach.update({ where: { id: coach.id }, data: { userId: created.id } });
+    await this.prisma.coach.update({ where: { id: coach.id, academyId }, data: { userId: created.id } });
 
     return this.serialize(created);
   }
 
   async update(id: string, dto: UpdateUserDto) {
-    const existing = await this.prisma.user.findFirst({ where: { id, deletedAt: null } });
+    const academyId = this.tenantContext.getAcademyId();
+    const existing = await this.prisma.user.findFirst({ where: { id, academyId, deletedAt: null } });
     if (!existing) {
       throw new NotFoundException('User not found');
     }
 
     if (dto.email && dto.email !== existing.email) {
-      const emailTaken = await this.prisma.user.findFirst({ where: { email: dto.email } });
+      const emailTaken = await this.prisma.user.findUnique({
+        where: { academyId_email: { academyId, email: dto.email } },
+      });
       if (emailTaken) {
         throw new ConflictException('A user with this email already exists');
       }
@@ -119,12 +132,14 @@ export class UsersService {
 
     const user = await this.prisma.$transaction(async (tx) => {
       if (roles) {
-        await tx.userRole.deleteMany({ where: { userId: id } });
-        await tx.userRole.createMany({ data: roles.map((role) => ({ userId: id, roleId: role.id })) });
+        await tx.userRole.deleteMany({ where: { userId: id, academyId } });
+        await tx.userRole.createMany({
+          data: roles.map((role) => ({ userId: id, roleId: role.id, academyId })),
+        });
       }
 
       return tx.user.update({
-        where: { id },
+        where: { id, academyId },
         data: {
           firstName: dto.firstName,
           lastName: dto.lastName,
@@ -144,19 +159,21 @@ export class UsersService {
       throw new BadRequestException('You cannot delete your own account');
     }
 
-    const existing = await this.prisma.user.findFirst({ where: { id, deletedAt: null } });
+    const academyId = this.tenantContext.getAcademyId();
+    const existing = await this.prisma.user.findFirst({ where: { id, academyId, deletedAt: null } });
     if (!existing) {
       throw new NotFoundException('User not found');
     }
 
     await this.prisma.user.update({
-      where: { id },
+      where: { id, academyId },
       data: { deletedAt: new Date(), refreshTokenHash: null },
     });
   }
 
   async resetPassword(id: string, dto: ResetUserPasswordDto) {
-    const user = await this.prisma.user.findFirst({ where: { id, deletedAt: null } });
+    const academyId = this.tenantContext.getAcademyId();
+    const user = await this.prisma.user.findFirst({ where: { id, academyId, deletedAt: null } });
     if (!user) {
       throw new NotFoundException('User not found');
     }
@@ -164,7 +181,7 @@ export class UsersService {
     if (dto.password) {
       const passwordHash = await bcrypt.hash(dto.password, 10);
       await this.prisma.user.update({
-        where: { id },
+        where: { id, academyId },
         data: { passwordHash, mustChangePassword: true, refreshTokenHash: null },
       });
       return { mode: 'temporary-password' as const };

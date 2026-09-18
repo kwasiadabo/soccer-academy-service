@@ -1,14 +1,19 @@
 import { ForbiddenException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { TenantContextService } from '../../common/tenant-context/tenant-context.service';
 import { ROLE_NAMES } from '../rbac/permissions.constants';
 import { RequestUser } from '../auth/types';
 
 @Injectable()
 export class CoachContextService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly tenantContext: TenantContextService,
+  ) {}
 
   async resolveCoachId(userId: string): Promise<string> {
-    const coach = await this.prisma.coach.findFirst({ where: { userId, deletedAt: null } });
+    const academyId = this.tenantContext.getAcademyId();
+    const coach = await this.prisma.coach.findFirst({ where: { userId, academyId, deletedAt: null } });
     if (!coach) {
       throw new ForbiddenException('No coach profile is linked to this account');
     }
@@ -19,13 +24,15 @@ export class CoachContextService {
   // sessions/plans without a personal Coach profile — null (rather than a thrown
   // ForbiddenException) just means "not personally attributed to a coach."
   async resolveOptionalCoachId(userId: string): Promise<string | null> {
-    const coach = await this.prisma.coach.findFirst({ where: { userId, deletedAt: null } });
+    const academyId = this.tenantContext.getAcademyId();
+    const coach = await this.prisma.coach.findFirst({ where: { userId, academyId, deletedAt: null } });
     return coach?.id ?? null;
   }
 
   async assertOwnsTeam(coachId: string, teamId: string): Promise<void> {
+    const academyId = this.tenantContext.getAcademyId();
     const assignment = await this.prisma.coachAssignment.findFirst({
-      where: { coachId, teamId, effectiveTo: null },
+      where: { coachId, teamId, academyId, effectiveTo: null },
     });
     if (!assignment) {
       throw new ForbiddenException('You are not assigned to this team');
@@ -33,8 +40,9 @@ export class CoachContextService {
   }
 
   async assertOwnsTrainingGroup(coachId: string, trainingGroupId: string): Promise<void> {
+    const academyId = this.tenantContext.getAcademyId();
     const assignment = await this.prisma.coachAssignment.findFirst({
-      where: { coachId, trainingGroupId, effectiveTo: null },
+      where: { coachId, trainingGroupId, academyId, effectiveTo: null },
     });
     if (!assignment) {
       throw new ForbiddenException('You are not assigned to this training group');
@@ -42,16 +50,18 @@ export class CoachContextService {
   }
 
   async getAssignedTeamIds(coachId: string): Promise<string[]> {
+    const academyId = this.tenantContext.getAcademyId();
     const assignments = await this.prisma.coachAssignment.findMany({
-      where: { coachId, effectiveTo: null, teamId: { not: null } },
+      where: { coachId, academyId, effectiveTo: null, teamId: { not: null } },
       select: { teamId: true },
     });
     return assignments.map((a) => a.teamId!);
   }
 
   async getAssignedTrainingGroupIds(coachId: string): Promise<string[]> {
+    const academyId = this.tenantContext.getAcademyId();
     const assignments = await this.prisma.coachAssignment.findMany({
-      where: { coachId, effectiveTo: null, trainingGroupId: { not: null } },
+      where: { coachId, academyId, effectiveTo: null, trainingGroupId: { not: null } },
       select: { trainingGroupId: true },
     });
     return assignments.map((a) => a.trainingGroupId!);
@@ -74,9 +84,11 @@ export class CoachContextService {
     entity: { teamId: string | null; trainingGroupId: string | null },
     notOwnedMessage: string,
   ): Promise<void> {
+    const academyId = this.tenantContext.getAcademyId();
     const assignment = await this.prisma.coachAssignment.findFirst({
       where: {
         coachId,
+        academyId,
         effectiveTo: null,
         OR: [
           entity.teamId ? { teamId: entity.teamId } : undefined,

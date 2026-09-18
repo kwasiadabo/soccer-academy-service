@@ -88,14 +88,16 @@ export class FinanceService {
 
   // --- Fee items (raw priced building blocks, no category of their own) ---
   findAllFeeItems(includeInactive = false) {
+    const academyId = this.tenantContext.getAcademyId();
     return this.prisma.feeItem.findMany({
-      where: includeInactive ? {} : { isActive: true },
+      where: includeInactive ? { academyId } : { academyId, isActive: true },
       orderBy: { name: 'asc' },
     });
   }
 
   createFeeItem(dto: CreateFeeItemDto) {
-    return this.prisma.feeItem.create({ data: dto });
+    const academyId = this.tenantContext.getAcademyId();
+    return this.prisma.feeItem.create({ data: { ...dto, academyId } });
   }
 
   // Sequential top-level calls, not a hand-rolled $transaction(async (tx) =>
@@ -106,17 +108,19 @@ export class FinanceService {
   // what made this throw "record not found" under RLS (same class of bug
   // already fixed in UsersService.create and BillingService).
   async updateFeeItem(id: string, dto: UpdateFeeItemDto) {
-    const feeItem = await this.prisma.feeItem.findUnique({ where: { id } });
+    const academyId = this.tenantContext.getAcademyId();
+    const feeItem = await this.prisma.feeItem.findFirst({ where: { id, academyId } });
     if (!feeItem) {
       throw new NotFoundException('Fee item not found');
     }
-    return this.prisma.feeItem.update({ where: { id }, data: dto });
+    return this.prisma.feeItem.update({ where: { id, academyId }, data: dto });
   }
 
   // --- Fee types (chargeable Fees composed of Fee Items) ---
   findAllFeeTypes(includeInactive = false) {
+    const academyId = this.tenantContext.getAcademyId();
     return this.prisma.feeType.findMany({
-      where: includeInactive ? {} : { isActive: true },
+      where: includeInactive ? { academyId } : { academyId, isActive: true },
       include: FEE_TYPE_INCLUDE,
       orderBy: { name: 'asc' },
     });
@@ -126,27 +130,36 @@ export class FinanceService {
   // findFirst (see players.service.ts#approve) — at most one may be active at a time
   // so that lookup is never ambiguous.
   private async deactivateOtherRegistrationFeeTypes(excludeId?: string) {
+    const academyId = this.tenantContext.getAcademyId();
     await this.prisma.feeType.updateMany({
-      where: { isRegistrationFee: true, isActive: true, ...(excludeId ? { id: { not: excludeId } } : {}) },
+      where: {
+        academyId,
+        isRegistrationFee: true,
+        isActive: true,
+        ...(excludeId ? { id: { not: excludeId } } : {}),
+      },
       data: { isActive: false },
     });
   }
 
   private async recomputeFeeTypeAmount(feeTypeId: string) {
-    const links = await this.prisma.feeTypeItem.findMany({ where: { feeTypeId } });
+    const academyId = this.tenantContext.getAcademyId();
+    const links = await this.prisma.feeTypeItem.findMany({ where: { feeTypeId, academyId } });
     const total = links.reduce((sum, link) => sum + Number(link.amount), 0);
-    await this.prisma.feeType.update({ where: { id: feeTypeId }, data: { defaultAmount: total } });
+    await this.prisma.feeType.update({ where: { id: feeTypeId, academyId }, data: { defaultAmount: total } });
   }
 
   async createFeeType(dto: CreateFeeTypeDto) {
+    const academyId = this.tenantContext.getAcademyId();
     if (dto.isRegistrationFee) {
       await this.deactivateOtherRegistrationFeeTypes();
     }
-    return this.prisma.feeType.create({ data: dto, include: FEE_TYPE_INCLUDE });
+    return this.prisma.feeType.create({ data: { ...dto, academyId }, include: FEE_TYPE_INCLUDE });
   }
 
   async updateFeeType(id: string, dto: UpdateFeeTypeDto) {
-    const feeType = await this.prisma.feeType.findUnique({ where: { id } });
+    const academyId = this.tenantContext.getAcademyId();
+    const feeType = await this.prisma.feeType.findFirst({ where: { id, academyId } });
     if (!feeType) {
       throw new NotFoundException('Fee type not found');
     }
@@ -154,49 +167,53 @@ export class FinanceService {
     if (activating && feeType.isRegistrationFee) {
       await this.deactivateOtherRegistrationFeeTypes(id);
     }
-    return this.prisma.feeType.update({ where: { id }, data: dto, include: FEE_TYPE_INCLUDE });
+    return this.prisma.feeType.update({ where: { id, academyId }, data: dto, include: FEE_TYPE_INCLUDE });
   }
 
   // Also used to change the amount of an already-attached item — upsert
   // lets the same call both attach a new item and re-price an existing one.
   async addFeeTypeItem(feeTypeId: string, feeItemId: string, amount: number) {
+    const academyId = this.tenantContext.getAcademyId();
     const [feeType, feeItem] = await Promise.all([
-      this.prisma.feeType.findUnique({ where: { id: feeTypeId } }),
-      this.prisma.feeItem.findUnique({ where: { id: feeItemId } }),
+      this.prisma.feeType.findFirst({ where: { id: feeTypeId, academyId } }),
+      this.prisma.feeItem.findFirst({ where: { id: feeItemId, academyId } }),
     ]);
     if (!feeType) throw new NotFoundException('Fee not found');
     if (!feeItem) throw new NotFoundException('Fee item not found');
 
     await this.prisma.feeTypeItem.upsert({
-      where: { feeTypeId_feeItemId: { feeTypeId, feeItemId } },
-      create: { feeTypeId, feeItemId, amount },
+      where: { feeTypeId_feeItemId: { feeTypeId, feeItemId }, academyId },
+      create: { feeTypeId, feeItemId, amount, academyId },
       update: { amount },
     });
     await this.recomputeFeeTypeAmount(feeTypeId);
-    return this.prisma.feeType.findUniqueOrThrow({ where: { id: feeTypeId }, include: FEE_TYPE_INCLUDE });
+    return this.prisma.feeType.findFirstOrThrow({ where: { id: feeTypeId, academyId }, include: FEE_TYPE_INCLUDE });
   }
 
   async removeFeeTypeItem(feeTypeId: string, feeItemId: string) {
-    await this.prisma.feeTypeItem.deleteMany({ where: { feeTypeId, feeItemId } });
+    const academyId = this.tenantContext.getAcademyId();
+    await this.prisma.feeTypeItem.deleteMany({ where: { feeTypeId, feeItemId, academyId } });
     await this.recomputeFeeTypeAmount(feeTypeId);
-    return this.prisma.feeType.findUniqueOrThrow({ where: { id: feeTypeId }, include: FEE_TYPE_INCLUDE });
+    return this.prisma.feeType.findFirstOrThrow({ where: { id: feeTypeId, academyId }, include: FEE_TYPE_INCLUDE });
   }
 
   // --- Invoices ---
   findInvoicesForPlayer(playerId: string) {
+    const academyId = this.tenantContext.getAcademyId();
     return this.prisma.invoice.findMany({
-      where: { playerId, deletedAt: null },
+      where: { playerId, academyId, deletedAt: null },
       include: INVOICE_INCLUDE,
       orderBy: { issuedAt: 'desc' },
     });
   }
 
   async createInvoice(dto: CreateInvoiceDto) {
-    const feeType = await this.prisma.feeType.findFirst({ where: { id: dto.feeTypeId, isActive: true } });
+    const academyId = this.tenantContext.getAcademyId();
+    const feeType = await this.prisma.feeType.findFirst({ where: { id: dto.feeTypeId, academyId, isActive: true } });
     if (!feeType) {
       throw new BadRequestException('Fee type not found or inactive');
     }
-    const player = await this.prisma.player.findFirst({ where: { id: dto.playerId, deletedAt: null } });
+    const player = await this.prisma.player.findFirst({ where: { id: dto.playerId, academyId, deletedAt: null } });
     if (!player) {
       throw new NotFoundException('Player not found');
     }
@@ -204,6 +221,7 @@ export class FinanceService {
     return this.prisma.invoice.create({
       data: {
         invoiceNumber: generateInvoiceNumber(),
+        academyId,
         playerId: dto.playerId,
         feeTypeId: dto.feeTypeId,
         description: dto.description,
@@ -218,9 +236,10 @@ export class FinanceService {
 
   // --- Payments ---
   async createPayment(dto: CreatePaymentDto, receivedByUserId: string) {
+    const academyId = this.tenantContext.getAcademyId();
     const invoiceIds = dto.allocations.map((a) => a.invoiceId);
     const invoices = await this.prisma.invoice.findMany({
-      where: { id: { in: invoiceIds }, playerId: dto.playerId, deletedAt: null },
+      where: { id: { in: invoiceIds }, playerId: dto.playerId, academyId, deletedAt: null },
       include: INVOICE_INCLUDE,
     });
     if (invoices.length !== new Set(invoiceIds).size) {
@@ -242,12 +261,15 @@ export class FinanceService {
     const payment = await this.prisma.payment.create({
       data: {
         receiptNumber: generateReceiptNumber(),
+        academyId,
         playerId: dto.playerId,
         amount: totalAmount,
         method: dto.method,
         reference: dto.reference,
         receivedByUserId,
-        allocations: { create: dto.allocations.map((a) => ({ invoiceId: a.invoiceId, amount: a.amount })) },
+        allocations: {
+          create: dto.allocations.map((a) => ({ invoiceId: a.invoiceId, amount: a.amount, academyId })),
+        },
       },
       include: { allocations: true },
     });
@@ -257,7 +279,7 @@ export class FinanceService {
         const invoice = invoices.find((inv) => inv.id === allocation.invoiceId)!;
         const remainingAfter = computeRemainingBalance(invoice) - allocation.amount;
         const status = remainingAfter <= 0.01 ? 'PAID' : 'PARTIALLY_PAID';
-        return this.prisma.invoice.update({ where: { id: invoice.id }, data: { status } });
+        return this.prisma.invoice.update({ where: { id: invoice.id, academyId: invoice.academyId }, data: { status } });
       }),
     );
 
@@ -272,14 +294,16 @@ export class FinanceService {
 
   // --- Dashboard stats ---
   async getTeamStats() {
+    const academyId = this.tenantContext.getAcademyId();
     const players = await this.prisma.player.findMany({
-      where: { status: 'ACTIVE', deletedAt: null },
+      where: { academyId, status: 'ACTIVE', deletedAt: null },
       select: { id: true, teamId: true, team: { select: { id: true, name: true } } },
     });
 
     const monthlyInvoices = players.length
       ? await this.prisma.invoice.findMany({
           where: {
+            academyId,
             deletedAt: null,
             feeType: { isRecurring: true },
             status: { in: ['PENDING', 'PARTIALLY_PAID', 'OVERDUE'] },
@@ -332,8 +356,9 @@ export class FinanceService {
 
   // --- Debtors ---
   async listDebtors() {
+    const academyId = this.tenantContext.getAcademyId();
     const invoices = await this.prisma.invoice.findMany({
-      where: { deletedAt: null, status: { in: ['PENDING', 'PARTIALLY_PAID', 'OVERDUE'] } },
+      where: { academyId, deletedAt: null, status: { in: ['PENDING', 'PARTIALLY_PAID', 'OVERDUE'] } },
       include: {
         ...INVOICE_INCLUDE,
         player: { select: { id: true, firstName: true, lastName: true, playerCode: true, status: true } },
@@ -389,6 +414,7 @@ export class FinanceService {
 
   // --- Payments report ---
   async getPaymentsReport(from?: string, to?: string, feeTypeId?: string, playerId?: string): Promise<PaymentReport> {
+    const academyId = this.tenantContext.getAcademyId();
     const paidAt: Prisma.DateTimeFilter = {};
     if (from) paidAt.gte = new Date(from);
     if (to) {
@@ -399,6 +425,7 @@ export class FinanceService {
 
     const allocations = await this.prisma.paymentAllocation.findMany({
       where: {
+        academyId,
         payment: {
           status: 'COMPLETED',
           ...(from || to ? { paidAt } : {}),
@@ -474,15 +501,16 @@ export class FinanceService {
   }
 
   async generateRecurringInvoices(): Promise<{ created: number; skipped: number }> {
+    const academyId = this.tenantContext.getAcademyId();
     const recurringFeeTypes = await this.prisma.feeType.findMany({
-      where: { isRecurring: true, isActive: true },
+      where: { academyId, isRecurring: true, isActive: true },
     });
     if (recurringFeeTypes.length === 0) {
       return { created: 0, skipped: 0 };
     }
 
     const activePlayers = await this.prisma.player.findMany({
-      where: { status: 'ACTIVE', deletedAt: null },
+      where: { academyId, status: 'ACTIVE', deletedAt: null },
       select: { id: true },
     });
 
@@ -496,6 +524,7 @@ export class FinanceService {
       for (const player of activePlayers) {
         const alreadyBilled = await this.prisma.invoice.findFirst({
           where: {
+            academyId,
             playerId: player.id,
             feeTypeId: feeType.id,
             issuedAt: { gte: startOfMonth },
@@ -513,6 +542,7 @@ export class FinanceService {
         await this.prisma.invoice.create({
           data: {
             invoiceNumber: generateInvoiceNumber(),
+            academyId,
             playerId: player.id,
             feeTypeId: feeType.id,
             amount: feeType.defaultAmount,
@@ -533,6 +563,7 @@ export class FinanceService {
   // Subscription mixup) doesn't keep showing every player billed twice after it's
   // deactivated.
   async getMonthlyBilling(month?: string): Promise<MonthlyBillingReport> {
+    const academyId = this.tenantContext.getAcademyId();
     const reference = month ? new Date(`${month}-01T00:00:00`) : new Date();
     const startOfMonth = new Date(reference.getFullYear(), reference.getMonth(), 1);
     const startOfNextMonth = new Date(reference.getFullYear(), reference.getMonth() + 1, 1);
@@ -540,6 +571,7 @@ export class FinanceService {
 
     const invoices = await this.prisma.invoice.findMany({
       where: {
+        academyId,
         deletedAt: null,
         feeType: { isRecurring: true, isActive: true },
         issuedAt: { gte: startOfMonth, lt: startOfNextMonth },
@@ -584,8 +616,9 @@ export class FinanceService {
   // stub exactly. Records an in-app Notification when the guardian has a portal
   // login; otherwise just logs it. Never claims a real message was sent.
   async sendPaymentReminder(playerId: string, invoiceId: string) {
+    const academyId = this.tenantContext.getAcademyId();
     const invoice = await this.prisma.invoice.findFirst({
-      where: { id: invoiceId, playerId, deletedAt: null },
+      where: { id: invoiceId, playerId, academyId, deletedAt: null },
       include: {
         feeType: true,
         player: {
@@ -605,6 +638,7 @@ export class FinanceService {
     if (primaryGuardian?.userId) {
       await this.prisma.notification.create({
         data: {
+          academyId,
           userId: primaryGuardian.userId,
           channel: 'IN_APP',
           title,

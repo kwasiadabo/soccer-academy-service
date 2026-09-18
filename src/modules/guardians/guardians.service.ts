@@ -3,6 +3,7 @@ import { randomBytes } from 'crypto';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuthService } from '../auth/auth.service';
+import { TenantContextService } from '../../common/tenant-context/tenant-context.service';
 import { ROLE_NAMES } from '../rbac/permissions.constants';
 import { GrantGuardianPortalAccessDto } from './dto/grant-portal-access.dto';
 
@@ -11,11 +12,14 @@ export class GuardiansService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly authService: AuthService,
+    private readonly tenantContext: TenantContextService,
   ) {}
 
   async findAll(search?: string) {
+    const academyId = this.tenantContext.getAcademyId();
     return this.prisma.guardian.findMany({
       where: {
+        academyId,
         deletedAt: null,
         ...(search
           ? {
@@ -34,8 +38,9 @@ export class GuardiansService {
   }
 
   async findOne(id: string) {
+    const academyId = this.tenantContext.getAcademyId();
     const guardian = await this.prisma.guardian.findFirst({
-      where: { id, deletedAt: null },
+      where: { id, academyId, deletedAt: null },
       include: { players: { include: { player: true } } },
     });
     if (!guardian) {
@@ -46,29 +51,30 @@ export class GuardiansService {
 
   async grantPortalAccess(id: string, dto: GrantGuardianPortalAccessDto) {
     const guardian = await this.findOne(id);
+    const academyId = guardian.academyId;
     if (guardian.userId) {
       throw new BadRequestException('This guardian already has portal access');
     }
 
-    let user = await this.prisma.user.findFirst({ where: { email: dto.email } });
+    let user = await this.prisma.user.findFirst({ where: { email: dto.email, academyId } });
 
     if (user) {
-      const linkedCoach = await this.prisma.coach.findFirst({ where: { userId: user.id } });
-      const linkedGuardian = await this.prisma.guardian.findFirst({ where: { userId: user.id } });
+      const linkedCoach = await this.prisma.coach.findFirst({ where: { userId: user.id, academyId } });
+      const linkedGuardian = await this.prisma.guardian.findFirst({ where: { userId: user.id, academyId } });
       if (linkedCoach || linkedGuardian) {
         throw new ConflictException('This email is already linked to a different portal profile');
       }
 
       const parentRole = await this.prisma.role.findUniqueOrThrow({ where: { name: ROLE_NAMES.PARENT } });
       const alreadyHasRole = await this.prisma.userRole.findUnique({
-        where: { userId_roleId: { userId: user.id, roleId: parentRole.id } },
+        where: { userId_roleId: { userId: user.id, roleId: parentRole.id }, academyId },
       });
 
       await this.prisma.$transaction([
         ...(alreadyHasRole
           ? []
-          : [this.prisma.userRole.create({ data: { userId: user.id, roleId: parentRole.id } })]),
-        this.prisma.guardian.update({ where: { id }, data: { userId: user.id } }),
+          : [this.prisma.userRole.create({ data: { userId: user.id, roleId: parentRole.id, academyId } })]),
+        this.prisma.guardian.update({ where: { id, academyId }, data: { userId: user.id } }),
       ]);
     } else {
       const parentRole = await this.prisma.role.findUniqueOrThrow({ where: { name: ROLE_NAMES.PARENT } });
@@ -76,6 +82,7 @@ export class GuardiansService {
 
       user = await this.prisma.user.create({
         data: {
+          academyId,
           email: dto.email,
           passwordHash,
           firstName: guardian.firstName,
@@ -86,7 +93,7 @@ export class GuardiansService {
         },
       });
 
-      await this.prisma.guardian.update({ where: { id }, data: { userId: user.id } });
+      await this.prisma.guardian.update({ where: { id, academyId }, data: { userId: user.id } });
     }
 
     await this.authService.requestPasswordReset(dto.email);

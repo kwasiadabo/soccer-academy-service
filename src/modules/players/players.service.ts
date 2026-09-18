@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { DocumentOwnerType, DocumentType, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { TenantContextService } from '../../common/tenant-context/tenant-context.service';
 import { StorageService } from '../storage/storage.service';
 import { PaystackService } from '../paystack/paystack.service';
 import { CoachContextService } from '../coaches/coach-context.service';
@@ -42,13 +43,16 @@ export class PlayersService {
     private readonly paystack: PaystackService,
     private readonly receipts: ReceiptsService,
     private readonly coachContext: CoachContextService,
+    private readonly tenantContext: TenantContextService,
   ) {}
 
   async findAll(filter: { status?: string; search?: string; teamId?: string }, user: RequestUser) {
+    const academyId = this.tenantContext.getAcademyId();
     const scopeFilter = await this.buildCoachScopeFilter(user);
 
     const players = await this.prisma.player.findMany({
       where: {
+        academyId,
         deletedAt: null,
         status: filter.status ? (filter.status as never) : undefined,
         teamId: filter.teamId || undefined,
@@ -97,8 +101,9 @@ export class PlayersService {
   }
 
   async listBirthdays(withinDays: number) {
+    const academyId = this.tenantContext.getAcademyId();
     const players = await this.prisma.player.findMany({
-      where: { status: 'ACTIVE', deletedAt: null },
+      where: { academyId, status: 'ACTIVE', deletedAt: null },
       select: { id: true, firstName: true, lastName: true, playerCode: true, dateOfBirth: true },
     });
 
@@ -121,8 +126,9 @@ export class PlayersService {
   }
 
   async findOne(id: string) {
+    const academyId = this.tenantContext.getAcademyId();
     const player = await this.prisma.player.findFirst({
-      where: { id, deletedAt: null },
+      where: { id, academyId, deletedAt: null },
       include: PROFILE_INCLUDE,
     });
     if (!player) {
@@ -132,6 +138,7 @@ export class PlayersService {
   }
 
   async create(dto: CreatePlayerDto) {
+    const academyId = this.tenantContext.getAcademyId();
     const primaryGuardians = dto.guardians.filter((g) => g.isPrimary);
     if (primaryGuardians.length > 1) {
       throw new BadRequestException('Only one guardian can be marked as primary');
@@ -139,6 +146,7 @@ export class PlayersService {
 
     const player = await this.prisma.player.create({
       data: {
+        academyId,
         firstName: dto.firstName,
         middleName: dto.middleName,
         lastName: dto.lastName,
@@ -156,10 +164,12 @@ export class PlayersService {
         status: 'DRAFT',
         guardians: {
           create: dto.guardians.map((g) => ({
+            academyId,
             relationship: g.relationship,
             isPrimary: g.isPrimary ?? false,
             guardian: {
               create: {
+                academyId,
                 firstName: g.firstName,
                 lastName: g.lastName,
                 phone: g.phone,
@@ -169,7 +179,7 @@ export class PlayersService {
             },
           })),
         },
-        registrations: { create: { status: 'DRAFT' } },
+        registrations: { create: { academyId, status: 'DRAFT' } },
       },
       include: PROFILE_INCLUDE,
     });
@@ -185,7 +195,7 @@ export class PlayersService {
       );
     }
     return this.prisma.player.update({
-      where: { id },
+      where: { id, academyId: player.academyId },
       data: {
         ...dto,
         dateOfBirth: dto.dateOfBirth ? new Date(dto.dateOfBirth) : undefined,
@@ -209,7 +219,7 @@ export class PlayersService {
       );
     }
     return this.prisma.player.update({
-      where: { id },
+      where: { id, academyId: player.academyId },
       data: {
         teamId: dto.teamId,
         trainingGroupId: dto.trainingGroupId,
@@ -229,34 +239,38 @@ export class PlayersService {
       throw new BadRequestException('Only a fully registered player can be suspended, withdrawn, or reinstated');
     }
     return this.prisma.player.update({
-      where: { id },
+      where: { id, academyId: player.academyId },
       data: { status },
       include: PROFILE_INCLUDE,
     });
   }
 
   async addGuardian(playerId: string, dto: AddGuardianDto) {
+    const academyId = this.tenantContext.getAcademyId();
     await this.findOne(playerId);
     if (dto.isPrimary) {
       await this.prisma.playerGuardian.updateMany({
-        where: { playerId },
+        where: { playerId, academyId },
         data: { isPrimary: false },
       });
     }
+    const guardian = await this.prisma.guardian.create({
+      data: {
+        academyId,
+        firstName: dto.firstName,
+        lastName: dto.lastName,
+        phone: dto.phone,
+        email: dto.email,
+        address: dto.address,
+      },
+    });
     await this.prisma.playerGuardian.create({
       data: {
-        player: { connect: { id: playerId } },
+        academyId,
+        playerId,
+        guardianId: guardian.id,
         relationship: dto.relationship,
         isPrimary: dto.isPrimary ?? false,
-        guardian: {
-          create: {
-            firstName: dto.firstName,
-            lastName: dto.lastName,
-            phone: dto.phone,
-            email: dto.email,
-            address: dto.address,
-          },
-        },
       },
     });
     return this.findOne(playerId);
@@ -270,7 +284,7 @@ export class PlayersService {
 
     const registration = player.registrations[0];
     await this.prisma.$transaction([
-      this.prisma.player.update({ where: { id }, data: { status: 'SUBMITTED' } }),
+      this.prisma.player.update({ where: { id, academyId: player.academyId }, data: { status: 'SUBMITTED' } }),
       this.prisma.playerRegistration.update({
         where: { id: registration.id },
         data: { status: 'SUBMITTED', submittedAt: new Date() },
@@ -283,13 +297,14 @@ export class PlayersService {
   // No separate review/approval gate — this moves a player straight from bio-data
   // capture to payment collection (generates the registration invoice) in one step.
   async approve(id: string, reviewerUserId: string, dto: ApproveRegistrationDto = {}) {
+    const academyId = this.tenantContext.getAcademyId();
     const player = await this.findOne(id);
 
     // Self-heals a player stuck in PENDING_REGISTRATION_PAYMENT with no actual invoice to
     // pay (e.g. their invoice was later deleted) by letting this run again to regenerate one.
     const existingInvoiceId = player.registrations[0]?.registrationFeeInvoiceId;
     const hasValidInvoice = existingInvoiceId
-      ? await this.prisma.invoice.findUnique({ where: { id: existingInvoiceId } })
+      ? await this.prisma.invoice.findFirst({ where: { id: existingInvoiceId, academyId } })
       : null;
     const canProceed =
       ['DRAFT', 'PENDING_PARENT_INFO', 'SUBMITTED'].includes(player.status) ||
@@ -307,7 +322,7 @@ export class PlayersService {
     // picks a subset (e.g. a returning player skips the jersey), this player's
     // invoice is only the sum of those, not the fee's full academy-wide total.
     const registrationFeeType = await this.prisma.feeType.findFirst({
-      where: { isRegistrationFee: true, isActive: true },
+      where: { academyId, isRegistrationFee: true, isActive: true },
       include: { items: { include: { feeItem: true } } },
     });
     if (!registrationFeeType) {
@@ -331,6 +346,7 @@ export class PlayersService {
 
     const invoice = await this.prisma.invoice.create({
       data: {
+        academyId,
         invoiceNumber: generateInvoiceNumber(),
         playerId: player.id,
         feeTypeId: registrationFeeType.id,
@@ -345,7 +361,7 @@ export class PlayersService {
     });
 
     await this.prisma.$transaction([
-      this.prisma.player.update({ where: { id }, data: { status: 'PENDING_REGISTRATION_PAYMENT' } }),
+      this.prisma.player.update({ where: { id, academyId }, data: { status: 'PENDING_REGISTRATION_PAYMENT' } }),
       this.prisma.playerRegistration.update({
         where: { id: registration.id },
         data: {
@@ -362,9 +378,11 @@ export class PlayersService {
 
   async confirmPayment(id: string, receptionistUserId: string, dto: ConfirmRegistrationPaymentDto) {
     const { player, registration, invoice } = await this.getPendingRegistrationInvoice(id);
+    const academyId = player.academyId;
 
     const payment = await this.prisma.payment.create({
       data: {
+        academyId,
         receiptNumber: generateReceiptNumber(),
         playerId: player.id,
         amount: invoice.amount,
@@ -372,7 +390,7 @@ export class PlayersService {
         reference: dto.reference,
         receivedByUserId: receptionistUserId,
         allocations: {
-          create: { invoiceId: invoice.id, amount: invoice.amount },
+          create: { academyId, invoiceId: invoice.id, amount: invoice.amount },
         },
       },
     });
@@ -380,9 +398,9 @@ export class PlayersService {
     const playerCode = await this.generateUniquePlayerCode(player.ageCategoryId!, player.dateOfBirth);
 
     await this.prisma.$transaction([
-      this.prisma.invoice.update({ where: { id: invoice.id }, data: { status: 'PAID' } }),
+      this.prisma.invoice.update({ where: { id: invoice.id, academyId }, data: { status: 'PAID' } }),
       this.prisma.player.update({
-        where: { id },
+        where: { id, academyId },
         data: { status: 'ACTIVE', playerCode },
       }),
       this.prisma.playerRegistration.update({
@@ -400,8 +418,9 @@ export class PlayersService {
   // keeping the ACTIVE transition + player code assignment centralized here. No-ops
   // unless the player is actually waiting on their registration invoice and it's now paid.
   async activateAfterRegistrationPayment(playerId: string) {
-    const player = await this.prisma.player.findUnique({
-      where: { id: playerId },
+    const academyId = this.tenantContext.getAcademyId();
+    const player = await this.prisma.player.findFirst({
+      where: { id: playerId, academyId },
       include: { registrations: { orderBy: { createdAt: 'desc' as const }, take: 1 } },
     });
     if (!player || player.status !== 'PENDING_REGISTRATION_PAYMENT') return;
@@ -409,12 +428,14 @@ export class PlayersService {
     const registration = player.registrations[0];
     if (!registration?.registrationFeeInvoiceId) return;
 
-    const invoice = await this.prisma.invoice.findUnique({ where: { id: registration.registrationFeeInvoiceId } });
+    const invoice = await this.prisma.invoice.findFirst({
+      where: { id: registration.registrationFeeInvoiceId, academyId },
+    });
     if (!invoice || invoice.status !== 'PAID') return;
 
     const playerCode = await this.generateUniquePlayerCode(player.ageCategoryId!, player.dateOfBirth);
     await this.prisma.$transaction([
-      this.prisma.player.update({ where: { id: playerId }, data: { status: 'ACTIVE', playerCode } }),
+      this.prisma.player.update({ where: { id: playerId, academyId }, data: { status: 'ACTIVE', playerCode } }),
       this.prisma.playerRegistration.update({ where: { id: registration.id }, data: { status: 'ACTIVE' } }),
     ]);
   }
@@ -428,8 +449,8 @@ export class PlayersService {
     if (!registration.registrationFeeInvoiceId) {
       throw new BadRequestException('No registration invoice found for this player');
     }
-    const invoice = await this.prisma.invoice.findUniqueOrThrow({
-      where: { id: registration.registrationFeeInvoiceId },
+    const invoice = await this.prisma.invoice.findFirstOrThrow({
+      where: { id: registration.registrationFeeInvoiceId, academyId: player.academyId },
       include: { feeType: { include: { items: { include: { feeItem: true } } } } },
     });
     return { player, registration, invoice };
@@ -471,11 +492,12 @@ export class PlayersService {
   }
 
   private async generateUniquePlayerCode(ageCategoryId: string, dateOfBirth: Date): Promise<string> {
-    const ageCategory = await this.prisma.ageCategory.findUniqueOrThrow({ where: { id: ageCategoryId } });
+    const academyId = this.tenantContext.getAcademyId();
+    const ageCategory = await this.prisma.ageCategory.findFirstOrThrow({ where: { id: ageCategoryId, academyId } });
 
     for (let attempt = 0; attempt < 5; attempt++) {
       const candidate = await this.playerIdService.generate(ageCategory.code, dateOfBirth);
-      const exists = await this.prisma.player.findFirst({ where: { playerCode: candidate } });
+      const exists = await this.prisma.player.findFirst({ where: { playerCode: candidate, academyId } });
       if (!exists) return candidate;
     }
     throw new ConflictException('Could not generate a unique player ID, please retry');
@@ -490,10 +512,12 @@ export class PlayersService {
     }
 
     const player = await this.findOne(id);
+    const academyId = player.academyId;
     const stored = await this.storage.save(file.originalname, file.mimetype, file.buffer);
 
     const document = await this.prisma.document.create({
       data: {
+        academyId,
         ownerType: DocumentOwnerType.PLAYER,
         ownerId: player.id,
         documentType: DocumentType.PHOTO,
@@ -506,10 +530,10 @@ export class PlayersService {
     });
 
     const previousDocumentId = player.photoDocumentId;
-    await this.prisma.player.update({ where: { id }, data: { photoDocumentId: document.id } });
+    await this.prisma.player.update({ where: { id, academyId }, data: { photoDocumentId: document.id } });
 
     if (previousDocumentId) {
-      const previous = await this.prisma.document.findUnique({ where: { id: previousDocumentId } });
+      const previous = await this.prisma.document.findFirst({ where: { id: previousDocumentId, academyId } });
       if (previous) {
         await this.storage.delete(previous.storageKey).catch(() => undefined);
         await this.prisma.document.delete({ where: { id: previousDocumentId } }).catch(() => undefined);
@@ -520,8 +544,9 @@ export class PlayersService {
   }
 
   async getPhoto(id: string): Promise<{ buffer: Buffer; mimeType: string }> {
+    const academyId = this.tenantContext.getAcademyId();
     const player = await this.prisma.player.findFirst({
-      where: { id, deletedAt: null },
+      where: { id, academyId, deletedAt: null },
       include: { photo: true },
     });
     if (!player?.photo) {

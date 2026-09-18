@@ -80,12 +80,13 @@ export class TrainingService {
   // team(s) so the picker defaults to what they actually manage; falls back to every active
   // team if they have none assigned yet, so they're never stuck with an empty picker.
   async listTeamsForPicker(user: RequestUser) {
+    const academyId = this.tenantContext.getAcademyId();
     if (this.coachContext.isCoachOnly(user)) {
       const coachId = await this.coachContext.resolveCoachId(user.userId);
       const teamIds = await this.coachContext.getAssignedTeamIds(coachId);
       if (teamIds.length > 0) {
         return this.prisma.team.findMany({
-          where: { isActive: true, id: { in: teamIds } },
+          where: { academyId, isActive: true, id: { in: teamIds } },
           select: { id: true, name: true },
           orderBy: { name: 'asc' },
         });
@@ -93,14 +94,15 @@ export class TrainingService {
     }
 
     return this.prisma.team.findMany({
-      where: { isActive: true },
+      where: { academyId, isActive: true },
       select: { id: true, name: true },
       orderBy: { name: 'asc' },
     });
   }
 
   private async getPlanOrThrow(id: string) {
-    const plan = await this.prisma.trainingPlan.findUnique({ where: { id }, include: PLAN_INCLUDE });
+    const academyId = this.tenantContext.getAcademyId();
+    const plan = await this.prisma.trainingPlan.findFirst({ where: { id, academyId }, include: PLAN_INCLUDE });
     if (!plan) {
       throw new NotFoundException('Training plan not found');
     }
@@ -119,9 +121,10 @@ export class TrainingService {
   // TRAINING_APPROVE (via @RequireAnyPermission) branch here on which one the
   // caller actually holds, rather than in the guard.
   async findAllPlans(user: RequestUser, status?: TrainingApprovalStatus) {
+    const academyId = this.tenantContext.getAcademyId();
     if (this.canApprove(user)) {
       return this.prisma.trainingPlan.findMany({
-        where: { approvalStatus: status },
+        where: { academyId, approvalStatus: status },
         include: PLAN_INCLUDE,
         orderBy: { scheduledDate: 'desc' },
       });
@@ -129,7 +132,7 @@ export class TrainingService {
 
     const coachId = await this.coachContext.resolveCoachId(user.userId);
     return this.prisma.trainingPlan.findMany({
-      where: { coachId, approvalStatus: status },
+      where: { academyId, coachId, approvalStatus: status },
       include: PLAN_INCLUDE,
       orderBy: { scheduledDate: 'desc' },
     });
@@ -147,16 +150,18 @@ export class TrainingService {
   }
 
   async createPlan(userId: string, dto: CreateTrainingPlanDto) {
+    const academyId = this.tenantContext.getAcademyId();
     const coachId = await this.coachContext.resolveCoachId(userId);
     const { activities, scheduledDate, ...rest } = dto;
 
     const plan = await this.prisma.trainingPlan.create({
       data: {
         ...rest,
+        academyId,
         scheduledDate: new Date(scheduledDate),
         coachId,
         approvalStatus: 'DRAFT',
-        activities: activities?.length ? { create: activities } : undefined,
+        activities: activities?.length ? { create: activities.map((a) => ({ ...a, academyId })) } : undefined,
       },
       include: PLAN_INCLUDE,
     });
@@ -178,7 +183,7 @@ export class TrainingService {
 
     const { scheduledDate, ...rest } = dto;
     await this.prisma.trainingPlan.update({
-      where: { id },
+      where: { id, academyId: plan.academyId },
       data: { ...rest, scheduledDate: scheduledDate ? new Date(scheduledDate) : undefined },
     });
     return this.getPlanOrThrow(id);
@@ -188,7 +193,9 @@ export class TrainingService {
     const plan = await this.assertOwnPlan(planId, userId);
     this.assertEditable(plan.approvalStatus);
 
-    await this.prisma.trainingActivity.create({ data: { ...dto, trainingPlanId: planId } });
+    await this.prisma.trainingActivity.create({
+      data: { ...dto, trainingPlanId: planId, academyId: plan.academyId },
+    });
     return this.getPlanOrThrow(planId);
   }
 
@@ -197,7 +204,7 @@ export class TrainingService {
     this.assertEditable(plan.approvalStatus);
 
     const activity = await this.prisma.trainingActivity.findFirst({
-      where: { id: activityId, trainingPlanId: planId },
+      where: { id: activityId, trainingPlanId: planId, academyId: plan.academyId },
     });
     if (!activity) {
       throw new NotFoundException('Training activity not found');
@@ -212,7 +219,7 @@ export class TrainingService {
     this.assertEditable(plan.approvalStatus);
 
     const activity = await this.prisma.trainingActivity.findFirst({
-      where: { id: activityId, trainingPlanId: planId },
+      where: { id: activityId, trainingPlanId: planId, academyId: plan.academyId },
     });
     if (!activity) {
       throw new NotFoundException('Training activity not found');
@@ -224,8 +231,9 @@ export class TrainingService {
 
   // --- Activity Marks ---
   private async getActivityOrThrow(activityId: string) {
-    const activity = await this.prisma.trainingActivity.findUnique({
-      where: { id: activityId },
+    const academyId = this.tenantContext.getAcademyId();
+    const activity = await this.prisma.trainingActivity.findFirst({
+      where: { id: activityId, academyId },
       include: { trainingPlan: true },
     });
     if (!activity) {
@@ -241,13 +249,14 @@ export class TrainingService {
   }
 
   async getActivityMarks(activityId: string, user: RequestUser) {
+    const academyId = this.tenantContext.getAcademyId();
     const activity = await this.getActivityOrThrow(activityId);
     await this.assertMarksAccess(user, activity.trainingPlan);
 
     const [roster, marks] = await Promise.all([
       this.rosterFor(activity.trainingPlan),
       this.prisma.trainingActivityMark.findMany({
-        where: { trainingActivityId: activityId },
+        where: { trainingActivityId: activityId, academyId },
         include: { ratedByCoach: { select: { id: true, firstName: true, lastName: true } } },
       }),
     ]);
@@ -256,6 +265,7 @@ export class TrainingService {
   }
 
   async upsertActivityMarks(activityId: string, user: RequestUser, dto: UpsertActivityMarksDto) {
+    const academyId = this.tenantContext.getAcademyId();
     const activity = await this.getActivityOrThrow(activityId);
     await this.assertMarksAccess(user, activity.trainingPlan);
     const ratedByCoachId = await this.coachContext.resolveCoachId(user.userId);
@@ -265,6 +275,7 @@ export class TrainingService {
         this.prisma.trainingActivityMark.upsert({
           where: { trainingActivityId_playerId: { trainingActivityId: activityId, playerId: record.playerId } },
           create: {
+            academyId,
             trainingActivityId: activityId,
             playerId: record.playerId,
             ratedByCoachId,
@@ -280,10 +291,11 @@ export class TrainingService {
   }
 
   async getPlayerMarks(playerId: string, user: RequestUser) {
+    const academyId = this.tenantContext.getAcademyId();
     if (this.coachContext.isCoachOnly(user)) {
       const coachId = await this.coachContext.resolveCoachId(user.userId);
-      const player = await this.prisma.player.findUnique({
-        where: { id: playerId },
+      const player = await this.prisma.player.findFirst({
+        where: { id: playerId, academyId },
         select: { teamId: true, trainingGroupId: true },
       });
       if (!player) {
@@ -293,7 +305,7 @@ export class TrainingService {
     }
 
     return this.prisma.trainingActivityMark.findMany({
-      where: { playerId },
+      where: { playerId, academyId },
       include: {
         trainingActivity: {
           include: { trainingPlan: { select: { title: true, scheduledDate: true } } },
@@ -305,13 +317,14 @@ export class TrainingService {
   }
 
   async getTeamMarks(teamId: string, user: RequestUser) {
+    const academyId = this.tenantContext.getAcademyId();
     if (this.coachContext.isCoachOnly(user)) {
       const coachId = await this.coachContext.resolveCoachId(user.userId);
       await this.coachContext.assertOwnsTeam(coachId, teamId);
     }
 
     return this.prisma.trainingActivityMark.findMany({
-      where: { player: { teamId } },
+      where: { academyId, player: { teamId } },
       select: {
         id: true,
         playerId: true,
@@ -331,8 +344,10 @@ export class TrainingService {
     }
 
     await this.prisma.$transaction([
-      this.prisma.trainingPlan.update({ where: { id }, data: { approvalStatus: 'SUBMITTED' } }),
-      this.prisma.trainingApproval.create({ data: { trainingPlanId: id, submittedByUserId: userId } }),
+      this.prisma.trainingPlan.update({ where: { id, academyId: plan.academyId }, data: { approvalStatus: 'SUBMITTED' } }),
+      this.prisma.trainingApproval.create({
+        data: { academyId: plan.academyId, trainingPlanId: id, submittedByUserId: userId },
+      }),
     ]);
     return this.getPlanOrThrow(id);
   }
@@ -344,7 +359,7 @@ export class TrainingService {
     }
 
     const pendingApproval = await this.prisma.trainingApproval.findFirst({
-      where: { trainingPlanId: id, decision: 'SUBMITTED' },
+      where: { trainingPlanId: id, decision: 'SUBMITTED', academyId: plan.academyId },
       orderBy: { submittedAt: 'desc' },
     });
     if (!pendingApproval) {
@@ -352,7 +367,7 @@ export class TrainingService {
     }
 
     await this.prisma.$transaction([
-      this.prisma.trainingPlan.update({ where: { id }, data: { approvalStatus: dto.decision } }),
+      this.prisma.trainingPlan.update({ where: { id, academyId: plan.academyId }, data: { approvalStatus: dto.decision } }),
       this.prisma.trainingApproval.update({
         where: { id: pendingApproval.id },
         data: {
@@ -368,7 +383,8 @@ export class TrainingService {
 
   // --- Sessions ---
   private async getSessionOrThrow(id: string) {
-    const session = await this.prisma.trainingSession.findUnique({ where: { id }, include: SESSION_INCLUDE });
+    const academyId = this.tenantContext.getAcademyId();
+    const session = await this.prisma.trainingSession.findFirst({ where: { id, academyId }, include: SESSION_INCLUDE });
     if (!session) {
       throw new NotFoundException('Training session not found');
     }
@@ -390,8 +406,10 @@ export class TrainingService {
   }
 
   private async rosterFor(session: { teamId: string; trainingGroupId: string | null }) {
+    const academyId = this.tenantContext.getAcademyId();
     return this.prisma.player.findMany({
       where: {
+        academyId,
         status: 'ACTIVE',
         deletedAt: null,
         teamId: session.teamId,
@@ -451,11 +469,12 @@ export class TrainingService {
   // Head Coach/Admin see every session — but a plain Coach is scoped to only their own
   // team(s)/group(s).
   async findAllSessions(user: RequestUser) {
+    const academyId = this.tenantContext.getAcademyId();
     const schedule = await this.getSchedule();
     if (!this.coachContext.isCoachOnly(user)) {
-      const allTeamIds = await this.prisma.team.findMany({ where: { isActive: true }, select: { id: true } });
+      const allTeamIds = await this.prisma.team.findMany({ where: { academyId, isActive: true }, select: { id: true } });
       await this.ensureThisWeeksWeeklySessions(allTeamIds.map((t) => t.id), schedule);
-      return this.prisma.trainingSession.findMany({ include: SESSION_INCLUDE, orderBy: { date: 'desc' } });
+      return this.prisma.trainingSession.findMany({ where: { academyId }, include: SESSION_INCLUDE, orderBy: { date: 'desc' } });
     }
 
     const coachId = await this.coachContext.resolveCoachId(user.userId);
@@ -470,6 +489,7 @@ export class TrainingService {
 
     return this.prisma.trainingSession.findMany({
       where: {
+        academyId,
         OR: [
           teamIds.length > 0 ? { teamId: { in: teamIds } } : undefined,
           trainingGroupIds.length > 0 ? { trainingGroupId: { in: trainingGroupIds } } : undefined,
@@ -489,21 +509,22 @@ export class TrainingService {
   // A plain Coach must have a linked Coach profile (they're recorded as conducting the
   // session); Head Coach/Admin can create a session without one — see resolveOptionalCoachId.
   async createSession(user: RequestUser, dto: CreateTrainingSessionDto) {
+    const academyId = this.tenantContext.getAcademyId();
     const coachId = this.coachContext.isCoachOnly(user)
       ? await this.coachContext.resolveCoachId(user.userId)
       : await this.coachContext.resolveOptionalCoachId(user.userId);
     const { date, ...rest } = dto;
     return this.prisma.trainingSession.create({
-      data: { ...rest, date: new Date(date), conductedByCoachId: coachId ?? undefined, status: 'SCHEDULED' },
+      data: { ...rest, academyId, date: new Date(date), conductedByCoachId: coachId ?? undefined, status: 'SCHEDULED' },
       include: SESSION_INCLUDE,
     });
   }
 
   async updateSession(id: string, user: RequestUser, dto: UpdateTrainingSessionDto) {
-    await this.assertOwnSession(id, user);
+    const session = await this.assertOwnSession(id, user);
     const { date, ...rest } = dto;
     await this.prisma.trainingSession.update({
-      where: { id },
+      where: { id, academyId: session.academyId },
       data: { ...rest, date: date ? new Date(date) : undefined },
     });
     return this.getSessionOrThrow(id);
@@ -519,12 +540,17 @@ export class TrainingService {
   }
 
   private async getOrCreateWeeklySessionRecord(teamId: string, schedule: TrainingSchedule, dateStr?: string) {
+    const academyId = this.tenantContext.getAcademyId();
     const date = this.resolveFixtureDate(schedule.dayOfWeek, dateStr);
-    const existing = await this.prisma.trainingSession.findFirst({ where: { teamId, date }, include: SESSION_INCLUDE });
+    const existing = await this.prisma.trainingSession.findFirst({
+      where: { teamId, date, academyId },
+      include: SESSION_INCLUDE,
+    });
     return (
       existing ??
       this.prisma.trainingSession.create({
         data: {
+          academyId,
           teamId,
           date,
           startTime: schedule.startTime,
@@ -564,18 +590,19 @@ export class TrainingService {
   }
 
   async provisionSaturdaySessions(): Promise<{ created: number; skipped: number }> {
+    const academyId = this.tenantContext.getAcademyId();
     const schedule = await this.getSchedule();
     if (new Date().getUTCDay() !== schedule.dayOfWeek) {
       return { created: 0, skipped: 0 };
     }
 
-    const teams = await this.prisma.team.findMany({ where: { isActive: true }, select: { id: true, name: true } });
+    const teams = await this.prisma.team.findMany({ where: { academyId, isActive: true }, select: { id: true, name: true } });
     const date = this.resolveFixtureDate(schedule.dayOfWeek);
     let created = 0;
     let skipped = 0;
 
     for (const team of teams) {
-      const existing = await this.prisma.trainingSession.findFirst({ where: { teamId: team.id, date } });
+      const existing = await this.prisma.trainingSession.findFirst({ where: { teamId: team.id, date, academyId } });
       if (existing) {
         skipped++;
         continue;
@@ -583,6 +610,7 @@ export class TrainingService {
 
       const session = await this.prisma.trainingSession.create({
         data: {
+          academyId,
           teamId: team.id,
           date,
           startTime: schedule.startTime,
@@ -606,9 +634,11 @@ export class TrainingService {
     session: { teamId: string; date: Date; startTime: string | null; endTime: string | null; location: string | null },
     teamName: string,
   ) {
+    const academyId = this.tenantContext.getAcademyId();
     const [assignments, headCoachRoles] = await Promise.all([
       this.prisma.coachAssignment.findMany({
         where: {
+          academyId,
           effectiveTo: null,
           coach: { isActive: true, deletedAt: null },
           OR: [{ teamId: session.teamId }, { trainingGroup: { teamId: session.teamId } }],
@@ -616,7 +646,7 @@ export class TrainingService {
         include: { coach: true },
       }),
       this.prisma.userRole.findMany({
-        where: { role: { name: ROLE_NAMES.HEAD_COACH }, user: { status: 'ACTIVE', deletedAt: null } },
+        where: { role: { name: ROLE_NAMES.HEAD_COACH }, user: { academyId, status: 'ACTIVE', deletedAt: null } },
         include: { user: true },
       }),
     ]);
@@ -661,7 +691,8 @@ export class TrainingService {
   // picking a team — the player's own team resolves (and auto-provisions) their Saturday
   // session behind the scenes.
   async quickMarkAttendance(playerId: string, user: RequestUser, status: AttendanceStatus = 'PRESENT') {
-    const player = await this.prisma.player.findUnique({ where: { id: playerId } });
+    const academyId = this.tenantContext.getAcademyId();
+    const player = await this.prisma.player.findFirst({ where: { id: playerId, academyId } });
     if (!player || player.deletedAt) {
       throw new NotFoundException('Player not found');
     }
@@ -682,7 +713,7 @@ export class TrainingService {
 
     return this.prisma.trainingAttendance.upsert({
       where: { trainingSessionId_playerId: { trainingSessionId: session.id, playerId } },
-      create: { trainingSessionId: session.id, playerId, status, recordedByUserId: user.userId, recordedAt },
+      create: { academyId, trainingSessionId: session.id, playerId, status, recordedByUserId: user.userId, recordedAt },
       update: { status, recordedByUserId: user.userId, recordedAt },
       include: {
         player: { select: { id: true, firstName: true, lastName: true, playerCode: true } },
@@ -707,6 +738,7 @@ export class TrainingService {
         this.prisma.trainingAttendance.upsert({
           where: { trainingSessionId_playerId: { trainingSessionId: id, playerId: record.playerId } },
           create: {
+            academyId: session.academyId,
             trainingSessionId: id,
             playerId: record.playerId,
             status: record.status,
@@ -737,19 +769,19 @@ export class TrainingService {
   }
 
   async addSessionActivity(sessionId: string, user: RequestUser, dto: CreateSessionActivityDto) {
-    await this.assertCanManageSession(sessionId, user);
+    const session = await this.assertCanManageSession(sessionId, user);
     const sortOrder = await this.prisma.trainingSessionActivity.count({ where: { trainingSessionId: sessionId } });
     await this.prisma.trainingSessionActivity.create({
-      data: { trainingSessionId: sessionId, name: dto.name, sortOrder },
+      data: { academyId: session.academyId, trainingSessionId: sessionId, name: dto.name, sortOrder },
     });
     return this.findOneSession(sessionId);
   }
 
   async removeSessionActivity(sessionId: string, activityId: string, user: RequestUser) {
-    await this.assertCanManageSession(sessionId, user);
+    const session = await this.assertCanManageSession(sessionId, user);
 
     const activity = await this.prisma.trainingSessionActivity.findFirst({
-      where: { id: activityId, trainingSessionId: sessionId },
+      where: { id: activityId, trainingSessionId: sessionId, academyId: session.academyId },
       include: { _count: { select: { ratings: true } } },
     });
     if (!activity) {

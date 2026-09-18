@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { GalleryPhotoContext } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { TenantContextService } from '../../common/tenant-context/tenant-context.service';
 import { StorageService } from '../storage/storage.service';
 
 const ALLOWED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
@@ -12,10 +13,13 @@ export class GalleryService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly storage: StorageService,
+    private readonly tenantContext: TenantContextService,
   ) {}
 
   async findPublic() {
+    const academyId = this.tenantContext.getAcademyId();
     const photos = await this.prisma.galleryPhoto.findMany({
+      where: { academyId },
       orderBy: [{ context: 'asc' }, { sortOrder: 'asc' }],
     });
     return photos.map((photo) => ({
@@ -40,6 +44,7 @@ export class GalleryService {
     details: string,
     uploadedByUserId: string,
   ) {
+    const academyId = this.tenantContext.getAcademyId();
     if (!files || files.length === 0) {
       throw new BadRequestException('At least one photo is required');
     }
@@ -55,7 +60,7 @@ export class GalleryService {
       }
     }
 
-    const previousPhotos = await this.prisma.galleryPhoto.findMany({ where: { context } });
+    const previousPhotos = await this.prisma.galleryPhoto.findMany({ where: { context, academyId } });
 
     const uploaded = await Promise.all(
       files.map((file) => this.storage.save(file.originalname, file.mimetype, file.buffer)),
@@ -63,6 +68,7 @@ export class GalleryService {
 
     await this.prisma.galleryPhoto.createMany({
       data: uploaded.map((stored, index) => ({
+        academyId,
         context,
         storageKey: stored.storageKey,
         sortOrder: index,
@@ -73,7 +79,9 @@ export class GalleryService {
     });
 
     if (previousPhotos.length > 0) {
-      await this.prisma.galleryPhoto.deleteMany({ where: { id: { in: previousPhotos.map((p) => p.id) } } });
+      await this.prisma.galleryPhoto.deleteMany({
+        where: { id: { in: previousPhotos.map((p) => p.id) }, academyId },
+      });
       await Promise.all(previousPhotos.map((photo) => this.storage.delete(photo.storageKey).catch(() => undefined)));
     }
 

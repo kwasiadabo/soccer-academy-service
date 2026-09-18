@@ -1,6 +1,7 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { TenantContextService } from '../../common/tenant-context/tenant-context.service';
 import { CoachContextService } from '../coaches/coach-context.service';
 import { PERMISSIONS, ROLE_NAMES } from '../rbac/permissions.constants';
 import { RequestUser } from '../auth/types';
@@ -21,6 +22,7 @@ export class MatchesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly coachContext: CoachContextService,
+    private readonly tenantContext: TenantContextService,
   ) {}
 
   // Matches have no owning coachId on the model itself (unlike TrainingPlan) —
@@ -48,16 +50,19 @@ export class MatchesService {
 
   // --- Opponents ---
   listOpponents() {
-    return this.prisma.opponent.findMany({ orderBy: { name: 'asc' } });
+    const academyId = this.tenantContext.getAcademyId();
+    return this.prisma.opponent.findMany({ where: { academyId }, orderBy: { name: 'asc' } });
   }
 
   createOpponent(dto: CreateOpponentDto) {
-    return this.prisma.opponent.create({ data: dto });
+    const academyId = this.tenantContext.getAcademyId();
+    return this.prisma.opponent.create({ data: { ...dto, academyId } });
   }
 
   // --- Matches ---
   private async getMatchOrThrow(id: string) {
-    const match = await this.prisma.match.findUnique({ where: { id }, include: MATCH_INCLUDE });
+    const academyId = this.tenantContext.getAcademyId();
+    const match = await this.prisma.match.findFirst({ where: { id, academyId }, include: MATCH_INCLUDE });
     if (!match) {
       throw new NotFoundException('Match not found');
     }
@@ -65,13 +70,14 @@ export class MatchesService {
   }
 
   async findAll(user: RequestUser) {
+    const academyId = this.tenantContext.getAcademyId();
     if (this.isUnscoped(user)) {
-      return this.prisma.match.findMany({ include: MATCH_INCLUDE, orderBy: { matchDate: 'desc' } });
+      return this.prisma.match.findMany({ where: { academyId }, include: MATCH_INCLUDE, orderBy: { matchDate: 'desc' } });
     }
     const coachId = await this.coachContext.resolveCoachId(user.userId);
     const teamIds = await this.coachContext.getAssignedTeamIds(coachId);
     return this.prisma.match.findMany({
-      where: { teamId: { in: teamIds } },
+      where: { academyId, teamId: { in: teamIds } },
       include: MATCH_INCLUDE,
       orderBy: { matchDate: 'desc' },
     });
@@ -82,7 +88,7 @@ export class MatchesService {
     await this.assertCanManageTeam(user, match.teamId);
 
     const roster = await this.prisma.player.findMany({
-      where: { status: 'ACTIVE', deletedAt: null, teamId: match.teamId },
+      where: { status: 'ACTIVE', deletedAt: null, teamId: match.teamId, academyId: match.academyId },
       select: { id: true, firstName: true, lastName: true },
       orderBy: { lastName: 'asc' },
     });
@@ -92,9 +98,10 @@ export class MatchesService {
 
   async create(user: RequestUser, dto: CreateMatchDto) {
     await this.assertCanManageTeam(user, dto.teamId);
+    const academyId = this.tenantContext.getAcademyId();
     const { matchDate, ...rest } = dto;
     return this.prisma.match.create({
-      data: { ...rest, matchDate: new Date(matchDate) },
+      data: { ...rest, academyId, matchDate: new Date(matchDate) },
       include: MATCH_INCLUDE,
     });
   }
@@ -104,7 +111,7 @@ export class MatchesService {
     await this.assertCanManageTeam(user, match.teamId);
     const { matchDate, ...rest } = dto;
     await this.prisma.match.update({
-      where: { id },
+      where: { id, academyId: match.academyId },
       data: { ...rest, matchDate: matchDate ? new Date(matchDate) : undefined },
     });
     return this.getMatchOrThrow(id);
@@ -113,10 +120,10 @@ export class MatchesService {
   // No other player-scoped activity (squad selection, match ratings) is allowed until the
   // registration fee is paid and the player has moved to ACTIVE — mirrors the same gate
   // already enforced for training sessions/assessments.
-  private async assertPlayersAreActive(playerIds: string[]): Promise<void> {
+  private async assertPlayersAreActive(academyId: string, playerIds: string[]): Promise<void> {
     if (playerIds.length === 0) return;
     const players = await this.prisma.player.findMany({
-      where: { id: { in: playerIds } },
+      where: { id: { in: playerIds }, academyId },
       select: { id: true, status: true },
     });
     const inactive = players.filter((p) => p.status !== 'ACTIVE');
@@ -135,13 +142,13 @@ export class MatchesService {
     // who has since been suspended) can still have their existing record edited.
     const existingPlayerIds = new Set(match.participations.map((p) => p.playerId));
     const newPlayerIds = dto.records.map((r) => r.playerId).filter((playerId) => !existingPlayerIds.has(playerId));
-    await this.assertPlayersAreActive(newPlayerIds);
+    await this.assertPlayersAreActive(match.academyId, newPlayerIds);
 
     await this.prisma.$transaction(
       dto.records.map((record) =>
         this.prisma.matchParticipation.upsert({
           where: { matchId_playerId: { matchId: id, playerId: record.playerId } },
-          create: { matchId: id, ...record },
+          create: { matchId: id, academyId: match.academyId, ...record },
           update: record,
         }),
       ),
@@ -154,12 +161,12 @@ export class MatchesService {
     const match = await this.getMatchOrThrow(id);
     await this.assertCanRateMatch(user, match.teamId);
     const coachId = await this.coachContext.resolveCoachId(user.userId);
-    await this.assertPlayersAreActive([dto.playerId]);
+    await this.assertPlayersAreActive(match.academyId, [dto.playerId]);
 
     const { playerId, ...ratings } = dto;
     await this.prisma.matchPlayerAssessment.upsert({
       where: { matchId_playerId: { matchId: id, playerId } },
-      create: { matchId: id, playerId, assessedByCoachId: coachId, ...ratings },
+      create: { matchId: id, playerId, academyId: match.academyId, assessedByCoachId: coachId, ...ratings },
       update: { assessedByCoachId: coachId, ...ratings },
     });
 

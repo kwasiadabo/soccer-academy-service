@@ -69,7 +69,7 @@ export class BillingService {
     const [subscription, academy, activePlayerCount, pricePerPlayer, invoices] = await Promise.all([
       this.prisma.academySubscription.findUnique({ where: { academyId } }),
       this.prisma.academy.findUniqueOrThrow({ where: { id: academyId } }),
-      this.prisma.player.count({ where: { status: 'ACTIVE' } }),
+      this.prisma.player.count({ where: { academyId, status: 'ACTIVE' } }),
       this.getCurrentPricePerPlayer(),
       this.prisma.platformInvoice.findMany({ where: { academyId }, orderBy: { createdAt: 'desc' }, take: 12 }),
     ]);
@@ -112,7 +112,7 @@ export class BillingService {
     const academyId = this.tenantContext.getAcademyId();
     const [subscription, activePlayerCount, pricePerPlayer] = await Promise.all([
       this.prisma.academySubscription.findUnique({ where: { academyId } }),
-      this.prisma.player.count({ where: { status: 'ACTIVE' } }),
+      this.prisma.player.count({ where: { academyId, status: 'ACTIVE' } }),
       this.getCurrentPricePerPlayer(),
     ]);
     if (!subscription) {
@@ -145,7 +145,7 @@ export class BillingService {
     const periodStart = subscription.currentPeriodEnd > now ? subscription.currentPeriodEnd : now;
     const periodEnd = addDays(periodStart, BILLING_PERIOD_DAYS);
     const pricePerPlayer = await this.getCurrentPricePerPlayer();
-    const activePlayerCount = await this.prisma.player.count({ where: { status: 'ACTIVE' } });
+    const activePlayerCount = await this.prisma.player.count({ where: { academyId, status: 'ACTIVE' } });
 
     await this.prisma.$transaction([
       this.prisma.academySubscription.update({
@@ -241,7 +241,7 @@ export class BillingService {
     subscription: { currentPeriodEnd: Date; paystackAuthorizationCode: string | null; paystackAuthorizationEmail: string | null },
   ): Promise<void> {
     const pricePerPlayer = await this.getCurrentPricePerPlayer();
-    const activePlayerCount = await this.prisma.player.count({ where: { status: 'ACTIVE' } });
+    const activePlayerCount = await this.prisma.player.count({ where: { academyId, status: 'ACTIVE' } });
     const periodStart = subscription.currentPeriodEnd;
     const periodEnd = addDays(periodStart, BILLING_PERIOD_DAYS);
     const amount = activePlayerCount * pricePerPlayer;
