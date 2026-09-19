@@ -3,16 +3,19 @@ import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { AcademyStatus } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
-import { randomBytes } from 'crypto';
+import { randomBytes, randomUUID } from 'crypto';
 import { TenantContextService } from '../../common/tenant-context/tenant-context.service';
 import { BillingService } from '../billing/billing.service';
+import { PlatformPaystackService } from '../billing/platform-paystack.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ROLE_NAMES } from '../rbac/permissions.constants';
 import { StorageService } from '../storage/storage.service';
+import { InitializeSignupPaymentDto } from './dto/initialize-signup-payment.dto';
 import { OnboardAcademyDto } from './dto/onboard-academy.dto';
 import { SignupAcademyDto } from './dto/signup-academy.dto';
 import { SubmitPlatformLeadDto } from './dto/submit-platform-lead.dto';
 import { UpdatePricingDto } from './dto/update-pricing.dto';
+import { VerifySignupPaymentDto } from './dto/verify-signup-payment.dto';
 import { PlatformAdminJwtPayload } from './platform-admin.types';
 
 function generateTemporaryPassword(): string {
@@ -28,6 +31,7 @@ export class PlatformAdminService {
     private readonly tenantContext: TenantContextService,
     private readonly billing: BillingService,
     private readonly storage: StorageService,
+    private readonly platformPaystack: PlatformPaystackService,
     config: ConfigService,
   ) {
     this.jwt = new JwtService({
@@ -226,16 +230,60 @@ export class PlatformAdminService {
 
   async getPricing() {
     const pricing = await this.prisma.platformPricing.findUnique({ where: { id: 'default' } });
-    return { pricePerPlayer: Number(pricing?.pricePerPlayer ?? 20), currency: pricing?.currency ?? 'GHS' };
+    return {
+      pricePerPlayer: Number(pricing?.pricePerPlayer ?? 20),
+      signupFee: Number(pricing?.signupFee ?? 0),
+      currency: pricing?.currency ?? 'GHS',
+    };
   }
 
   async updatePricing(dto: UpdatePricingDto) {
     const pricing = await this.prisma.platformPricing.upsert({
       where: { id: 'default' },
-      update: { pricePerPlayer: dto.pricePerPlayer },
-      create: { id: 'default', pricePerPlayer: dto.pricePerPlayer },
+      update: { pricePerPlayer: dto.pricePerPlayer, signupFee: dto.signupFee },
+      create: { id: 'default', pricePerPlayer: dto.pricePerPlayer, signupFee: dto.signupFee },
     });
-    return { pricePerPlayer: Number(pricing.pricePerPlayer), currency: pricing.currency };
+    return {
+      pricePerPlayer: Number(pricing.pricePerPlayer),
+      signupFee: Number(pricing.signupFee),
+      currency: pricing.currency,
+    };
+  }
+
+  // Step one of paid self-serve signup: charge the platform's configured
+  // one-time signup fee *before* anything is created. The academy/admin
+  // details the caller already collected aren't persisted anywhere here —
+  // the frontend carries them through the Paystack redirect itself and
+  // re-submits them to verifySignupPayment below.
+  async initializeSignupPayment(dto: InitializeSignupPaymentDto) {
+    const pricing = await this.prisma.platformPricing.findUnique({ where: { id: 'default' } });
+    const signupFee = Number(pricing?.signupFee ?? 0);
+    if (signupFee <= 0) {
+      throw new BadRequestException(
+        'Self-serve signup is not available yet — ask a platform admin to configure the signup fee.',
+      );
+    }
+
+    const reference = `signup_${randomUUID()}`;
+    const result = await this.platformPaystack.initializeTransaction({
+      email: dto.email,
+      amount: signupFee,
+      reference,
+      callbackUrl: dto.callbackUrl,
+    });
+    return { authorizationUrl: result.authorizationUrl, reference: result.reference };
+  }
+
+  // Step two: verify the signup fee was actually paid (never trusts the
+  // redirect alone — see billing.service.ts#verifyAndApplyPayment for the
+  // same pattern), then, only on success, creates the academy exactly as
+  // signupAcademy() always has.
+  async verifySignupPayment(dto: VerifySignupPaymentDto, logo?: Express.Multer.File) {
+    const verification = await this.platformPaystack.verifyTransaction(dto.reference);
+    if (verification.status !== 'success') {
+      throw new BadRequestException('Payment was not successful');
+    }
+    return this.signupAcademy(dto, logo);
   }
 
   // Public — submitted from the SAMS product landing page's "Sign up" form,

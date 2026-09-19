@@ -447,6 +447,10 @@ model TrainingScheduleSlot {
 model PlatformPricing {
   id             String   @id @default("default")
   pricePerPlayer Decimal  @db.Decimal(10, 2)
+  // One-time fee charged during self-serve signup, before the academy account
+  // is created (see PlatformAdminService#initializeSignupPayment) — separate
+  // from pricePerPlayer, which is the recurring per-player subscription rate.
+  signupFee      Decimal  @default(0) @db.Decimal(10, 2)
   currency       String   @default("GHS")
   updatedAt      DateTime @updatedAt
 

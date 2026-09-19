@@ -7,6 +7,6 @@ import { PlatformPaystackService } from './platform-paystack.service';
 @Module({
   controllers: [BillingController],
   providers: [BillingService, PlatformPaystackService, PlatformEmailService],
-  exports: [BillingService, PlatformEmailService],
+  exports: [BillingService, PlatformEmailService, PlatformPaystackService],
 })
 export class BillingModule {}

@@ -3,11 +3,13 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiConsumes, ApiOkResponse, ApiOperation, ApiTags, ApiUnauthorizedResponse } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { PlatformAdminAuthGuard } from './guards/platform-admin-jwt-auth.guard';
+import { InitializeSignupPaymentDto } from './dto/initialize-signup-payment.dto';
 import { OnboardAcademyDto } from './dto/onboard-academy.dto';
 import { PlatformAdminLoginDto } from './dto/platform-admin-login.dto';
 import { SignupAcademyDto } from './dto/signup-academy.dto';
 import { SubmitPlatformLeadDto } from './dto/submit-platform-lead.dto';
 import { UpdatePricingDto } from './dto/update-pricing.dto';
+import { VerifySignupPaymentDto } from './dto/verify-signup-payment.dto';
 import { PlatformAdminService } from './platform-admin.service';
 
 // The platform-operator control plane — sits above every academy, gated by its
@@ -91,6 +93,29 @@ export class PlatformAdminController {
   @ApiOkResponse({ description: 'Academy created.' })
   signup(@Body() dto: SignupAcademyDto, @UploadedFile() logo?: Express.Multer.File) {
     return this.platformAdmin.signupAcademy(dto, logo);
+  }
+
+  // Public — step one of the paid signup flow: charges the configured
+  // signup fee via Paystack before any academy/admin details are collected
+  // as a real account. Nothing is created here.
+  @Post('signup/initialize-payment')
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @ApiOperation({ summary: 'Start the one-time signup fee payment (unauthenticated).' })
+  @ApiOkResponse({ description: 'Paystack checkout URL returned.' })
+  initializeSignupPayment(@Body() dto: InitializeSignupPaymentDto) {
+    return this.platformAdmin.initializeSignupPayment(dto);
+  }
+
+  // Public — step two: verifies the signup fee was actually paid, then
+  // creates the academy exactly like signup() above.
+  @Post('signup/verify-and-create')
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(FileInterceptor('logo', { limits: { fileSize: 5 * 1024 * 1024 } }))
+  @ApiOperation({ summary: 'Verify the signup fee payment and create the academy (unauthenticated).' })
+  @ApiOkResponse({ description: 'Academy created.' })
+  verifySignupPayment(@Body() dto: VerifySignupPaymentDto, @UploadedFile() logo?: Express.Multer.File) {
+    return this.platformAdmin.verifySignupPayment(dto, logo);
   }
 
   @Get('leads')

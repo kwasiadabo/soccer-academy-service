@@ -6,4 +6,9 @@ export class UpdatePricingDto {
   @IsNumber()
   @Min(0)
   pricePerPlayer!: number;
+
+  @ApiProperty({ description: 'One-time GHS fee charged during self-serve signup, before payment' })
+  @IsNumber()
+  @Min(0)
+  signupFee!: number;
 }
