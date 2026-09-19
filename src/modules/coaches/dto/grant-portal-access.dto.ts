@@ -2,7 +2,12 @@ import { ApiProperty } from '@nestjs/swagger';
 import { ArrayMinSize, IsArray, IsEmail, IsIn } from 'class-validator';
 import { ROLE_NAMES } from '../../rbac/permissions.constants';
 
-const GRANTABLE_ROLES = [ROLE_NAMES.COACH, ROLE_NAMES.HEAD_COACH] as const;
+const GRANTABLE_ROLES = [
+  ROLE_NAMES.COACH,
+  ROLE_NAMES.HEAD_COACH,
+  ROLE_NAMES.RECEPTIONIST,
+  ROLE_NAMES.ADMIN,
+] as const;
 
 export class GrantCoachPortalAccessDto {
   @ApiProperty()
