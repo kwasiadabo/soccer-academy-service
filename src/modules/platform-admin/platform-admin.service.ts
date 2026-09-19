@@ -1,11 +1,12 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import { AcademyStatus } from '@prisma/client';
+import { AcademyStatus, InquiryStatus } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { randomBytes, randomUUID } from 'crypto';
 import { TenantContextService } from '../../common/tenant-context/tenant-context.service';
 import { BillingService } from '../billing/billing.service';
+import { PlatformEmailService } from '../billing/platform-email.service';
 import { PlatformPaystackService } from '../billing/platform-paystack.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ROLE_NAMES } from '../rbac/permissions.constants';
@@ -22,6 +23,18 @@ function generateTemporaryPassword(): string {
   return randomBytes(9).toString('base64url');
 }
 
+// The lead form is public and unauthenticated, so its fields must never be
+// interpolated into the notification email's HTML unescaped — otherwise
+// anyone could inject markup/links into a message SAMS staff open and trust.
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 @Injectable()
 export class PlatformAdminService {
   private readonly jwt: JwtService;
@@ -32,7 +45,8 @@ export class PlatformAdminService {
     private readonly billing: BillingService,
     private readonly storage: StorageService,
     private readonly platformPaystack: PlatformPaystackService,
-    config: ConfigService,
+    private readonly platformEmail: PlatformEmailService,
+    private readonly config: ConfigService,
   ) {
     this.jwt = new JwtService({
       secret: config.get<string>('JWT_PLATFORM_ADMIN_SECRET'),
@@ -313,11 +327,41 @@ export class PlatformAdminService {
   // Public — submitted from the SAMS product landing page's "Sign up" form,
   // before the prospective academy exists at all. Not tenant-scoped: there's
   // no academy to attach this to yet.
-  submitLead(dto: SubmitPlatformLeadDto) {
-    return this.prisma.platformLead.create({ data: dto });
+  async submitLead(dto: SubmitPlatformLeadDto) {
+    const lead = await this.prisma.platformLead.create({ data: dto });
+    await this.notifyNewLead(dto);
+    return lead;
+  }
+
+  // Fire-and-forget heads-up to SAMS itself — otherwise a lead just sits
+  // there until someone happens to open the platform dashboard's Leads tab.
+  // Never throws (see PlatformEmailService#send), so a notification failure
+  // can't turn into a failed submission for the prospect.
+  private async notifyNewLead(dto: SubmitPlatformLeadDto): Promise<void> {
+    const to = this.config.get<string>('SAMS_LEADS_NOTIFICATION_EMAIL') ?? 'adabo@variablexsolutions.com';
+    await this.platformEmail.send({
+      to,
+      subject: `New walkthrough request — ${dto.academyName}`,
+      html: `<p>A prospective academy just asked to bring their academy onto SAMS.</p>
+        <ul>
+          <li><strong>Academy:</strong> ${escapeHtml(dto.academyName)}</li>
+          <li><strong>Training location:</strong> ${escapeHtml(dto.trainingLocation)}</li>
+          <li><strong>Contact:</strong> ${escapeHtml(dto.contactName)} — ${escapeHtml(dto.contactEmail)} — ${escapeHtml(dto.contactPhone)}</li>
+          ${dto.message ? `<li><strong>Message:</strong> ${escapeHtml(dto.message)}</li>` : ''}
+        </ul>
+        <p>Open the platform dashboard's Leads tab to follow up.</p>`,
+    });
   }
 
   listLeads() {
     return this.prisma.platformLead.findMany({ orderBy: { createdAt: 'desc' } });
+  }
+
+  async updateLeadStatus(id: string, status: InquiryStatus) {
+    const lead = await this.prisma.platformLead.findUnique({ where: { id } });
+    if (!lead) {
+      throw new NotFoundException('Lead not found');
+    }
+    return this.prisma.platformLead.update({ where: { id }, data: { status } });
   }
 }

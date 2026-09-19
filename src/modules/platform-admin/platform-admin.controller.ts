@@ -8,6 +8,7 @@ import { OnboardAcademyDto } from './dto/onboard-academy.dto';
 import { PlatformAdminLoginDto } from './dto/platform-admin-login.dto';
 import { SignupAcademyDto } from './dto/signup-academy.dto';
 import { SubmitPlatformLeadDto } from './dto/submit-platform-lead.dto';
+import { UpdateLeadStatusDto } from './dto/update-lead-status.dto';
 import { UpdatePricingDto } from './dto/update-pricing.dto';
 import { VerifySignupPaymentDto } from './dto/verify-signup-payment.dto';
 import { PlatformAdminService } from './platform-admin.service';
@@ -126,6 +127,16 @@ export class PlatformAdminController {
   @ApiOkResponse({ description: 'Leads returned.' })
   listLeads() {
     return this.platformAdmin.listLeads();
+  }
+
+  @Patch('leads/:id/status')
+  @UseGuards(PlatformAdminAuthGuard)
+  @ApiBearerAuth()
+  @ApiUnauthorizedResponse({ description: 'Missing or invalid platform admin token.' })
+  @ApiOperation({ summary: "Update a lead's follow-up status." })
+  @ApiOkResponse({ description: 'Lead updated.' })
+  updateLeadStatus(@Param('id') id: string, @Body() dto: UpdateLeadStatusDto) {
+    return this.platformAdmin.updateLeadStatus(id, dto.status);
   }
 
   // Public — the SAMS landing page's pricing section reads the live price.

@@ -38,6 +38,10 @@ export const envSchema = z.object({
 	// above are kept only as a fallback for when this isn't configured.
 	RESEND_API_KEY: z.string().optional(),
 	RESEND_FROM_EMAIL: z.string().optional(),
+	// Where "Request a walkthrough" lead notifications go (see
+	// PlatformAdminService#notifyNewLead) — falls back to SAMS's own contact
+	// address if unset.
+	SAMS_LEADS_NOTIFICATION_EMAIL: z.string().optional(),
 });
 
 export type EnvConfig = z.infer<typeof envSchema>;
