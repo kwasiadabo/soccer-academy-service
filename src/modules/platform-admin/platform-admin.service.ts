@@ -53,6 +53,19 @@ export class PlatformAdminService {
     return { accessToken: await this.jwt.signAsync(payload) };
   }
 
+  // The public self-serve flow no longer lets the caller pick their own slug
+  // (see sams-signup-page.tsx) — it's derived from the academy name, so two
+  // "Riverside FC" signups would otherwise collide. Appending "-2", "-3", …
+  // resolves that silently instead of failing a signup that, in the paid
+  // flow, happens *after* the signup fee has already been charged.
+  private async resolveUniqueSlug(baseSlug: string): Promise<string> {
+    let candidate = baseSlug;
+    for (let suffix = 2; await this.prisma.academy.findUnique({ where: { slug: candidate } }); suffix += 1) {
+      candidate = `${baseSlug}-${suffix}`;
+    }
+    return candidate;
+  }
+
   // Shared by both ways an academy comes into being: a platform admin
   // onboarding one on someone's behalf (onboardAcademy) and a prospective
   // academy signing itself up from the public landing page (signupAcademy) —
@@ -69,14 +82,24 @@ export class PlatformAdminService {
     adminLastName: string;
     passwordHash: string;
     mustChangePassword: boolean;
+    // Platform-admin onboarding picks its slug deliberately, so a collision
+    // there is a genuine mistake worth surfacing (ConflictException). Public
+    // self-serve signup should just resolve it — see resolveUniqueSlug above.
+    resolveSlugConflict?: boolean;
   }) {
-    const existing = await this.prisma.academy.findUnique({ where: { slug: params.slug } });
-    if (existing) {
-      throw new ConflictException(`An academy with slug '${params.slug}' already exists`);
+    const slug = params.resolveSlugConflict
+      ? await this.resolveUniqueSlug(params.slug)
+      : params.slug;
+
+    if (!params.resolveSlugConflict) {
+      const existing = await this.prisma.academy.findUnique({ where: { slug } });
+      if (existing) {
+        throw new ConflictException(`An academy with slug '${slug}' already exists`);
+      }
     }
 
     const academy = await this.prisma.academy.create({
-      data: { slug: params.slug, name: params.name, status: 'ACTIVE' },
+      data: { slug, name: params.name, status: 'ACTIVE' },
     });
 
     const adminUser = await this.tenantContext.run({ academyId: academy.id, slug: academy.slug }, async () => {
@@ -165,6 +188,7 @@ export class PlatformAdminService {
       adminLastName: dto.adminLastName,
       passwordHash,
       mustChangePassword: false,
+      resolveSlugConflict: true,
     });
 
     return { academy: { id: academy.id, slug: academy.slug, name: academy.name } };
