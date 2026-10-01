@@ -6,6 +6,7 @@ import { PrismaService } from '../prisma/prisma.service';
 interface TokenPair {
     accessToken: string;
     refreshToken: string;
+    academySlug: string;
 }
 export declare class AuthService {
     private readonly prisma;

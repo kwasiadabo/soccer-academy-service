@@ -20,6 +20,7 @@ import {
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
+import { ConfigService } from '@nestjs/config';
 import { Request, Response } from 'express';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
@@ -33,16 +34,27 @@ import { RequestUser } from './types';
 import { AuditLog } from '../audit/audit-log.decorator';
 
 const REFRESH_COOKIE = 'refresh_token';
-const REFRESH_COOKIE_OPTIONS = {
-  httpOnly: true,
-  sameSite: 'lax' as const,
-  path: '/api/auth',
-};
 
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly config: ConfigService,
+  ) {}
+
+  // A Domain attribute, when configured, shares this cookie across every
+  // academy subdomain and the bare root domain — see COOKIE_DOMAIN in
+  // env.validation.ts for why this is conditional rather than hardcoded.
+  private refreshCookieOptions() {
+    const domain = this.config.get<string>('COOKIE_DOMAIN');
+    return {
+      httpOnly: true,
+      sameSite: 'lax' as const,
+      path: '/api/auth',
+      ...(domain ? { domain } : {}),
+    };
+  }
 
   @Post('login')
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
@@ -53,7 +65,7 @@ export class AuthController {
   @AuditLog({ action: 'AUTH_LOGIN', entityType: 'User' })
   async login(@Body() dto: LoginDto, @Res({ passthrough: true }) res: Response): Promise<AuthResponseDto> {
     const { tokens, user } = await this.authService.login(dto.email, dto.password);
-    res.cookie(REFRESH_COOKIE, tokens.refreshToken, REFRESH_COOKIE_OPTIONS);
+    res.cookie(REFRESH_COOKIE, tokens.refreshToken, this.refreshCookieOptions());
     return { accessToken: tokens.accessToken, user };
   }
 
@@ -66,15 +78,21 @@ export class AuthController {
   async refresh(
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
-  ): Promise<{ accessToken: string }> {
+  ): Promise<{ accessToken: string; academySlug: string }> {
     const refreshToken = (req.cookies as Record<string, string> | undefined)?.[REFRESH_COOKIE];
     if (!refreshToken) {
       throw new UnauthorizedException('No refresh token provided');
     }
 
     const tokens = await this.authService.refresh(refreshToken);
-    res.cookie(REFRESH_COOKIE, tokens.refreshToken, REFRESH_COOKIE_OPTIONS);
-    return { accessToken: tokens.accessToken };
+    res.cookie(REFRESH_COOKIE, tokens.refreshToken, this.refreshCookieOptions());
+    // Returned explicitly rather than requiring a follow-up /auth/me call:
+    // with COOKIE_DOMAIN set, this can succeed from a different academy's
+    // subdomain (or the bare root) than the one the session was issued on,
+    // and /auth/me's JwtStrategy deliberately rejects an access token whose
+    // academyId doesn't match the current request's — exactly the mismatch
+    // the caller needs this slug to resolve (by redirecting there instead).
+    return { accessToken: tokens.accessToken, academySlug: tokens.academySlug };
   }
 
   @Post('forgot-password')
@@ -138,7 +156,9 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ): Promise<{ success: true }> {
     await this.authService.logout(user.userId);
-    res.clearCookie(REFRESH_COOKIE, { path: '/api/auth' });
+    // Must match the Set-Cookie's own domain/path exactly, or the browser
+    // treats this as clearing a different cookie and leaves the real one in place.
+    res.clearCookie(REFRESH_COOKIE, this.refreshCookieOptions());
     return { success: true };
   }
 }

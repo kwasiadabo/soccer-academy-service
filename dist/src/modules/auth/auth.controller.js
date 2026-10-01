@@ -16,6 +16,7 @@ exports.AuthController = void 0;
 const common_1 = require("@nestjs/common");
 const swagger_1 = require("@nestjs/swagger");
 const throttler_1 = require("@nestjs/throttler");
+const config_1 = require("@nestjs/config");
 const auth_service_1 = require("./auth.service");
 const login_dto_1 = require("./dto/login.dto");
 const forgot_password_dto_1 = require("./dto/forgot-password.dto");
@@ -25,18 +26,23 @@ const jwt_auth_guard_1 = require("./guards/jwt-auth.guard");
 const current_user_decorator_1 = require("./decorators/current-user.decorator");
 const audit_log_decorator_1 = require("../audit/audit-log.decorator");
 const REFRESH_COOKIE = 'refresh_token';
-const REFRESH_COOKIE_OPTIONS = {
-    httpOnly: true,
-    sameSite: 'lax',
-    path: '/api/auth',
-};
 let AuthController = class AuthController {
-    constructor(authService) {
+    constructor(authService, config) {
         this.authService = authService;
+        this.config = config;
+    }
+    refreshCookieOptions() {
+        const domain = this.config.get('COOKIE_DOMAIN');
+        return {
+            httpOnly: true,
+            sameSite: 'lax',
+            path: '/api/auth',
+            ...(domain ? { domain } : {}),
+        };
     }
     async login(dto, res) {
         const { tokens, user } = await this.authService.login(dto.email, dto.password);
-        res.cookie(REFRESH_COOKIE, tokens.refreshToken, REFRESH_COOKIE_OPTIONS);
+        res.cookie(REFRESH_COOKIE, tokens.refreshToken, this.refreshCookieOptions());
         return { accessToken: tokens.accessToken, user };
     }
     async refresh(req, res) {
@@ -45,8 +51,8 @@ let AuthController = class AuthController {
             throw new common_1.UnauthorizedException('No refresh token provided');
         }
         const tokens = await this.authService.refresh(refreshToken);
-        res.cookie(REFRESH_COOKIE, tokens.refreshToken, REFRESH_COOKIE_OPTIONS);
-        return { accessToken: tokens.accessToken };
+        res.cookie(REFRESH_COOKIE, tokens.refreshToken, this.refreshCookieOptions());
+        return { accessToken: tokens.accessToken, academySlug: tokens.academySlug };
     }
     async forgotPassword(dto) {
         await this.authService.requestPasswordReset(dto.email);
@@ -65,7 +71,7 @@ let AuthController = class AuthController {
     }
     async logout(user, res) {
         await this.authService.logout(user.userId);
-        res.clearCookie(REFRESH_COOKIE, { path: '/api/auth' });
+        res.clearCookie(REFRESH_COOKIE, this.refreshCookieOptions());
         return { success: true };
     }
 };
@@ -166,6 +172,7 @@ __decorate([
 exports.AuthController = AuthController = __decorate([
     (0, swagger_1.ApiTags)('auth'),
     (0, common_1.Controller)('auth'),
-    __metadata("design:paramtypes", [auth_service_1.AuthService])
+    __metadata("design:paramtypes", [auth_service_1.AuthService,
+        config_1.ConfigService])
 ], AuthController);
 //# sourceMappingURL=auth.controller.js.map

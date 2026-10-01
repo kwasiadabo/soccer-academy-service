@@ -1,3 +1,4 @@
+import { ConfigService } from '@nestjs/config';
 import { Request, Response } from 'express';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
@@ -8,10 +9,13 @@ import { AuthResponseDto } from './dto/auth-response.dto';
 import { RequestUser } from './types';
 export declare class AuthController {
     private readonly authService;
-    constructor(authService: AuthService);
+    private readonly config;
+    constructor(authService: AuthService, config: ConfigService);
+    private refreshCookieOptions;
     login(dto: LoginDto, res: Response): Promise<AuthResponseDto>;
     refresh(req: Request, res: Response): Promise<{
         accessToken: string;
+        academySlug: string;
     }>;
     forgotPassword(dto: ForgotPasswordDto): Promise<{
         message: string;

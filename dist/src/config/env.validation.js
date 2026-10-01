@@ -16,6 +16,7 @@ exports.envSchema = zod_1.z.object({
         .enum(['development', 'test', 'production'])
         .default('development'),
     CORS_ORIGIN: zod_1.z.string().default('http://sams.variablexsolutions.com'),
+    COOKIE_DOMAIN: zod_1.z.string().optional(),
     STORAGE_DRIVER: zod_1.z.enum(['local', 'cloudinary']).default('local'),
     STORAGE_LOCAL_PATH: zod_1.z.string().default('./uploads'),
     CLOUDINARY_URL: zod_1.z.string().optional(),

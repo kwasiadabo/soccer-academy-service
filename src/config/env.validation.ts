@@ -13,6 +13,16 @@ export const envSchema = z.object({
 		.enum(['development', 'test', 'production'])
 		.default('development'),
 	CORS_ORIGIN: z.string().default('http://sams.variablexsolutions.com'),
+	// Shares the refresh-token cookie across every academy subdomain and the
+	// bare root domain (e.g. "sams.variablexsolutions.com", no leading dot
+	// required) so a session started on one subdomain can be recognized on
+	// another — notably the bare marketing/signup domain, which otherwise can
+	// never see a cookie set while on an academy's own subdomain (see
+	// AuthController's REFRESH_COOKIE_OPTIONS). Left unset outside production:
+	// a Domain attribute that doesn't match the actual request host (as on
+	// localhost or *.lvh.me in local dev) makes browsers reject the cookie
+	// outright rather than just scoping it narrower.
+	COOKIE_DOMAIN: z.string().optional(),
 	STORAGE_DRIVER: z.enum(['local', 'cloudinary']).default('local'),
 	STORAGE_LOCAL_PATH: z.string().default('./uploads'),
 	CLOUDINARY_URL: z.string().optional(),

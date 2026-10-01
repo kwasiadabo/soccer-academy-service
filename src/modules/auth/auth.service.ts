@@ -18,6 +18,7 @@ const RESET_TOKEN_TTL_MS = 60 * 60 * 1000;
 interface TokenPair {
   accessToken: string;
   refreshToken: string;
+  academySlug: string;
 }
 
 @Injectable()
@@ -117,47 +118,70 @@ export class AuthService {
   }
 
   private async issueTokens(payload: JwtPayload): Promise<TokenPair> {
+    const slug = this.tenantContext.getSlug();
     const accessToken = await this.accessTokenJwt.signAsync(payload);
-    const refreshToken = await this.refreshTokenJwt.signAsync({ sub: payload.sub });
-    return { accessToken, refreshToken };
+    // Carries its own academy rather than relying on refresh() being called
+    // from that academy's own subdomain — see refresh() below for why.
+    const refreshToken = await this.refreshTokenJwt.signAsync({
+      sub: payload.sub,
+      academyId: payload.academyId,
+      slug,
+    });
+    return { accessToken, refreshToken, academySlug: slug };
   }
 
   async refresh(refreshToken: string): Promise<TokenPair> {
-    let decoded: { sub: string };
+    let decoded: { sub: string; academyId?: string; slug?: string };
     try {
       decoded = await this.refreshTokenJwt.verifyAsync(refreshToken);
     } catch {
       throw new UnauthorizedException('Invalid refresh token');
     }
 
-    const user = await this.prisma.user.findUnique({
-      where: { id: decoded.sub },
-      include: {
-        roles: {
-          include: { role: { include: { permissions: { include: { permission: true } } } } },
+    const run = async (): Promise<TokenPair> => {
+      const user = await this.prisma.user.findUnique({
+        where: { id: decoded.sub },
+        include: {
+          roles: {
+            include: { role: { include: { permissions: { include: { permission: true } } } } },
+          },
         },
-      },
-    });
+      });
 
-    if (!user || !user.refreshTokenHash || user.status !== 'ACTIVE' || user.deletedAt) {
-      throw new UnauthorizedException('Session expired, please log in again');
+      if (!user || !user.refreshTokenHash || user.status !== 'ACTIVE' || user.deletedAt) {
+        throw new UnauthorizedException('Session expired, please log in again');
+      }
+
+      const matches = await bcrypt.compare(refreshToken, user.refreshTokenHash);
+      if (!matches) {
+        // Possible token reuse/theft: revoke the session defensively.
+        await this.prisma.user.update({ where: { id: user.id }, data: { refreshTokenHash: null } });
+        throw new ForbiddenException('Refresh token invalid, session revoked');
+      }
+
+      const payload = this.buildPayload(user);
+      const tokens = await this.issueTokens(payload);
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: { refreshTokenHash: await bcrypt.hash(tokens.refreshToken, 10) },
+      });
+
+      return tokens;
+    };
+
+    // The refresh token carries its own academy, verified here instead of
+    // trusting whatever TenantResolutionMiddleware guessed from this
+    // request's Host header — unlike a normal authenticated call, a refresh
+    // may legitimately arrive from outside that academy's own subdomain
+    // (e.g. the bare marketing domain, restoring a session only to redirect
+    // the visitor to their actual academy; see COOKIE_DOMAIN). A token
+    // issued before this claim existed falls back to the old behavior
+    // (whatever context the request resolved to) so existing sessions
+    // survive the deploy instead of every academy being logged out at once.
+    if (decoded.academyId && decoded.slug) {
+      return this.tenantContext.run({ academyId: decoded.academyId, slug: decoded.slug }, run);
     }
-
-    const matches = await bcrypt.compare(refreshToken, user.refreshTokenHash);
-    if (!matches) {
-      // Possible token reuse/theft: revoke the session defensively.
-      await this.prisma.user.update({ where: { id: user.id }, data: { refreshTokenHash: null } });
-      throw new ForbiddenException('Refresh token invalid, session revoked');
-    }
-
-    const payload = this.buildPayload(user);
-    const tokens = await this.issueTokens(payload);
-    await this.prisma.user.update({
-      where: { id: user.id },
-      data: { refreshTokenHash: await bcrypt.hash(tokens.refreshToken, 10) },
-    });
-
-    return tokens;
+    return run();
   }
 
   async logout(userId: string): Promise<void> {

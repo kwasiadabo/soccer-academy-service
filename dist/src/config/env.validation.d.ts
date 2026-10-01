@@ -10,6 +10,7 @@ export declare const envSchema: z.ZodObject<{
     PORT: z.ZodDefault<z.ZodNumber>;
     NODE_ENV: z.ZodDefault<z.ZodEnum<["development", "test", "production"]>>;
     CORS_ORIGIN: z.ZodDefault<z.ZodString>;
+    COOKIE_DOMAIN: z.ZodOptional<z.ZodString>;
     STORAGE_DRIVER: z.ZodDefault<z.ZodEnum<["local", "cloudinary"]>>;
     STORAGE_LOCAL_PATH: z.ZodDefault<z.ZodString>;
     CLOUDINARY_URL: z.ZodOptional<z.ZodString>;
@@ -39,6 +40,7 @@ export declare const envSchema: z.ZodObject<{
     STORAGE_LOCAL_PATH: string;
     PAYSTACK_CURRENCY: string;
     CLOUDINARY_URL?: string | undefined;
+    COOKIE_DOMAIN?: string | undefined;
     PAYSTACK_SECRET_KEY?: string | undefined;
     PAYSTACK_PUBLIC_KEY?: string | undefined;
     NALO_API_KEY?: string | undefined;
@@ -61,6 +63,7 @@ export declare const envSchema: z.ZodObject<{
     PORT?: number | undefined;
     NODE_ENV?: "development" | "test" | "production" | undefined;
     CORS_ORIGIN?: string | undefined;
+    COOKIE_DOMAIN?: string | undefined;
     STORAGE_DRIVER?: "local" | "cloudinary" | undefined;
     STORAGE_LOCAL_PATH?: string | undefined;
     PAYSTACK_SECRET_KEY?: string | undefined;

@@ -114,9 +114,14 @@ let AuthService = AuthService_1 = class AuthService {
         };
     }
     async issueTokens(payload) {
+        const slug = this.tenantContext.getSlug();
         const accessToken = await this.accessTokenJwt.signAsync(payload);
-        const refreshToken = await this.refreshTokenJwt.signAsync({ sub: payload.sub });
-        return { accessToken, refreshToken };
+        const refreshToken = await this.refreshTokenJwt.signAsync({
+            sub: payload.sub,
+            academyId: payload.academyId,
+            slug,
+        });
+        return { accessToken, refreshToken, academySlug: slug };
     }
     async refresh(refreshToken) {
         let decoded;
@@ -126,29 +131,35 @@ let AuthService = AuthService_1 = class AuthService {
         catch {
             throw new common_1.UnauthorizedException('Invalid refresh token');
         }
-        const user = await this.prisma.user.findUnique({
-            where: { id: decoded.sub },
-            include: {
-                roles: {
-                    include: { role: { include: { permissions: { include: { permission: true } } } } },
+        const run = async () => {
+            const user = await this.prisma.user.findUnique({
+                where: { id: decoded.sub },
+                include: {
+                    roles: {
+                        include: { role: { include: { permissions: { include: { permission: true } } } } },
+                    },
                 },
-            },
-        });
-        if (!user || !user.refreshTokenHash || user.status !== 'ACTIVE' || user.deletedAt) {
-            throw new common_1.UnauthorizedException('Session expired, please log in again');
+            });
+            if (!user || !user.refreshTokenHash || user.status !== 'ACTIVE' || user.deletedAt) {
+                throw new common_1.UnauthorizedException('Session expired, please log in again');
+            }
+            const matches = await bcrypt.compare(refreshToken, user.refreshTokenHash);
+            if (!matches) {
+                await this.prisma.user.update({ where: { id: user.id }, data: { refreshTokenHash: null } });
+                throw new common_1.ForbiddenException('Refresh token invalid, session revoked');
+            }
+            const payload = this.buildPayload(user);
+            const tokens = await this.issueTokens(payload);
+            await this.prisma.user.update({
+                where: { id: user.id },
+                data: { refreshTokenHash: await bcrypt.hash(tokens.refreshToken, 10) },
+            });
+            return tokens;
+        };
+        if (decoded.academyId && decoded.slug) {
+            return this.tenantContext.run({ academyId: decoded.academyId, slug: decoded.slug }, run);
         }
-        const matches = await bcrypt.compare(refreshToken, user.refreshTokenHash);
-        if (!matches) {
-            await this.prisma.user.update({ where: { id: user.id }, data: { refreshTokenHash: null } });
-            throw new common_1.ForbiddenException('Refresh token invalid, session revoked');
-        }
-        const payload = this.buildPayload(user);
-        const tokens = await this.issueTokens(payload);
-        await this.prisma.user.update({
-            where: { id: user.id },
-            data: { refreshTokenHash: await bcrypt.hash(tokens.refreshToken, 10) },
-        });
-        return tokens;
+        return run();
     }
     async logout(userId) {
         await this.prisma.user.update({ where: { id: userId }, data: { refreshTokenHash: null } });
