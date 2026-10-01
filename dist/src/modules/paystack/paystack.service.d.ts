@@ -16,6 +16,7 @@ export declare class PaystackService {
     private readonly logger;
     constructor(prisma: PrismaService, tenantContext: TenantContextService);
     private getCredentials;
+    private fetchPaystack;
     chargeMobileMoney(params: {
         email: string;
         amount: number;

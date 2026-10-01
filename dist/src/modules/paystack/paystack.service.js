@@ -28,9 +28,18 @@ let PaystackService = PaystackService_1 = class PaystackService {
         }
         return { secretKey: settings.paystackSecretKey, currency: settings.paystackCurrency };
     }
+    async fetchPaystack(url, init) {
+        try {
+            return await fetch(url, init);
+        }
+        catch (err) {
+            this.logger.error(`Could not reach Paystack (${url}): ${err.message}`);
+            throw new common_1.BadRequestException('Could not reach the payment provider — please try again shortly');
+        }
+    }
     async chargeMobileMoney(params) {
         const { secretKey, currency } = await this.getCredentials();
-        const response = await fetch('https://api.paystack.co/charge', {
+        const response = await this.fetchPaystack('https://api.paystack.co/charge', {
             method: 'POST',
             headers: {
                 Authorization: `Bearer ${secretKey}`,
@@ -57,9 +66,7 @@ let PaystackService = PaystackService_1 = class PaystackService {
     }
     async verifyTransaction(reference) {
         const { secretKey } = await this.getCredentials();
-        const response = await fetch(`https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`, {
-            headers: { Authorization: `Bearer ${secretKey}` },
-        });
+        const response = await this.fetchPaystack(`https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`, { headers: { Authorization: `Bearer ${secretKey}` } });
         const body = (await response.json());
         if (!response.ok || !body.status || !body.data) {
             throw new common_1.BadRequestException(body.message ?? 'Could not verify Paystack transaction');

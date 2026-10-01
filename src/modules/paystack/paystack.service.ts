@@ -43,6 +43,21 @@ export class PaystackService {
     return { secretKey: settings.paystackSecretKey, currency: settings.paystackCurrency };
   }
 
+  // A plain `fetch()` call throws on anything below the HTTP layer — DNS
+  // failure, no outbound route, TLS error, timeout — and none of that is an
+  // HttpException, so it would otherwise surface to the client as an opaque,
+  // undiagnosable 500 rather than a clear "payment provider unreachable"
+  // error. Every Paystack call goes through this wrapper so that failure
+  // mode is caught and reported the same way a Paystack-side rejection is.
+  private async fetchPaystack(url: string, init: RequestInit): Promise<Response> {
+    try {
+      return await fetch(url, init);
+    } catch (err) {
+      this.logger.error(`Could not reach Paystack (${url}): ${(err as Error).message}`);
+      throw new BadRequestException('Could not reach the payment provider — please try again shortly');
+    }
+  }
+
   async chargeMobileMoney(params: {
     email: string;
     amount: number;
@@ -52,7 +67,7 @@ export class PaystackService {
   }): Promise<PaystackChargeResult> {
     const { secretKey, currency } = await this.getCredentials();
 
-    const response = await fetch('https://api.paystack.co/charge', {
+    const response = await this.fetchPaystack('https://api.paystack.co/charge', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${secretKey}`,
@@ -88,9 +103,10 @@ export class PaystackService {
   async verifyTransaction(reference: string): Promise<PaystackVerification> {
     const { secretKey } = await this.getCredentials();
 
-    const response = await fetch(`https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`, {
-      headers: { Authorization: `Bearer ${secretKey}` },
-    });
+    const response = await this.fetchPaystack(
+      `https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`,
+      { headers: { Authorization: `Bearer ${secretKey}` } },
+    );
 
     const body = (await response.json()) as {
       status: boolean;

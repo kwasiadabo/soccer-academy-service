@@ -6,6 +6,10 @@ import { TenantContextService } from '../tenant-context/tenant-context.service';
 const ACADEMY_SLUG_HEADER = 'x-academy-slug';
 const ACADEMY_SLUG_QUERY_PARAM = 'academy';
 
+// Leftmost Host labels that identify the platform itself rather than a tenant
+// (e.g. `api.sams.app`), so they're never mistaken for an academy slug.
+const RESERVED_SUBDOMAINS = new Set(['api', 'www', 'admin']);
+
 // Resolves which academy a request belongs to and runs the rest of the
 // request inside that academy's tenant context. Three resolution paths,
 // in priority order:
@@ -39,7 +43,7 @@ function extractSlug(req: Request): string | null {
   const host = req.headers.host ?? '';
   const hostname = host.split(':')[0];
   const labels = hostname.split('.');
-  if (labels.length > 2) {
+  if (labels.length > 2 && !RESERVED_SUBDOMAINS.has(labels[0])) {
     return labels[0];
   }
   return null;

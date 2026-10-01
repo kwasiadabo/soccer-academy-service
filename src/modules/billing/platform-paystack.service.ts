@@ -57,6 +57,21 @@ export class PlatformPaystackService {
     return this.config.get<string>('PAYSTACK_CURRENCY') ?? 'GHS';
   }
 
+  // A plain `fetch()` call throws on anything below the HTTP layer — DNS
+  // failure, no outbound route, TLS error, timeout — and none of that is an
+  // HttpException, so it would otherwise surface to the client as an opaque,
+  // undiagnosable 500 rather than a clear "payment provider unreachable"
+  // error. Every Paystack call goes through this wrapper so that failure
+  // mode is caught and reported the same way a Paystack-side rejection is.
+  private async fetchPaystack(url: string, init: RequestInit): Promise<Response> {
+    try {
+      return await fetch(url, init);
+    } catch (err) {
+      this.logger.error(`Could not reach Paystack (${url}): ${(err as Error).message}`);
+      throw new BadRequestException('Could not reach the payment provider — please try again shortly');
+    }
+  }
+
   // First step of capturing a reusable authorization: a real charge for the
   // amount currently due, which — if the academy pays by card — returns an
   // authorization_code this service can reuse every following period without
@@ -67,7 +82,7 @@ export class PlatformPaystackService {
     reference: string;
     callbackUrl: string;
   }): Promise<PaystackInitializeResult> {
-    const response = await fetch('https://api.paystack.co/transaction/initialize', {
+    const response = await this.fetchPaystack('https://api.paystack.co/transaction/initialize', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${this.getSecretKey()}`,
@@ -103,9 +118,10 @@ export class PlatformPaystackService {
   async verifyTransaction(
     reference: string,
   ): Promise<{ status: string; amount: number; authorization: PaystackAuthorization | null }> {
-    const response = await fetch(`https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`, {
-      headers: { Authorization: `Bearer ${this.getSecretKey()}` },
-    });
+    const response = await this.fetchPaystack(
+      `https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`,
+      { headers: { Authorization: `Bearer ${this.getSecretKey()}` } },
+    );
 
     const body = (await response.json()) as {
       status: boolean;
@@ -155,7 +171,7 @@ export class PlatformPaystackService {
     authorizationCode: string;
     reference: string;
   }): Promise<PaystackChargeResult> {
-    const response = await fetch('https://api.paystack.co/transaction/charge_authorization', {
+    const response = await this.fetchPaystack('https://api.paystack.co/transaction/charge_authorization', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${this.getSecretKey()}`,
