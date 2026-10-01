@@ -4,24 +4,36 @@ import { AcademiesService } from '../../modules/academies/academies.service';
 import { TenantContextService } from '../tenant-context/tenant-context.service';
 
 const ACADEMY_SLUG_HEADER = 'x-academy-slug';
+const ACADEMY_SLUG_QUERY_PARAM = 'academy';
 
 // Resolves which academy a request belongs to and runs the rest of the
-// request inside that academy's tenant context. Two resolution paths:
+// request inside that academy's tenant context. Three resolution paths,
+// in priority order:
 //
 //  1. `X-Academy-Slug` header — explicit override, always wins. Used in local
 //     development against plain `localhost` (which has no subdomain to parse)
 //     and for tooling/tests that don't want to fuss with DNS.
-//  2. The `Host` header's leftmost label, e.g. `kapikids.sams.app` -> `kapikids`
+//  2. `?academy=<slug>` query param — same explicit override, for a plain
+//     browser address-bar GET where there's no way to set a custom header
+//     (e.g. manually exercising the API at its own host, api.sams.app, rather
+//     than through an academy's subdomain). Checked before the Host-based
+//     guess below so it isn't shadowed by it.
+//  3. The `Host` header's leftmost label, e.g. `kapikids.sams.app` -> `kapikids`
 //     (also works against `kapikids.lvh.me`, which resolves to 127.0.0.1, for
 //     realistic subdomain testing in local dev).
 //
 // A host with no parseable subdomain (`localhost`, an apex domain, a bare IP)
-// and no override header cannot be resolved to a tenant — treated as a client
-// error rather than silently falling back to some default academy.
+// and no override header/param cannot be resolved to a tenant — treated as a
+// client error rather than silently falling back to some default academy.
 function extractSlug(req: Request): string | null {
   const headerSlug = req.headers[ACADEMY_SLUG_HEADER];
   if (typeof headerSlug === 'string' && headerSlug.trim() !== '') {
     return headerSlug.trim();
+  }
+
+  const querySlug = req.query[ACADEMY_SLUG_QUERY_PARAM];
+  if (typeof querySlug === 'string' && querySlug.trim() !== '') {
+    return querySlug.trim();
   }
 
   const host = req.headers.host ?? '';
@@ -45,7 +57,8 @@ export class TenantResolutionMiddleware implements NestMiddleware {
     if (!slug) {
       throw new NotFoundException(
         'Could not determine which academy this request belongs to. ' +
-          'Use a subdomain (e.g. kapikids.sams.app) or, in development, an X-Academy-Slug header.',
+          'Use a subdomain (e.g. kapikids.sams.app), an X-Academy-Slug header, ' +
+          'or a ?academy=<slug> query param.',
       );
     }
 
