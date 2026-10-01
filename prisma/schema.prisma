@@ -1919,3 +1919,42 @@ model PlatformLead {
 
   @@map("platform_leads")
 }
+
+// A self-serve signup that's past the pricing step but hasn't completed the
+// Paystack checkout yet. Lives here — never as an Academy row — until payment
+// is verified (see PlatformAdminService#verifySignupPayment), so an abandoned
+// signup never creates a half-real account. The admin's password is hashed
+// immediately on creation, exactly as it would be on a completed signup,
+// rather than sitting around in plaintext for however long this row lives.
+// Cleaned up by PlatformAdminService#handlePendingSignupCleanupCron: a
+// reminder email at 2 days old, a deletion warning at 5, deleted at 7.
+model PendingAcademySignup {
+  id       String @id @default(uuid())
+  // Stable identifier carried in every email link — unlike paystackReference
+  // below, this never changes across a resume.
+  resumeToken String @unique @default(uuid())
+  // The *current* Paystack transaction reference being attempted. Reissued
+  // each time the academy resumes from an email link, since a Paystack
+  // reference is single-use.
+  paystackReference String @unique
+  // Where the SAMS frontend the academy is signing up from actually lives —
+  // captured from the browser's own origin at initialize/resume time, so
+  // the cron's reminder/deletion emails can build a working resume link with
+  // no separate "frontend base URL" config to keep in sync.
+  frontendOrigin String
+
+  slug              String
+  name              String
+  adminEmail        String
+  adminFirstName    String
+  adminLastName     String
+  adminPasswordHash String
+
+  reminderSentAt        DateTime?
+  deletionWarningSentAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("pending_academy_signups")
+}

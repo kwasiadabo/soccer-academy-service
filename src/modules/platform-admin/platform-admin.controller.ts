@@ -6,6 +6,7 @@ import { PlatformAdminAuthGuard } from './guards/platform-admin-jwt-auth.guard';
 import { InitializeSignupPaymentDto } from './dto/initialize-signup-payment.dto';
 import { OnboardAcademyDto } from './dto/onboard-academy.dto';
 import { PlatformAdminLoginDto } from './dto/platform-admin-login.dto';
+import { ResumeSignupPaymentDto } from './dto/resume-signup-payment.dto';
 import { SignupAcademyDto } from './dto/signup-academy.dto';
 import { SubmitPlatformLeadDto } from './dto/submit-platform-lead.dto';
 import { UpdateLeadStatusDto } from './dto/update-lead-status.dto';
@@ -96,9 +97,10 @@ export class PlatformAdminController {
     return this.platformAdmin.signupAcademy(dto, logo);
   }
 
-  // Public — step one of the paid signup flow: charges the configured
-  // signup fee via Paystack before any academy/admin details are collected
-  // as a real account. Nothing is created here.
+  // Public — step one of the paid signup flow: charges the configured signup
+  // fee via Paystack and, the instant that's initialized, persists the
+  // academy/admin details as a PendingAcademySignup (not a real account) so
+  // the academy can come back to this however long it takes to actually pay.
   @Post('signup/initialize-payment')
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @ApiOperation({ summary: 'Start the one-time signup fee payment (unauthenticated).' })
@@ -107,16 +109,25 @@ export class PlatformAdminController {
     return this.platformAdmin.initializeSignupPayment(dto);
   }
 
+  // Public — the link in the resume/reminder/deletion-warning emails: issues
+  // a fresh Paystack checkout for an existing PendingAcademySignup.
+  @Post('signup/resume')
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @ApiOperation({ summary: 'Resume a pending self-serve signup (unauthenticated).' })
+  @ApiOkResponse({ description: 'Paystack checkout URL returned.' })
+  resumeSignupPayment(@Body() dto: ResumeSignupPaymentDto) {
+    return this.platformAdmin.resumeSignupPayment(dto);
+  }
+
   // Public — step two: verifies the signup fee was actually paid, then
-  // creates the academy exactly like signup() above.
+  // creates the academy from the PendingAcademySignup this reference
+  // belongs to.
   @Post('signup/verify-and-create')
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
-  @ApiConsumes('multipart/form-data')
-  @UseInterceptors(FileInterceptor('logo', { limits: { fileSize: 5 * 1024 * 1024 } }))
   @ApiOperation({ summary: 'Verify the signup fee payment and create the academy (unauthenticated).' })
   @ApiOkResponse({ description: 'Academy created.' })
-  verifySignupPayment(@Body() dto: VerifySignupPaymentDto, @UploadedFile() logo?: Express.Multer.File) {
-    return this.platformAdmin.verifySignupPayment(dto, logo);
+  verifySignupPayment(@Body() dto: VerifySignupPaymentDto) {
+    return this.platformAdmin.verifySignupPayment(dto);
   }
 
   @Get('leads')

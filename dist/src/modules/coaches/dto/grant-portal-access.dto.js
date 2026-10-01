@@ -13,7 +13,12 @@ exports.GrantCoachPortalAccessDto = void 0;
 const swagger_1 = require("@nestjs/swagger");
 const class_validator_1 = require("class-validator");
 const permissions_constants_1 = require("../../rbac/permissions.constants");
-const GRANTABLE_ROLES = [permissions_constants_1.ROLE_NAMES.COACH, permissions_constants_1.ROLE_NAMES.HEAD_COACH];
+const GRANTABLE_ROLES = [
+    permissions_constants_1.ROLE_NAMES.COACH,
+    permissions_constants_1.ROLE_NAMES.HEAD_COACH,
+    permissions_constants_1.ROLE_NAMES.RECEPTIONIST,
+    permissions_constants_1.ROLE_NAMES.ADMIN,
+];
 class GrantCoachPortalAccessDto {
 }
 exports.GrantCoachPortalAccessDto = GrantCoachPortalAccessDto;

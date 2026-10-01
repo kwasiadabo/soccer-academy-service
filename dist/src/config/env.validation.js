@@ -29,6 +29,7 @@ exports.envSchema = zod_1.z.object({
     EMAIL_APP_PASSWORD: zod_1.z.string().optional(),
     RESEND_API_KEY: zod_1.z.string().optional(),
     RESEND_FROM_EMAIL: zod_1.z.string().optional(),
+    SAMS_LEADS_NOTIFICATION_EMAIL: zod_1.z.string().optional(),
 });
 function validateEnv(config) {
     const result = exports.envSchema.safeParse(config);

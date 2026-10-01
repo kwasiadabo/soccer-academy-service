@@ -1,7 +1,8 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import { AcademyStatus, InquiryStatus } from '@prisma/client';
+import { Cron } from '@nestjs/schedule';
+import { AcademyStatus, InquiryStatus, PendingAcademySignup } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { randomBytes, randomUUID } from 'crypto';
 import { TenantContextService } from '../../common/tenant-context/tenant-context.service';
@@ -13,11 +14,18 @@ import { ROLE_NAMES } from '../rbac/permissions.constants';
 import { StorageService } from '../storage/storage.service';
 import { InitializeSignupPaymentDto } from './dto/initialize-signup-payment.dto';
 import { OnboardAcademyDto } from './dto/onboard-academy.dto';
+import { ResumeSignupPaymentDto } from './dto/resume-signup-payment.dto';
 import { SignupAcademyDto } from './dto/signup-academy.dto';
 import { SubmitPlatformLeadDto } from './dto/submit-platform-lead.dto';
 import { UpdatePricingDto } from './dto/update-pricing.dto';
 import { VerifySignupPaymentDto } from './dto/verify-signup-payment.dto';
 import { PlatformAdminJwtPayload } from './platform-admin.types';
+
+// Cadence for an unpaid PendingAcademySignup (see handlePendingSignupCleanupCron
+// below) — matches the user-facing promise made in its reminder/warning emails.
+const PENDING_SIGNUP_REMINDER_AFTER_DAYS = 2;
+const PENDING_SIGNUP_DELETION_WARNING_AFTER_DAYS = 5;
+const PENDING_SIGNUP_DELETE_AFTER_DAYS = 7;
 
 function generateTemporaryPassword(): string {
   return randomBytes(9).toString('base64url');
@@ -288,12 +296,7 @@ export class PlatformAdminService {
     };
   }
 
-  // Step one of paid self-serve signup: charge the platform's configured
-  // one-time signup fee *before* anything is created. The academy/admin
-  // details the caller already collected aren't persisted anywhere here —
-  // the frontend carries them through the Paystack redirect itself and
-  // re-submits them to verifySignupPayment below.
-  async initializeSignupPayment(dto: InitializeSignupPaymentDto) {
+  private async getSignupFee(): Promise<number> {
     const pricing = await this.prisma.platformPricing.findUnique({ where: { id: 'default' } });
     const signupFee = Number(pricing?.signupFee ?? 0);
     if (signupFee <= 0) {
@@ -301,27 +304,171 @@ export class PlatformAdminService {
         'Self-serve signup is not available yet — ask a platform admin to configure the signup fee.',
       );
     }
+    return signupFee;
+  }
+
+  // Step one of paid self-serve signup: charge the platform's configured
+  // one-time signup fee, then — the instant payment is initialized, before
+  // the browser has even reached Paystack — persist the academy/admin
+  // details as a PendingAcademySignup. Nothing here waits for payment to
+  // succeed; this just makes sure the signup survives however long the
+  // academy takes to actually pay, including closing the tab entirely (see
+  // resumeSignupPayment and handlePendingSignupCleanupCron below).
+  async initializeSignupPayment(dto: InitializeSignupPaymentDto) {
+    const signupFee = await this.getSignupFee();
 
     const reference = `signup_${randomUUID()}`;
     const result = await this.platformPaystack.initializeTransaction({
-      email: dto.email,
+      email: dto.adminEmail,
       amount: signupFee,
       reference,
       callbackUrl: dto.callbackUrl,
     });
+
+    const adminPasswordHash = await bcrypt.hash(dto.adminPassword, 10);
+    const pending = await this.prisma.pendingAcademySignup.create({
+      data: {
+        paystackReference: result.reference,
+        frontendOrigin: new URL(dto.callbackUrl).origin,
+        slug: dto.slug,
+        name: dto.name,
+        adminEmail: dto.adminEmail,
+        adminFirstName: dto.adminFirstName,
+        adminLastName: dto.adminLastName,
+        adminPasswordHash,
+      },
+    });
+
+    await this.sendPendingSignupEmail(pending, {
+      subject: `Finish bringing ${pending.name} onto SAMS`,
+      intro: `You're almost done bringing <strong>${escapeHtml(pending.name)}</strong> onto SAMS — just the one-time signup fee left.`,
+    });
+
+    return { authorizationUrl: result.authorizationUrl, reference: result.reference };
+  }
+
+  // Re-initializes payment for an existing PendingAcademySignup from its
+  // resume link (sent on day 0, then again by the reminder/deletion-warning
+  // emails) — a fresh Paystack reference, since the original is single-use
+  // and, days later, likely long expired.
+  async resumeSignupPayment(dto: ResumeSignupPaymentDto) {
+    const pending = await this.prisma.pendingAcademySignup.findUnique({
+      where: { resumeToken: dto.resumeToken },
+    });
+    if (!pending) {
+      throw new NotFoundException('This signup link has expired or already been completed.');
+    }
+
+    const signupFee = await this.getSignupFee();
+    const reference = `signup_${randomUUID()}`;
+    const result = await this.platformPaystack.initializeTransaction({
+      email: pending.adminEmail,
+      amount: signupFee,
+      reference,
+      callbackUrl: dto.callbackUrl,
+    });
+
+    await this.prisma.pendingAcademySignup.update({
+      where: { id: pending.id },
+      data: { paystackReference: result.reference, frontendOrigin: new URL(dto.callbackUrl).origin },
+    });
+
     return { authorizationUrl: result.authorizationUrl, reference: result.reference };
   }
 
   // Step two: verify the signup fee was actually paid (never trusts the
   // redirect alone — see billing.service.ts#verifyAndApplyPayment for the
-  // same pattern), then, only on success, creates the academy exactly as
-  // signupAcademy() always has.
-  async verifySignupPayment(dto: VerifySignupPaymentDto, logo?: Express.Multer.File) {
+  // same pattern), then, only on success, create the academy from the
+  // PendingAcademySignup this reference belongs to and discard that row —
+  // its job is done either way: the Academy row is now the source of truth.
+  async verifySignupPayment(dto: VerifySignupPaymentDto) {
+    const pending = await this.prisma.pendingAcademySignup.findUnique({
+      where: { paystackReference: dto.reference },
+    });
+    if (!pending) {
+      throw new BadRequestException('We could not find this signup — it may have already been completed.');
+    }
+
     const verification = await this.platformPaystack.verifyTransaction(dto.reference);
     if (verification.status !== 'success') {
       throw new BadRequestException('Payment was not successful');
     }
-    return this.signupAcademy(dto, logo);
+
+    const { academy } = await this.createAcademyWithAdmin({
+      slug: pending.slug,
+      name: pending.name,
+      adminEmail: pending.adminEmail,
+      adminFirstName: pending.adminFirstName,
+      adminLastName: pending.adminLastName,
+      passwordHash: pending.adminPasswordHash,
+      mustChangePassword: false,
+      resolveSlugConflict: true,
+    });
+
+    await this.prisma.pendingAcademySignup.delete({ where: { id: pending.id } });
+
+    return { academy: { id: academy.id, slug: academy.slug, name: academy.name } };
+  }
+
+  private async sendPendingSignupEmail(
+    pending: PendingAcademySignup,
+    params: { subject: string; intro: string },
+  ): Promise<void> {
+    const resumeUrl = `${pending.frontendOrigin}/signup/resume?token=${pending.resumeToken}`;
+    await this.platformEmail.send({
+      to: pending.adminEmail,
+      subject: params.subject,
+      html: `<p>Hi ${escapeHtml(pending.adminFirstName)},</p>
+        <p>${params.intro}</p>
+        <p><a href="${resumeUrl}">Continue to payment</a></p>
+        <p>If the button doesn't work, copy this link into your browser: ${resumeUrl}</p>`,
+    });
+  }
+
+  // Runs daily: nudges academies that started signing up but haven't paid
+  // yet, then deletes anything that's gone a full week without payment —
+  // this table is only ever a staging area, never a real account, so
+  // there's nothing to "deactivate" first.
+  @Cron('0 8 * * *')
+  async handlePendingSignupCleanupCron(): Promise<void> {
+    const pendings = await this.prisma.pendingAcademySignup.findMany();
+    const now = Date.now();
+
+    for (const pending of pendings) {
+      const ageDays = (now - pending.createdAt.getTime()) / (1000 * 60 * 60 * 24);
+
+      if (ageDays >= PENDING_SIGNUP_DELETE_AFTER_DAYS) {
+        await this.prisma.pendingAcademySignup.delete({ where: { id: pending.id } });
+        continue;
+      }
+
+      if (ageDays >= PENDING_SIGNUP_DELETION_WARNING_AFTER_DAYS && !pending.deletionWarningSentAt) {
+        await this.sendPendingSignupEmail(pending, {
+          subject: `Your SAMS signup for ${pending.name} will be deleted soon`,
+          intro: `We still haven't received the one-time signup fee for <strong>${escapeHtml(pending.name)}</strong>.
+            If payment isn't completed within ${PENDING_SIGNUP_DELETE_AFTER_DAYS - PENDING_SIGNUP_DELETION_WARNING_AFTER_DAYS}
+            more day${PENDING_SIGNUP_DELETE_AFTER_DAYS - PENDING_SIGNUP_DELETION_WARNING_AFTER_DAYS === 1 ? '' : 's'},
+            this signup will be deleted and you'll need to start over.`,
+        });
+        await this.prisma.pendingAcademySignup.update({
+          where: { id: pending.id },
+          data: { deletionWarningSentAt: new Date() },
+        });
+        continue;
+      }
+
+      if (ageDays >= PENDING_SIGNUP_REMINDER_AFTER_DAYS && !pending.reminderSentAt) {
+        await this.sendPendingSignupEmail(pending, {
+          subject: `Reminder: finish bringing ${pending.name} onto SAMS`,
+          intro: `You started signing <strong>${escapeHtml(pending.name)}</strong> up for SAMS a couple of days ago
+            but haven't completed the one-time signup fee yet.`,
+        });
+        await this.prisma.pendingAcademySignup.update({
+          where: { id: pending.id },
+          data: { reminderSentAt: new Date() },
+        });
+      }
+    }
   }
 
   // Public — submitted from the SAMS product landing page's "Sign up" form,
