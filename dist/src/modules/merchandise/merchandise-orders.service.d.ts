@@ -70,29 +70,29 @@ export declare class MerchandiseOrdersService {
                 product: {
                     images: {
                         id: string;
-                        academyId: string;
                         createdAt: Date;
+                        academyId: string;
                         sortOrder: number;
                         documentId: string;
                         productId: string;
                     }[];
                 } & {
                     id: string;
-                    academyId: string;
+                    name: string;
                     createdAt: Date;
                     updatedAt: Date;
-                    deletedAt: Date | null;
-                    name: string;
                     description: string | null;
+                    academyId: string;
+                    deletedAt: Date | null;
                     isActive: boolean;
                     category: import(".prisma/client").$Enums.ProductCategory;
                     basePrice: Prisma.Decimal;
                 };
             } & {
                 id: string;
-                academyId: string;
                 createdAt: Date;
                 updatedAt: Date;
+                academyId: string;
                 isActive: boolean;
                 productId: string;
                 sizeLabel: string;
@@ -101,8 +101,8 @@ export declare class MerchandiseOrdersService {
             };
         } & {
             id: string;
-            academyId: string;
             createdAt: Date;
+            academyId: string;
             orderId: string;
             productVariantId: string;
             quantity: number;
@@ -116,10 +116,10 @@ export declare class MerchandiseOrdersService {
         } | null;
     } & {
         id: string;
-        academyId: string;
         status: import(".prisma/client").$Enums.MerchandiseOrderStatus;
         createdAt: Date;
         updatedAt: Date;
+        academyId: string;
         playerId: string;
         guardianId: string;
         invoiceId: string | null;
@@ -131,12 +131,12 @@ export declare class MerchandiseOrdersService {
         staffNotes: string | null;
     }>;
     lookupPlayerByCode(playerCode: string): Promise<{
-        team: {
-            name: string;
-        } | null;
         id: string;
         firstName: string;
         lastName: string;
+        team: {
+            name: string;
+        } | null;
     }>;
     createGuestOrder(dto: CreateGuestOrderDto): Promise<{
         player: {
@@ -167,29 +167,29 @@ export declare class MerchandiseOrdersService {
                 product: {
                     images: {
                         id: string;
-                        academyId: string;
                         createdAt: Date;
+                        academyId: string;
                         sortOrder: number;
                         documentId: string;
                         productId: string;
                     }[];
                 } & {
                     id: string;
-                    academyId: string;
+                    name: string;
                     createdAt: Date;
                     updatedAt: Date;
-                    deletedAt: Date | null;
-                    name: string;
                     description: string | null;
+                    academyId: string;
+                    deletedAt: Date | null;
                     isActive: boolean;
                     category: import(".prisma/client").$Enums.ProductCategory;
                     basePrice: Prisma.Decimal;
                 };
             } & {
                 id: string;
-                academyId: string;
                 createdAt: Date;
                 updatedAt: Date;
+                academyId: string;
                 isActive: boolean;
                 productId: string;
                 sizeLabel: string;
@@ -198,8 +198,8 @@ export declare class MerchandiseOrdersService {
             };
         } & {
             id: string;
-            academyId: string;
             createdAt: Date;
+            academyId: string;
             orderId: string;
             productVariantId: string;
             quantity: number;
@@ -213,10 +213,10 @@ export declare class MerchandiseOrdersService {
         } | null;
     } & {
         id: string;
-        academyId: string;
         status: import(".prisma/client").$Enums.MerchandiseOrderStatus;
         createdAt: Date;
         updatedAt: Date;
+        academyId: string;
         playerId: string;
         guardianId: string;
         invoiceId: string | null;
@@ -257,29 +257,29 @@ export declare class MerchandiseOrdersService {
                 product: {
                     images: {
                         id: string;
-                        academyId: string;
                         createdAt: Date;
+                        academyId: string;
                         sortOrder: number;
                         documentId: string;
                         productId: string;
                     }[];
                 } & {
                     id: string;
-                    academyId: string;
+                    name: string;
                     createdAt: Date;
                     updatedAt: Date;
-                    deletedAt: Date | null;
-                    name: string;
                     description: string | null;
+                    academyId: string;
+                    deletedAt: Date | null;
                     isActive: boolean;
                     category: import(".prisma/client").$Enums.ProductCategory;
                     basePrice: Prisma.Decimal;
                 };
             } & {
                 id: string;
-                academyId: string;
                 createdAt: Date;
                 updatedAt: Date;
+                academyId: string;
                 isActive: boolean;
                 productId: string;
                 sizeLabel: string;
@@ -288,8 +288,8 @@ export declare class MerchandiseOrdersService {
             };
         } & {
             id: string;
-            academyId: string;
             createdAt: Date;
+            academyId: string;
             orderId: string;
             productVariantId: string;
             quantity: number;
@@ -303,10 +303,10 @@ export declare class MerchandiseOrdersService {
         } | null;
     } & {
         id: string;
-        academyId: string;
         status: import(".prisma/client").$Enums.MerchandiseOrderStatus;
         createdAt: Date;
         updatedAt: Date;
+        academyId: string;
         playerId: string;
         guardianId: string;
         invoiceId: string | null;
@@ -346,29 +346,29 @@ export declare class MerchandiseOrdersService {
                 product: {
                     images: {
                         id: string;
-                        academyId: string;
                         createdAt: Date;
+                        academyId: string;
                         sortOrder: number;
                         documentId: string;
                         productId: string;
                     }[];
                 } & {
                     id: string;
-                    academyId: string;
+                    name: string;
                     createdAt: Date;
                     updatedAt: Date;
-                    deletedAt: Date | null;
-                    name: string;
                     description: string | null;
+                    academyId: string;
+                    deletedAt: Date | null;
                     isActive: boolean;
                     category: import(".prisma/client").$Enums.ProductCategory;
                     basePrice: Prisma.Decimal;
                 };
             } & {
                 id: string;
-                academyId: string;
                 createdAt: Date;
                 updatedAt: Date;
+                academyId: string;
                 isActive: boolean;
                 productId: string;
                 sizeLabel: string;
@@ -377,8 +377,8 @@ export declare class MerchandiseOrdersService {
             };
         } & {
             id: string;
-            academyId: string;
             createdAt: Date;
+            academyId: string;
             orderId: string;
             productVariantId: string;
             quantity: number;
@@ -392,10 +392,10 @@ export declare class MerchandiseOrdersService {
         } | null;
     } & {
         id: string;
-        academyId: string;
         status: import(".prisma/client").$Enums.MerchandiseOrderStatus;
         createdAt: Date;
         updatedAt: Date;
+        academyId: string;
         playerId: string;
         guardianId: string;
         invoiceId: string | null;
@@ -435,29 +435,29 @@ export declare class MerchandiseOrdersService {
                 product: {
                     images: {
                         id: string;
-                        academyId: string;
                         createdAt: Date;
+                        academyId: string;
                         sortOrder: number;
                         documentId: string;
                         productId: string;
                     }[];
                 } & {
                     id: string;
-                    academyId: string;
+                    name: string;
                     createdAt: Date;
                     updatedAt: Date;
-                    deletedAt: Date | null;
-                    name: string;
                     description: string | null;
+                    academyId: string;
+                    deletedAt: Date | null;
                     isActive: boolean;
                     category: import(".prisma/client").$Enums.ProductCategory;
                     basePrice: Prisma.Decimal;
                 };
             } & {
                 id: string;
-                academyId: string;
                 createdAt: Date;
                 updatedAt: Date;
+                academyId: string;
                 isActive: boolean;
                 productId: string;
                 sizeLabel: string;
@@ -466,8 +466,8 @@ export declare class MerchandiseOrdersService {
             };
         } & {
             id: string;
-            academyId: string;
             createdAt: Date;
+            academyId: string;
             orderId: string;
             productVariantId: string;
             quantity: number;
@@ -481,10 +481,10 @@ export declare class MerchandiseOrdersService {
         } | null;
     } & {
         id: string;
-        academyId: string;
         status: import(".prisma/client").$Enums.MerchandiseOrderStatus;
         createdAt: Date;
         updatedAt: Date;
+        academyId: string;
         playerId: string;
         guardianId: string;
         invoiceId: string | null;
@@ -524,29 +524,29 @@ export declare class MerchandiseOrdersService {
                 product: {
                     images: {
                         id: string;
-                        academyId: string;
                         createdAt: Date;
+                        academyId: string;
                         sortOrder: number;
                         documentId: string;
                         productId: string;
                     }[];
                 } & {
                     id: string;
-                    academyId: string;
+                    name: string;
                     createdAt: Date;
                     updatedAt: Date;
-                    deletedAt: Date | null;
-                    name: string;
                     description: string | null;
+                    academyId: string;
+                    deletedAt: Date | null;
                     isActive: boolean;
                     category: import(".prisma/client").$Enums.ProductCategory;
                     basePrice: Prisma.Decimal;
                 };
             } & {
                 id: string;
-                academyId: string;
                 createdAt: Date;
                 updatedAt: Date;
+                academyId: string;
                 isActive: boolean;
                 productId: string;
                 sizeLabel: string;
@@ -555,8 +555,8 @@ export declare class MerchandiseOrdersService {
             };
         } & {
             id: string;
-            academyId: string;
             createdAt: Date;
+            academyId: string;
             orderId: string;
             productVariantId: string;
             quantity: number;
@@ -570,10 +570,10 @@ export declare class MerchandiseOrdersService {
         } | null;
     } & {
         id: string;
-        academyId: string;
         status: import(".prisma/client").$Enums.MerchandiseOrderStatus;
         createdAt: Date;
         updatedAt: Date;
+        academyId: string;
         playerId: string;
         guardianId: string;
         invoiceId: string | null;
@@ -618,29 +618,29 @@ export declare class MerchandiseOrdersService {
                 product: {
                     images: {
                         id: string;
-                        academyId: string;
                         createdAt: Date;
+                        academyId: string;
                         sortOrder: number;
                         documentId: string;
                         productId: string;
                     }[];
                 } & {
                     id: string;
-                    academyId: string;
+                    name: string;
                     createdAt: Date;
                     updatedAt: Date;
-                    deletedAt: Date | null;
-                    name: string;
                     description: string | null;
+                    academyId: string;
+                    deletedAt: Date | null;
                     isActive: boolean;
                     category: import(".prisma/client").$Enums.ProductCategory;
                     basePrice: Prisma.Decimal;
                 };
             } & {
                 id: string;
-                academyId: string;
                 createdAt: Date;
                 updatedAt: Date;
+                academyId: string;
                 isActive: boolean;
                 productId: string;
                 sizeLabel: string;
@@ -649,8 +649,8 @@ export declare class MerchandiseOrdersService {
             };
         } & {
             id: string;
-            academyId: string;
             createdAt: Date;
+            academyId: string;
             orderId: string;
             productVariantId: string;
             quantity: number;
@@ -664,10 +664,10 @@ export declare class MerchandiseOrdersService {
         } | null;
     } & {
         id: string;
-        academyId: string;
         status: import(".prisma/client").$Enums.MerchandiseOrderStatus;
         createdAt: Date;
         updatedAt: Date;
+        academyId: string;
         playerId: string;
         guardianId: string;
         invoiceId: string | null;

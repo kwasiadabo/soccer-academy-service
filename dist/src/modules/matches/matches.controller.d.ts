@@ -9,42 +9,23 @@ export declare class MatchesController {
     constructor(matchesService: MatchesService);
     listOpponents(): import(".prisma/client").Prisma.PrismaPromise<{
         id: string;
-        academyId: string;
-        createdAt: Date;
         name: string;
+        createdAt: Date;
+        academyId: string;
         contactInfo: string | null;
     }[]>;
     createOpponent(dto: CreateOpponentDto): import(".prisma/client").Prisma.Prisma__OpponentClient<{
         id: string;
-        academyId: string;
-        createdAt: Date;
         name: string;
+        createdAt: Date;
+        academyId: string;
         contactInfo: string | null;
     }, never, import("@prisma/client/runtime/library").DefaultArgs>;
     findAll(user: RequestUser): Promise<({
-        team: {
-            id: string;
-            academyId: string;
-            createdAt: Date;
-            updatedAt: Date;
-            name: string;
-            branchId: string | null;
-            isActive: boolean;
-            ageCategoryId: string;
-            seasonId: string;
-            headCoachId: string | null;
-        };
-        opponent: {
-            id: string;
-            academyId: string;
-            createdAt: Date;
-            name: string;
-            contactInfo: string | null;
-        };
         matchPlayerAssessments: {
             id: string;
-            academyId: string;
             createdAt: Date;
+            academyId: string;
             playerId: string;
             remarks: string | null;
             matchId: string;
@@ -57,6 +38,25 @@ export declare class MatchesController {
             overallRating: import("@prisma/client/runtime/library").Decimal | null;
             recommendations: string | null;
         }[];
+        team: {
+            id: string;
+            name: string;
+            createdAt: Date;
+            updatedAt: Date;
+            academyId: string;
+            branchId: string | null;
+            isActive: boolean;
+            ageCategoryId: string;
+            seasonId: string;
+            headCoachId: string | null;
+        };
+        opponent: {
+            id: string;
+            name: string;
+            createdAt: Date;
+            academyId: string;
+            contactInfo: string | null;
+        };
         participations: ({
             player: {
                 id: string;
@@ -75,10 +75,10 @@ export declare class MatchesController {
         })[];
     } & {
         id: string;
-        academyId: string;
         status: import(".prisma/client").$Enums.MatchStatus;
         createdAt: Date;
         updatedAt: Date;
+        academyId: string;
         teamId: string;
         opponentId: string;
         competitionName: string | null;
@@ -94,29 +94,10 @@ export declare class MatchesController {
             firstName: string;
             lastName: string;
         }[];
-        team: {
-            id: string;
-            academyId: string;
-            createdAt: Date;
-            updatedAt: Date;
-            name: string;
-            branchId: string | null;
-            isActive: boolean;
-            ageCategoryId: string;
-            seasonId: string;
-            headCoachId: string | null;
-        };
-        opponent: {
-            id: string;
-            academyId: string;
-            createdAt: Date;
-            name: string;
-            contactInfo: string | null;
-        };
         matchPlayerAssessments: {
             id: string;
-            academyId: string;
             createdAt: Date;
+            academyId: string;
             playerId: string;
             remarks: string | null;
             matchId: string;
@@ -129,6 +110,25 @@ export declare class MatchesController {
             overallRating: import("@prisma/client/runtime/library").Decimal | null;
             recommendations: string | null;
         }[];
+        team: {
+            id: string;
+            name: string;
+            createdAt: Date;
+            updatedAt: Date;
+            academyId: string;
+            branchId: string | null;
+            isActive: boolean;
+            ageCategoryId: string;
+            seasonId: string;
+            headCoachId: string | null;
+        };
+        opponent: {
+            id: string;
+            name: string;
+            createdAt: Date;
+            academyId: string;
+            contactInfo: string | null;
+        };
         participations: ({
             player: {
                 id: string;
@@ -146,10 +146,10 @@ export declare class MatchesController {
             minutesPlayed: number | null;
         })[];
         id: string;
-        academyId: string;
         status: import(".prisma/client").$Enums.MatchStatus;
         createdAt: Date;
         updatedAt: Date;
+        academyId: string;
         teamId: string;
         opponentId: string;
         competitionName: string | null;
@@ -160,29 +160,10 @@ export declare class MatchesController {
         notes: string | null;
     }>;
     create(dto: CreateMatchDto, user: RequestUser): Promise<{
-        team: {
-            id: string;
-            academyId: string;
-            createdAt: Date;
-            updatedAt: Date;
-            name: string;
-            branchId: string | null;
-            isActive: boolean;
-            ageCategoryId: string;
-            seasonId: string;
-            headCoachId: string | null;
-        };
-        opponent: {
-            id: string;
-            academyId: string;
-            createdAt: Date;
-            name: string;
-            contactInfo: string | null;
-        };
         matchPlayerAssessments: {
             id: string;
-            academyId: string;
             createdAt: Date;
+            academyId: string;
             playerId: string;
             remarks: string | null;
             matchId: string;
@@ -195,6 +176,25 @@ export declare class MatchesController {
             overallRating: import("@prisma/client/runtime/library").Decimal | null;
             recommendations: string | null;
         }[];
+        team: {
+            id: string;
+            name: string;
+            createdAt: Date;
+            updatedAt: Date;
+            academyId: string;
+            branchId: string | null;
+            isActive: boolean;
+            ageCategoryId: string;
+            seasonId: string;
+            headCoachId: string | null;
+        };
+        opponent: {
+            id: string;
+            name: string;
+            createdAt: Date;
+            academyId: string;
+            contactInfo: string | null;
+        };
         participations: ({
             player: {
                 id: string;
@@ -213,10 +213,10 @@ export declare class MatchesController {
         })[];
     } & {
         id: string;
-        academyId: string;
         status: import(".prisma/client").$Enums.MatchStatus;
         createdAt: Date;
         updatedAt: Date;
+        academyId: string;
         teamId: string;
         opponentId: string;
         competitionName: string | null;
@@ -227,29 +227,10 @@ export declare class MatchesController {
         notes: string | null;
     }>;
     update(id: string, dto: UpdateMatchDto, user: RequestUser): Promise<{
-        team: {
-            id: string;
-            academyId: string;
-            createdAt: Date;
-            updatedAt: Date;
-            name: string;
-            branchId: string | null;
-            isActive: boolean;
-            ageCategoryId: string;
-            seasonId: string;
-            headCoachId: string | null;
-        };
-        opponent: {
-            id: string;
-            academyId: string;
-            createdAt: Date;
-            name: string;
-            contactInfo: string | null;
-        };
         matchPlayerAssessments: {
             id: string;
-            academyId: string;
             createdAt: Date;
+            academyId: string;
             playerId: string;
             remarks: string | null;
             matchId: string;
@@ -262,6 +243,25 @@ export declare class MatchesController {
             overallRating: import("@prisma/client/runtime/library").Decimal | null;
             recommendations: string | null;
         }[];
+        team: {
+            id: string;
+            name: string;
+            createdAt: Date;
+            updatedAt: Date;
+            academyId: string;
+            branchId: string | null;
+            isActive: boolean;
+            ageCategoryId: string;
+            seasonId: string;
+            headCoachId: string | null;
+        };
+        opponent: {
+            id: string;
+            name: string;
+            createdAt: Date;
+            academyId: string;
+            contactInfo: string | null;
+        };
         participations: ({
             player: {
                 id: string;
@@ -280,10 +280,10 @@ export declare class MatchesController {
         })[];
     } & {
         id: string;
-        academyId: string;
         status: import(".prisma/client").$Enums.MatchStatus;
         createdAt: Date;
         updatedAt: Date;
+        academyId: string;
         teamId: string;
         opponentId: string;
         competitionName: string | null;
@@ -294,29 +294,10 @@ export declare class MatchesController {
         notes: string | null;
     }>;
     setParticipations(id: string, dto: SetParticipationsDto, user: RequestUser): Promise<{
-        team: {
-            id: string;
-            academyId: string;
-            createdAt: Date;
-            updatedAt: Date;
-            name: string;
-            branchId: string | null;
-            isActive: boolean;
-            ageCategoryId: string;
-            seasonId: string;
-            headCoachId: string | null;
-        };
-        opponent: {
-            id: string;
-            academyId: string;
-            createdAt: Date;
-            name: string;
-            contactInfo: string | null;
-        };
         matchPlayerAssessments: {
             id: string;
-            academyId: string;
             createdAt: Date;
+            academyId: string;
             playerId: string;
             remarks: string | null;
             matchId: string;
@@ -329,6 +310,25 @@ export declare class MatchesController {
             overallRating: import("@prisma/client/runtime/library").Decimal | null;
             recommendations: string | null;
         }[];
+        team: {
+            id: string;
+            name: string;
+            createdAt: Date;
+            updatedAt: Date;
+            academyId: string;
+            branchId: string | null;
+            isActive: boolean;
+            ageCategoryId: string;
+            seasonId: string;
+            headCoachId: string | null;
+        };
+        opponent: {
+            id: string;
+            name: string;
+            createdAt: Date;
+            academyId: string;
+            contactInfo: string | null;
+        };
         participations: ({
             player: {
                 id: string;
@@ -347,10 +347,10 @@ export declare class MatchesController {
         })[];
     } & {
         id: string;
-        academyId: string;
         status: import(".prisma/client").$Enums.MatchStatus;
         createdAt: Date;
         updatedAt: Date;
+        academyId: string;
         teamId: string;
         opponentId: string;
         competitionName: string | null;
@@ -361,29 +361,10 @@ export declare class MatchesController {
         notes: string | null;
     }>;
     addPlayerAssessment(id: string, dto: CreateMatchPlayerAssessmentDto, user: RequestUser): Promise<{
-        team: {
-            id: string;
-            academyId: string;
-            createdAt: Date;
-            updatedAt: Date;
-            name: string;
-            branchId: string | null;
-            isActive: boolean;
-            ageCategoryId: string;
-            seasonId: string;
-            headCoachId: string | null;
-        };
-        opponent: {
-            id: string;
-            academyId: string;
-            createdAt: Date;
-            name: string;
-            contactInfo: string | null;
-        };
         matchPlayerAssessments: {
             id: string;
-            academyId: string;
             createdAt: Date;
+            academyId: string;
             playerId: string;
             remarks: string | null;
             matchId: string;
@@ -396,6 +377,25 @@ export declare class MatchesController {
             overallRating: import("@prisma/client/runtime/library").Decimal | null;
             recommendations: string | null;
         }[];
+        team: {
+            id: string;
+            name: string;
+            createdAt: Date;
+            updatedAt: Date;
+            academyId: string;
+            branchId: string | null;
+            isActive: boolean;
+            ageCategoryId: string;
+            seasonId: string;
+            headCoachId: string | null;
+        };
+        opponent: {
+            id: string;
+            name: string;
+            createdAt: Date;
+            academyId: string;
+            contactInfo: string | null;
+        };
         participations: ({
             player: {
                 id: string;
@@ -414,10 +414,10 @@ export declare class MatchesController {
         })[];
     } & {
         id: string;
-        academyId: string;
         status: import(".prisma/client").$Enums.MatchStatus;
         createdAt: Date;
         updatedAt: Date;
+        academyId: string;
         teamId: string;
         opponentId: string;
         competitionName: string | null;

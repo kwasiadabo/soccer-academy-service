@@ -17,15 +17,15 @@ export declare class CoachesController {
             }[];
         } | null;
     } & {
-        role: import(".prisma/client").$Enums.StaffRole;
         id: string;
-        academyId: string;
+        createdAt: Date;
+        updatedAt: Date;
         email: string | null;
         firstName: string;
         lastName: string;
+        role: import(".prisma/client").$Enums.StaffRole;
+        academyId: string;
         phone: string | null;
-        createdAt: Date;
-        updatedAt: Date;
         deletedAt: Date | null;
         userId: string | null;
         isActive: boolean;
@@ -44,8 +44,8 @@ export declare class CoachesController {
         } | null;
         qualifications: {
             id: string;
-            academyId: string;
             createdAt: Date;
+            academyId: string;
             coachId: string;
             title: string;
             issuingBody: string | null;
@@ -56,10 +56,10 @@ export declare class CoachesController {
         assignments: ({
             team: {
                 id: string;
-                academyId: string;
+                name: string;
                 createdAt: Date;
                 updatedAt: Date;
-                name: string;
+                academyId: string;
                 branchId: string | null;
                 isActive: boolean;
                 ageCategoryId: string;
@@ -68,20 +68,20 @@ export declare class CoachesController {
             } | null;
             trainingGroup: {
                 id: string;
-                academyId: string;
+                name: string;
                 createdAt: Date;
                 updatedAt: Date;
-                name: string;
+                academyId: string;
                 branchId: string | null;
                 isActive: boolean;
                 teamId: string;
                 primaryCoachId: string | null;
             } | null;
         } & {
-            role: import(".prisma/client").$Enums.CoachAssignmentRole;
             id: string;
-            academyId: string;
             createdAt: Date;
+            role: import(".prisma/client").$Enums.CoachAssignmentRole;
+            academyId: string;
             teamId: string | null;
             trainingGroupId: string | null;
             coachId: string;
@@ -89,15 +89,15 @@ export declare class CoachesController {
             effectiveTo: Date | null;
         })[];
     } & {
-        role: import(".prisma/client").$Enums.StaffRole;
         id: string;
-        academyId: string;
+        createdAt: Date;
+        updatedAt: Date;
         email: string | null;
         firstName: string;
         lastName: string;
+        role: import(".prisma/client").$Enums.StaffRole;
+        academyId: string;
         phone: string | null;
-        createdAt: Date;
-        updatedAt: Date;
         deletedAt: Date | null;
         userId: string | null;
         isActive: boolean;
@@ -105,15 +105,15 @@ export declare class CoachesController {
         bio: string | null;
     }>;
     create(dto: CreateCoachDto): import(".prisma/client").Prisma.Prisma__CoachClient<{
-        role: import(".prisma/client").$Enums.StaffRole;
         id: string;
-        academyId: string;
+        createdAt: Date;
+        updatedAt: Date;
         email: string | null;
         firstName: string;
         lastName: string;
+        role: import(".prisma/client").$Enums.StaffRole;
+        academyId: string;
         phone: string | null;
-        createdAt: Date;
-        updatedAt: Date;
         deletedAt: Date | null;
         userId: string | null;
         isActive: boolean;
@@ -121,15 +121,15 @@ export declare class CoachesController {
         bio: string | null;
     }, never, import("@prisma/client/runtime/library").DefaultArgs>;
     update(id: string, dto: UpdateCoachDto): Promise<{
-        role: import(".prisma/client").$Enums.StaffRole;
         id: string;
-        academyId: string;
+        createdAt: Date;
+        updatedAt: Date;
         email: string | null;
         firstName: string;
         lastName: string;
+        role: import(".prisma/client").$Enums.StaffRole;
+        academyId: string;
         phone: string | null;
-        createdAt: Date;
-        updatedAt: Date;
         deletedAt: Date | null;
         userId: string | null;
         isActive: boolean;
@@ -148,8 +148,8 @@ export declare class CoachesController {
         } | null;
         qualifications: {
             id: string;
-            academyId: string;
             createdAt: Date;
+            academyId: string;
             coachId: string;
             title: string;
             issuingBody: string | null;
@@ -160,10 +160,10 @@ export declare class CoachesController {
         assignments: ({
             team: {
                 id: string;
-                academyId: string;
+                name: string;
                 createdAt: Date;
                 updatedAt: Date;
-                name: string;
+                academyId: string;
                 branchId: string | null;
                 isActive: boolean;
                 ageCategoryId: string;
@@ -172,20 +172,20 @@ export declare class CoachesController {
             } | null;
             trainingGroup: {
                 id: string;
-                academyId: string;
+                name: string;
                 createdAt: Date;
                 updatedAt: Date;
-                name: string;
+                academyId: string;
                 branchId: string | null;
                 isActive: boolean;
                 teamId: string;
                 primaryCoachId: string | null;
             } | null;
         } & {
-            role: import(".prisma/client").$Enums.CoachAssignmentRole;
             id: string;
-            academyId: string;
             createdAt: Date;
+            role: import(".prisma/client").$Enums.CoachAssignmentRole;
+            academyId: string;
             teamId: string | null;
             trainingGroupId: string | null;
             coachId: string;
@@ -193,15 +193,15 @@ export declare class CoachesController {
             effectiveTo: Date | null;
         })[];
     } & {
-        role: import(".prisma/client").$Enums.StaffRole;
         id: string;
-        academyId: string;
+        createdAt: Date;
+        updatedAt: Date;
         email: string | null;
         firstName: string;
         lastName: string;
+        role: import(".prisma/client").$Enums.StaffRole;
+        academyId: string;
         phone: string | null;
-        createdAt: Date;
-        updatedAt: Date;
         deletedAt: Date | null;
         userId: string | null;
         isActive: boolean;
@@ -220,8 +220,8 @@ export declare class CoachesController {
         } | null;
         qualifications: {
             id: string;
-            academyId: string;
             createdAt: Date;
+            academyId: string;
             coachId: string;
             title: string;
             issuingBody: string | null;
@@ -232,10 +232,10 @@ export declare class CoachesController {
         assignments: ({
             team: {
                 id: string;
-                academyId: string;
+                name: string;
                 createdAt: Date;
                 updatedAt: Date;
-                name: string;
+                academyId: string;
                 branchId: string | null;
                 isActive: boolean;
                 ageCategoryId: string;
@@ -244,20 +244,20 @@ export declare class CoachesController {
             } | null;
             trainingGroup: {
                 id: string;
-                academyId: string;
+                name: string;
                 createdAt: Date;
                 updatedAt: Date;
-                name: string;
+                academyId: string;
                 branchId: string | null;
                 isActive: boolean;
                 teamId: string;
                 primaryCoachId: string | null;
             } | null;
         } & {
-            role: import(".prisma/client").$Enums.CoachAssignmentRole;
             id: string;
-            academyId: string;
             createdAt: Date;
+            role: import(".prisma/client").$Enums.CoachAssignmentRole;
+            academyId: string;
             teamId: string | null;
             trainingGroupId: string | null;
             coachId: string;
@@ -265,15 +265,15 @@ export declare class CoachesController {
             effectiveTo: Date | null;
         })[];
     } & {
-        role: import(".prisma/client").$Enums.StaffRole;
         id: string;
-        academyId: string;
+        createdAt: Date;
+        updatedAt: Date;
         email: string | null;
         firstName: string;
         lastName: string;
+        role: import(".prisma/client").$Enums.StaffRole;
+        academyId: string;
         phone: string | null;
-        createdAt: Date;
-        updatedAt: Date;
         deletedAt: Date | null;
         userId: string | null;
         isActive: boolean;
@@ -292,8 +292,8 @@ export declare class CoachesController {
         } | null;
         qualifications: {
             id: string;
-            academyId: string;
             createdAt: Date;
+            academyId: string;
             coachId: string;
             title: string;
             issuingBody: string | null;
@@ -304,10 +304,10 @@ export declare class CoachesController {
         assignments: ({
             team: {
                 id: string;
-                academyId: string;
+                name: string;
                 createdAt: Date;
                 updatedAt: Date;
-                name: string;
+                academyId: string;
                 branchId: string | null;
                 isActive: boolean;
                 ageCategoryId: string;
@@ -316,20 +316,20 @@ export declare class CoachesController {
             } | null;
             trainingGroup: {
                 id: string;
-                academyId: string;
+                name: string;
                 createdAt: Date;
                 updatedAt: Date;
-                name: string;
+                academyId: string;
                 branchId: string | null;
                 isActive: boolean;
                 teamId: string;
                 primaryCoachId: string | null;
             } | null;
         } & {
-            role: import(".prisma/client").$Enums.CoachAssignmentRole;
             id: string;
-            academyId: string;
             createdAt: Date;
+            role: import(".prisma/client").$Enums.CoachAssignmentRole;
+            academyId: string;
             teamId: string | null;
             trainingGroupId: string | null;
             coachId: string;
@@ -337,15 +337,15 @@ export declare class CoachesController {
             effectiveTo: Date | null;
         })[];
     } & {
-        role: import(".prisma/client").$Enums.StaffRole;
         id: string;
-        academyId: string;
+        createdAt: Date;
+        updatedAt: Date;
         email: string | null;
         firstName: string;
         lastName: string;
+        role: import(".prisma/client").$Enums.StaffRole;
+        academyId: string;
         phone: string | null;
-        createdAt: Date;
-        updatedAt: Date;
         deletedAt: Date | null;
         userId: string | null;
         isActive: boolean;
@@ -364,8 +364,8 @@ export declare class CoachesController {
         } | null;
         qualifications: {
             id: string;
-            academyId: string;
             createdAt: Date;
+            academyId: string;
             coachId: string;
             title: string;
             issuingBody: string | null;
@@ -376,10 +376,10 @@ export declare class CoachesController {
         assignments: ({
             team: {
                 id: string;
-                academyId: string;
+                name: string;
                 createdAt: Date;
                 updatedAt: Date;
-                name: string;
+                academyId: string;
                 branchId: string | null;
                 isActive: boolean;
                 ageCategoryId: string;
@@ -388,20 +388,20 @@ export declare class CoachesController {
             } | null;
             trainingGroup: {
                 id: string;
-                academyId: string;
+                name: string;
                 createdAt: Date;
                 updatedAt: Date;
-                name: string;
+                academyId: string;
                 branchId: string | null;
                 isActive: boolean;
                 teamId: string;
                 primaryCoachId: string | null;
             } | null;
         } & {
-            role: import(".prisma/client").$Enums.CoachAssignmentRole;
             id: string;
-            academyId: string;
             createdAt: Date;
+            role: import(".prisma/client").$Enums.CoachAssignmentRole;
+            academyId: string;
             teamId: string | null;
             trainingGroupId: string | null;
             coachId: string;
@@ -409,15 +409,15 @@ export declare class CoachesController {
             effectiveTo: Date | null;
         })[];
     } & {
-        role: import(".prisma/client").$Enums.StaffRole;
         id: string;
-        academyId: string;
+        createdAt: Date;
+        updatedAt: Date;
         email: string | null;
         firstName: string;
         lastName: string;
+        role: import(".prisma/client").$Enums.StaffRole;
+        academyId: string;
         phone: string | null;
-        createdAt: Date;
-        updatedAt: Date;
         deletedAt: Date | null;
         userId: string | null;
         isActive: boolean;

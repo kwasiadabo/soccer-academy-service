@@ -9,17 +9,17 @@ export declare class PublicShopController {
     listProducts(): import(".prisma/client").Prisma.PrismaPromise<({
         images: {
             id: string;
-            academyId: string;
             createdAt: Date;
+            academyId: string;
             sortOrder: number;
             documentId: string;
             productId: string;
         }[];
         variants: {
             id: string;
-            academyId: string;
             createdAt: Date;
             updatedAt: Date;
+            academyId: string;
             isActive: boolean;
             productId: string;
             sizeLabel: string;
@@ -28,12 +28,12 @@ export declare class PublicShopController {
         }[];
     } & {
         id: string;
-        academyId: string;
+        name: string;
         createdAt: Date;
         updatedAt: Date;
-        deletedAt: Date | null;
-        name: string;
         description: string | null;
+        academyId: string;
+        deletedAt: Date | null;
         isActive: boolean;
         category: import(".prisma/client").$Enums.ProductCategory;
         basePrice: import("@prisma/client/runtime/library").Decimal;
@@ -41,17 +41,17 @@ export declare class PublicShopController {
     getProduct(id: string): Promise<{
         images: {
             id: string;
-            academyId: string;
             createdAt: Date;
+            academyId: string;
             sortOrder: number;
             documentId: string;
             productId: string;
         }[];
         variants: {
             id: string;
-            academyId: string;
             createdAt: Date;
             updatedAt: Date;
+            academyId: string;
             isActive: boolean;
             productId: string;
             sizeLabel: string;
@@ -60,24 +60,24 @@ export declare class PublicShopController {
         }[];
     } & {
         id: string;
-        academyId: string;
+        name: string;
         createdAt: Date;
         updatedAt: Date;
-        deletedAt: Date | null;
-        name: string;
         description: string | null;
+        academyId: string;
+        deletedAt: Date | null;
         isActive: boolean;
         category: import(".prisma/client").$Enums.ProductCategory;
         basePrice: import("@prisma/client/runtime/library").Decimal;
     }>;
     getProductImage(id: string, imageId: string, res: Response): Promise<void>;
     lookupPlayer(code: string): Promise<{
-        team: {
-            name: string;
-        } | null;
         id: string;
         firstName: string;
         lastName: string;
+        team: {
+            name: string;
+        } | null;
     }>;
     createOrder(dto: CreateGuestOrderDto): Promise<{
         player: {
@@ -108,29 +108,29 @@ export declare class PublicShopController {
                 product: {
                     images: {
                         id: string;
-                        academyId: string;
                         createdAt: Date;
+                        academyId: string;
                         sortOrder: number;
                         documentId: string;
                         productId: string;
                     }[];
                 } & {
                     id: string;
-                    academyId: string;
+                    name: string;
                     createdAt: Date;
                     updatedAt: Date;
-                    deletedAt: Date | null;
-                    name: string;
                     description: string | null;
+                    academyId: string;
+                    deletedAt: Date | null;
                     isActive: boolean;
                     category: import(".prisma/client").$Enums.ProductCategory;
                     basePrice: import("@prisma/client/runtime/library").Decimal;
                 };
             } & {
                 id: string;
-                academyId: string;
                 createdAt: Date;
                 updatedAt: Date;
+                academyId: string;
                 isActive: boolean;
                 productId: string;
                 sizeLabel: string;
@@ -139,8 +139,8 @@ export declare class PublicShopController {
             };
         } & {
             id: string;
-            academyId: string;
             createdAt: Date;
+            academyId: string;
             orderId: string;
             productVariantId: string;
             quantity: number;
@@ -154,10 +154,10 @@ export declare class PublicShopController {
         } | null;
     } & {
         id: string;
-        academyId: string;
         status: import(".prisma/client").$Enums.MerchandiseOrderStatus;
         createdAt: Date;
         updatedAt: Date;
+        academyId: string;
         playerId: string;
         guardianId: string;
         invoiceId: string | null;
