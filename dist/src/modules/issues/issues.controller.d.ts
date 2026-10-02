@@ -21,11 +21,11 @@ export declare class IssuesController {
         };
     } & {
         id: string;
+        academyId: string;
         status: import(".prisma/client").$Enums.IssueStatus;
         createdAt: Date;
         updatedAt: Date;
         description: string;
-        academyId: string;
         guardianId: string;
         submittedByUserId: string;
         subject: string;
@@ -49,21 +49,21 @@ export declare class IssuesController {
             };
         } & {
             id: string;
-            createdAt: Date;
             academyId: string;
-            message: string;
+            createdAt: Date;
             issueId: string;
             authorUserId: string;
             isStaffReply: boolean;
+            message: string;
             readAt: Date | null;
         })[];
     } & {
         id: string;
+        academyId: string;
         status: import(".prisma/client").$Enums.IssueStatus;
         createdAt: Date;
         updatedAt: Date;
         description: string;
-        academyId: string;
         guardianId: string;
         submittedByUserId: string;
         subject: string;
@@ -87,21 +87,21 @@ export declare class IssuesController {
             };
         } & {
             id: string;
-            createdAt: Date;
             academyId: string;
-            message: string;
+            createdAt: Date;
             issueId: string;
             authorUserId: string;
             isStaffReply: boolean;
+            message: string;
             readAt: Date | null;
         })[];
     } & {
         id: string;
+        academyId: string;
         status: import(".prisma/client").$Enums.IssueStatus;
         createdAt: Date;
         updatedAt: Date;
         description: string;
-        academyId: string;
         guardianId: string;
         submittedByUserId: string;
         subject: string;
@@ -125,21 +125,21 @@ export declare class IssuesController {
             };
         } & {
             id: string;
-            createdAt: Date;
             academyId: string;
-            message: string;
+            createdAt: Date;
             issueId: string;
             authorUserId: string;
             isStaffReply: boolean;
+            message: string;
             readAt: Date | null;
         })[];
     } & {
         id: string;
+        academyId: string;
         status: import(".prisma/client").$Enums.IssueStatus;
         createdAt: Date;
         updatedAt: Date;
         description: string;
-        academyId: string;
         guardianId: string;
         submittedByUserId: string;
         subject: string;

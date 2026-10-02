@@ -8,6 +8,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.MessagingModule = void 0;
 const common_1 = require("@nestjs/common");
+const billing_module_1 = require("../billing/billing.module");
 const email_service_1 = require("./email.service");
 const sms_service_1 = require("./sms.service");
 let MessagingModule = class MessagingModule {
@@ -15,6 +16,7 @@ let MessagingModule = class MessagingModule {
 exports.MessagingModule = MessagingModule;
 exports.MessagingModule = MessagingModule = __decorate([
     (0, common_1.Module)({
+        imports: [billing_module_1.BillingModule],
         providers: [email_service_1.EmailService, sms_service_1.SmsService],
         exports: [email_service_1.EmailService, sms_service_1.SmsService],
     })

@@ -1,44 +1,21 @@
-import { Injectable, Logger } from '@nestjs/common';
-import nodemailer from 'nodemailer';
+import { Injectable } from '@nestjs/common';
 import { TenantContextService } from '../../common/tenant-context/tenant-context.service';
-import { PrismaService } from '../prisma/prisma.service';
+import { PlatformEmailService } from '../billing/platform-email.service';
 
-// Each academy brings its own email account (its own Gmail address + app
-// password, stored in AcademySettings) and its own display/brand name for the
-// "from" header — resolved per call from the current tenant.
+// An academy's own parent-facing email (receipts, reminders, etc.) — sent
+// through the same single platform mail sender everything else uses (see
+// PlatformEmailService), not a Gmail account of the academy's own. Only the
+// "from" display name changes per call, to the current tenant's own slug
+// (e.g. "kapikids@sams"), so a parent can tell which academy an email came
+// from regardless of branding.
 @Injectable()
 export class EmailService {
-  private readonly logger = new Logger(EmailService.name);
-
   constructor(
-    private readonly prisma: PrismaService,
+    private readonly platformEmail: PlatformEmailService,
     private readonly tenantContext: TenantContextService,
   ) {}
 
-  // Never throws — a notification failure must not roll back a real payment.
   async send(params: { to: string; subject: string; html: string }): Promise<boolean> {
-    const academyId = this.tenantContext.getAcademyId();
-    const settings = await this.prisma.academySettings.findUnique({ where: { academyId } });
-    if (!settings?.emailUser || !settings?.emailAppPassword) {
-      this.logger.warn(`Email not configured for academy ${academyId} — skipping send`);
-      return false;
-    }
-    try {
-      const transporter = nodemailer.createTransport({
-        service: 'gmail',
-        auth: { user: settings.emailUser, pass: settings.emailAppPassword },
-      });
-      const info = await transporter.sendMail({
-        from: `${settings.brandName} <${settings.emailUser}>`,
-        to: params.to,
-        subject: params.subject,
-        html: params.html,
-      });
-      this.logger.log(`Email sent to ${params.to}: ${info.messageId}`);
-      return true;
-    } catch (err) {
-      this.logger.error(`Failed to send email to ${params.to}: ${(err as Error).message}`);
-      return false;
-    }
+    return this.platformEmail.send({ ...params, fromName: `${this.tenantContext.getSlug()}@sams` });
   }
 }

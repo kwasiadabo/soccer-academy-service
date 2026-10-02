@@ -3,17 +3,19 @@ import { ConfigService } from '@nestjs/config';
 import { Resend } from 'resend';
 import nodemailer from 'nodemailer';
 
-// SAMS's own outbound email — subscription warnings and password resets,
-// not an academy's own parent-facing communications (see the academy-scoped
-// EmailService for that, which reads AcademySettings instead).
+// The single outbound email sender for the whole platform — both SAMS's own
+// mail (subscription warnings, lead notifications, password resets) and
+// every academy's own parent-facing communications (see the academy-scoped
+// EmailService, which delegates here rather than using its own Gmail relay).
+// Every email goes out from the same verified address; only the sender
+// *name* varies by caller (e.g. "SAMS" vs "kapikids@sams"), via `fromName`.
 //
 // Sent via Resend with a verified sending domain (RESEND_API_KEY/
 // RESEND_FROM_EMAIL) rather than a personal Gmail relay — Gmail's SMTP
 // accepts and relays the message fine, but third-party inboxes (Yahoo in
 // particular) silently drop mail from an unverified personal sender with no
 // bounce, which is invisible from here. Falls back to the old Gmail relay
-// (EMAIL_USER/EMAIL_APP_PASSWORD, orphaned by the multi-tenancy migration
-// when academy email became per-academy) only if Resend isn't configured.
+// (EMAIL_USER/EMAIL_APP_PASSWORD) only if Resend isn't configured.
 @Injectable()
 export class PlatformEmailService {
   private readonly logger = new Logger(PlatformEmailService.name);
@@ -21,24 +23,26 @@ export class PlatformEmailService {
   constructor(private readonly config: ConfigService) {}
 
   // Never throws — a notification failure must not break the billing cron.
-  async send(params: { to: string; subject: string; html: string }): Promise<boolean> {
+  async send(params: { to: string; subject: string; html: string; fromName?: string }): Promise<boolean> {
+    const fromName = params.fromName ?? 'SAMS';
     const resendApiKey = this.config.get<string>('RESEND_API_KEY');
     const resendFrom = this.config.get<string>('RESEND_FROM_EMAIL');
     if (resendApiKey && resendFrom) {
-      return this.sendViaResend(resendApiKey, resendFrom, params);
+      return this.sendViaResend(resendApiKey, resendFrom, fromName, params);
     }
-    return this.sendViaGmailFallback(params);
+    return this.sendViaGmailFallback(fromName, params);
   }
 
   private async sendViaResend(
     apiKey: string,
     from: string,
+    fromName: string,
     params: { to: string; subject: string; html: string },
   ): Promise<boolean> {
     try {
       const resend = new Resend(apiKey);
       const { data, error } = await resend.emails.send({
-        from: `SAMS <${from}>`,
+        from: `${fromName} <${from}>`,
         to: params.to,
         subject: params.subject,
         html: params.html,
@@ -55,7 +59,10 @@ export class PlatformEmailService {
     }
   }
 
-  private async sendViaGmailFallback(params: { to: string; subject: string; html: string }): Promise<boolean> {
+  private async sendViaGmailFallback(
+    fromName: string,
+    params: { to: string; subject: string; html: string },
+  ): Promise<boolean> {
     const user = this.config.get<string>('EMAIL_USER');
     const pass = this.config.get<string>('EMAIL_APP_PASSWORD');
     if (!user || !pass) {
@@ -65,7 +72,7 @@ export class PlatformEmailService {
     try {
       const transporter = nodemailer.createTransport({ service: 'gmail', auth: { user, pass } });
       const info = await transporter.sendMail({
-        from: `SAMS <${user}>`,
+        from: `${fromName} <${user}>`,
         to: params.to,
         subject: params.subject,
         html: params.html,

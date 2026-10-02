@@ -8,10 +8,10 @@ export declare class AcademyConfigController {
     constructor(service: AcademyConfigService);
     listSeasons(): import(".prisma/client").Prisma.PrismaPromise<{
         id: string;
-        name: string;
+        academyId: string;
         createdAt: Date;
         updatedAt: Date;
-        academyId: string;
+        name: string;
         branchId: string | null;
         startDate: Date;
         endDate: Date;
@@ -19,10 +19,10 @@ export declare class AcademyConfigController {
     }[]>;
     createSeason(dto: CreateSeasonDto): Promise<{
         id: string;
-        name: string;
+        academyId: string;
         createdAt: Date;
         updatedAt: Date;
-        academyId: string;
+        name: string;
         branchId: string | null;
         startDate: Date;
         endDate: Date;
@@ -30,10 +30,10 @@ export declare class AcademyConfigController {
     }>;
     updateSeason(id: string, dto: UpdateSeasonDto): Promise<{
         id: string;
-        name: string;
+        academyId: string;
         createdAt: Date;
         updatedAt: Date;
-        academyId: string;
+        name: string;
         branchId: string | null;
         startDate: Date;
         endDate: Date;
@@ -41,78 +41,50 @@ export declare class AcademyConfigController {
     }>;
     listAgeCategories(): import(".prisma/client").Prisma.PrismaPromise<{
         id: string;
-        name: string;
+        academyId: string;
         createdAt: Date;
         updatedAt: Date;
-        academyId: string;
-        sortOrder: number;
+        name: string;
         branchId: string | null;
         isActive: boolean;
         code: string;
         minAge: number;
         maxAge: number;
+        sortOrder: number;
     }[]>;
     createAgeCategory(dto: CreateAgeCategoryDto): import(".prisma/client").Prisma.Prisma__AgeCategoryClient<{
         id: string;
-        name: string;
+        academyId: string;
         createdAt: Date;
         updatedAt: Date;
-        academyId: string;
-        sortOrder: number;
+        name: string;
         branchId: string | null;
         isActive: boolean;
         code: string;
         minAge: number;
         maxAge: number;
+        sortOrder: number;
     }, never, import("@prisma/client/runtime/library").DefaultArgs>;
     updateAgeCategory(id: string, dto: UpdateAgeCategoryDto): Promise<{
         id: string;
-        name: string;
+        academyId: string;
         createdAt: Date;
         updatedAt: Date;
-        academyId: string;
-        sortOrder: number;
+        name: string;
         branchId: string | null;
         isActive: boolean;
         code: string;
         minAge: number;
         maxAge: number;
+        sortOrder: number;
     }>;
     listTeams(): import(".prisma/client").Prisma.PrismaPromise<({
-        coachAssignments: ({
-            coach: {
-                id: string;
-                createdAt: Date;
-                updatedAt: Date;
-                email: string | null;
-                firstName: string;
-                lastName: string;
-                role: import(".prisma/client").$Enums.StaffRole;
-                academyId: string;
-                phone: string | null;
-                deletedAt: Date | null;
-                userId: string | null;
-                isActive: boolean;
-                middleName: string | null;
-                bio: string | null;
-            };
-        } & {
-            id: string;
-            createdAt: Date;
-            role: import(".prisma/client").$Enums.CoachAssignmentRole;
-            academyId: string;
-            teamId: string | null;
-            trainingGroupId: string | null;
-            coachId: string;
-            effectiveFrom: Date;
-            effectiveTo: Date | null;
-        })[];
         season: {
             id: string;
-            name: string;
+            academyId: string;
             createdAt: Date;
             updatedAt: Date;
-            academyId: string;
+            name: string;
             branchId: string | null;
             startDate: Date;
             endDate: Date;
@@ -120,27 +92,55 @@ export declare class AcademyConfigController {
         };
         ageCategory: {
             id: string;
-            name: string;
+            academyId: string;
             createdAt: Date;
             updatedAt: Date;
-            academyId: string;
-            sortOrder: number;
+            name: string;
             branchId: string | null;
             isActive: boolean;
             code: string;
             minAge: number;
             maxAge: number;
+            sortOrder: number;
         };
-        headCoach: {
+        coachAssignments: ({
+            coach: {
+                role: import(".prisma/client").$Enums.StaffRole;
+                id: string;
+                academyId: string;
+                email: string | null;
+                firstName: string;
+                lastName: string;
+                phone: string | null;
+                createdAt: Date;
+                updatedAt: Date;
+                deletedAt: Date | null;
+                userId: string | null;
+                isActive: boolean;
+                middleName: string | null;
+                bio: string | null;
+            };
+        } & {
+            role: import(".prisma/client").$Enums.CoachAssignmentRole;
             id: string;
+            academyId: string;
             createdAt: Date;
-            updatedAt: Date;
+            teamId: string | null;
+            trainingGroupId: string | null;
+            coachId: string;
+            effectiveFrom: Date;
+            effectiveTo: Date | null;
+        })[];
+        headCoach: {
+            role: import(".prisma/client").$Enums.StaffRole;
+            id: string;
+            academyId: string;
             email: string | null;
             firstName: string;
             lastName: string;
-            role: import(".prisma/client").$Enums.StaffRole;
-            academyId: string;
             phone: string | null;
+            createdAt: Date;
+            updatedAt: Date;
             deletedAt: Date | null;
             userId: string | null;
             isActive: boolean;
@@ -149,10 +149,10 @@ export declare class AcademyConfigController {
         } | null;
     } & {
         id: string;
-        name: string;
+        academyId: string;
         createdAt: Date;
         updatedAt: Date;
-        academyId: string;
+        name: string;
         branchId: string | null;
         isActive: boolean;
         ageCategoryId: string;
@@ -161,10 +161,10 @@ export declare class AcademyConfigController {
     })[]>;
     createTeam(dto: CreateTeamDto): import(".prisma/client").Prisma.Prisma__TeamClient<{
         id: string;
-        name: string;
+        academyId: string;
         createdAt: Date;
         updatedAt: Date;
-        academyId: string;
+        name: string;
         branchId: string | null;
         isActive: boolean;
         ageCategoryId: string;
@@ -173,10 +173,10 @@ export declare class AcademyConfigController {
     }, never, import("@prisma/client/runtime/library").DefaultArgs>;
     updateTeam(id: string, dto: UpdateTeamDto): Promise<{
         id: string;
-        name: string;
+        academyId: string;
         createdAt: Date;
         updatedAt: Date;
-        academyId: string;
+        name: string;
         branchId: string | null;
         isActive: boolean;
         ageCategoryId: string;
@@ -186,10 +186,10 @@ export declare class AcademyConfigController {
     listTrainingGroups(): import(".prisma/client").Prisma.PrismaPromise<({
         team: {
             id: string;
-            name: string;
+            academyId: string;
             createdAt: Date;
             updatedAt: Date;
-            academyId: string;
+            name: string;
             branchId: string | null;
             isActive: boolean;
             ageCategoryId: string;
@@ -197,15 +197,15 @@ export declare class AcademyConfigController {
             headCoachId: string | null;
         };
         primaryCoach: {
+            role: import(".prisma/client").$Enums.StaffRole;
             id: string;
-            createdAt: Date;
-            updatedAt: Date;
+            academyId: string;
             email: string | null;
             firstName: string;
             lastName: string;
-            role: import(".prisma/client").$Enums.StaffRole;
-            academyId: string;
             phone: string | null;
+            createdAt: Date;
+            updatedAt: Date;
             deletedAt: Date | null;
             userId: string | null;
             isActive: boolean;
@@ -214,10 +214,10 @@ export declare class AcademyConfigController {
         } | null;
     } & {
         id: string;
-        name: string;
+        academyId: string;
         createdAt: Date;
         updatedAt: Date;
-        academyId: string;
+        name: string;
         branchId: string | null;
         isActive: boolean;
         teamId: string;
@@ -225,10 +225,10 @@ export declare class AcademyConfigController {
     })[]>;
     createTrainingGroup(dto: CreateTrainingGroupDto): import(".prisma/client").Prisma.Prisma__TrainingGroupClient<{
         id: string;
-        name: string;
+        academyId: string;
         createdAt: Date;
         updatedAt: Date;
-        academyId: string;
+        name: string;
         branchId: string | null;
         isActive: boolean;
         teamId: string;
@@ -236,10 +236,10 @@ export declare class AcademyConfigController {
     }, never, import("@prisma/client/runtime/library").DefaultArgs>;
     updateTrainingGroup(id: string, dto: UpdateTrainingGroupDto): Promise<{
         id: string;
-        name: string;
+        academyId: string;
         createdAt: Date;
         updatedAt: Date;
-        academyId: string;
+        name: string;
         branchId: string | null;
         isActive: boolean;
         teamId: string;

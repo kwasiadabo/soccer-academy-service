@@ -27,6 +27,14 @@ const PENDING_SIGNUP_REMINDER_AFTER_DAYS = 2;
 const PENDING_SIGNUP_DELETION_WARNING_AFTER_DAYS = 5;
 const PENDING_SIGNUP_DELETE_AFTER_DAYS = 7;
 
+// How long a single emailed payment link stays valid for, from the moment
+// it's minted — see PendingAcademySignup#paymentLinkExpiresAt.
+const PAYMENT_LINK_VALID_HOURS = 72;
+
+function paymentLinkExpiry(): Date {
+  return new Date(Date.now() + PAYMENT_LINK_VALID_HOURS * 60 * 60 * 1000);
+}
+
 function generateTemporaryPassword(): string {
   return randomBytes(9).toString('base64url');
 }
@@ -365,12 +373,14 @@ export class PlatformAdminService {
   }
 
   // Step one of paid self-serve signup: charge the platform's configured
-  // one-time signup fee, then — the instant payment is initialized, before
-  // the browser has even reached Paystack — persist the academy/admin
-  // details as a PendingAcademySignup. Nothing here waits for payment to
-  // succeed; this just makes sure the signup survives however long the
-  // academy takes to actually pay, including closing the tab entirely (see
-  // resumeSignupPayment and handlePendingSignupCleanupCron below).
+  // one-time signup fee, then — the instant payment is initialized —
+  // persist the academy/admin details as a PendingAcademySignup and email
+  // the actual Paystack payment link to the admin. Deliberately does NOT
+  // hand the authorizationUrl back to the caller — the browser must never
+  // auto-redirect into Paystack straight off this form; the admin has to go
+  // to their inbox and follow the link from there, same as every reminder
+  // that follows it (see resumeSignupPayment and
+  // handlePendingSignupCleanupCron below).
   async initializeSignupPayment(dto: InitializeSignupPaymentDto) {
     const signupFee = await this.getSignupFee();
 
@@ -383,6 +393,7 @@ export class PlatformAdminService {
     });
 
     const adminPasswordHash = await bcrypt.hash(dto.adminPassword, 10);
+    const paymentLinkExpiresAt = paymentLinkExpiry();
     const pending = await this.prisma.pendingAcademySignup.create({
       data: {
         paystackReference: result.reference,
@@ -393,15 +404,21 @@ export class PlatformAdminService {
         adminFirstName: dto.adminFirstName,
         adminLastName: dto.adminLastName,
         adminPasswordHash,
+        paymentLinkExpiresAt,
       },
     });
 
     await this.sendPendingSignupEmail(pending, {
-      subject: `Finish bringing ${pending.name} onto SAMS`,
-      intro: `You're almost done bringing <strong>${escapeHtml(pending.name)}</strong> onto SAMS — just the one-time signup fee left.`,
+      subject: `Complete payment to activate ${pending.name} on SAMS`,
+      intro: `You're almost done bringing <strong>${escapeHtml(pending.name)}</strong> onto SAMS. Pay the
+        one-time signup fee using the link below within the next ${PAYMENT_LINK_VALID_HOURS} hours to activate
+        your account — the link expires after that.`,
     });
 
-    return { authorizationUrl: result.authorizationUrl, reference: result.reference };
+    return {
+      adminEmail: pending.adminEmail,
+      paymentLinkExpiresAt,
+    };
   }
 
   // Re-initializes payment for an existing PendingAcademySignup from its
@@ -427,7 +444,11 @@ export class PlatformAdminService {
 
     await this.prisma.pendingAcademySignup.update({
       where: { id: pending.id },
-      data: { paystackReference: result.reference, frontendOrigin: new URL(dto.callbackUrl).origin },
+      data: {
+        paystackReference: result.reference,
+        frontendOrigin: new URL(dto.callbackUrl).origin,
+        paymentLinkExpiresAt: paymentLinkExpiry(),
+      },
     });
 
     return { authorizationUrl: result.authorizationUrl, reference: result.reference };
@@ -444,6 +465,11 @@ export class PlatformAdminService {
     });
     if (!pending) {
       throw new BadRequestException('We could not find this signup — it may have already been completed.');
+    }
+    if (pending.paymentLinkExpiresAt.getTime() < Date.now()) {
+      throw new BadRequestException(
+        'This payment link has expired. We will email a new one, or you can start over from the signup page.',
+      );
     }
 
     const verification = await this.platformPaystack.verifyTransaction(dto.reference);

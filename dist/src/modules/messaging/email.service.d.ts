@@ -1,10 +1,9 @@
 import { TenantContextService } from '../../common/tenant-context/tenant-context.service';
-import { PrismaService } from '../prisma/prisma.service';
+import { PlatformEmailService } from '../billing/platform-email.service';
 export declare class EmailService {
-    private readonly prisma;
+    private readonly platformEmail;
     private readonly tenantContext;
-    private readonly logger;
-    constructor(prisma: PrismaService, tenantContext: TenantContextService);
+    constructor(platformEmail: PlatformEmailService, tenantContext: TenantContextService);
     send(params: {
         to: string;
         subject: string;

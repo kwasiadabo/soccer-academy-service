@@ -7,16 +7,18 @@ export declare class GuardiansController {
         players: ({
             player: {
                 id: string;
+                academyId: string;
+                firstName: string;
+                lastName: string;
                 status: import(".prisma/client").$Enums.PlayerStatus;
                 createdAt: Date;
                 updatedAt: Date;
-                firstName: string;
-                lastName: string;
-                academyId: string;
                 deletedAt: Date | null;
                 ageCategoryId: string | null;
-                middleName: string | null;
+                teamId: string | null;
+                primaryCoachId: string | null;
                 playerCode: string | null;
+                middleName: string | null;
                 dateOfBirth: Date;
                 gender: import(".prisma/client").$Enums.Gender;
                 nationality: string | null;
@@ -28,14 +30,12 @@ export declare class GuardiansController {
                 dominantFoot: import(".prisma/client").$Enums.DominantFoot | null;
                 emergencyContactName: string | null;
                 emergencyContactPhone: string | null;
-                teamId: string | null;
                 trainingGroupId: string | null;
-                primaryCoachId: string | null;
             };
         } & {
             id: string;
-            createdAt: Date;
             academyId: string;
+            createdAt: Date;
             playerId: string;
             guardianId: string;
             relationship: import(".prisma/client").$Enums.GuardianRelationship;
@@ -43,13 +43,13 @@ export declare class GuardiansController {
         })[];
     } & {
         id: string;
-        createdAt: Date;
-        updatedAt: Date;
+        academyId: string;
         email: string | null;
         firstName: string;
         lastName: string;
-        academyId: string;
         phone: string;
+        createdAt: Date;
+        updatedAt: Date;
         deletedAt: Date | null;
         userId: string | null;
         address: string | null;
@@ -58,16 +58,18 @@ export declare class GuardiansController {
         players: ({
             player: {
                 id: string;
+                academyId: string;
+                firstName: string;
+                lastName: string;
                 status: import(".prisma/client").$Enums.PlayerStatus;
                 createdAt: Date;
                 updatedAt: Date;
-                firstName: string;
-                lastName: string;
-                academyId: string;
                 deletedAt: Date | null;
                 ageCategoryId: string | null;
-                middleName: string | null;
+                teamId: string | null;
+                primaryCoachId: string | null;
                 playerCode: string | null;
+                middleName: string | null;
                 dateOfBirth: Date;
                 gender: import(".prisma/client").$Enums.Gender;
                 nationality: string | null;
@@ -79,14 +81,12 @@ export declare class GuardiansController {
                 dominantFoot: import(".prisma/client").$Enums.DominantFoot | null;
                 emergencyContactName: string | null;
                 emergencyContactPhone: string | null;
-                teamId: string | null;
                 trainingGroupId: string | null;
-                primaryCoachId: string | null;
             };
         } & {
             id: string;
-            createdAt: Date;
             academyId: string;
+            createdAt: Date;
             playerId: string;
             guardianId: string;
             relationship: import(".prisma/client").$Enums.GuardianRelationship;
@@ -94,13 +94,13 @@ export declare class GuardiansController {
         })[];
     } & {
         id: string;
-        createdAt: Date;
-        updatedAt: Date;
+        academyId: string;
         email: string | null;
         firstName: string;
         lastName: string;
-        academyId: string;
         phone: string;
+        createdAt: Date;
+        updatedAt: Date;
         deletedAt: Date | null;
         userId: string | null;
         address: string | null;
@@ -109,16 +109,18 @@ export declare class GuardiansController {
         players: ({
             player: {
                 id: string;
+                academyId: string;
+                firstName: string;
+                lastName: string;
                 status: import(".prisma/client").$Enums.PlayerStatus;
                 createdAt: Date;
                 updatedAt: Date;
-                firstName: string;
-                lastName: string;
-                academyId: string;
                 deletedAt: Date | null;
                 ageCategoryId: string | null;
-                middleName: string | null;
+                teamId: string | null;
+                primaryCoachId: string | null;
                 playerCode: string | null;
+                middleName: string | null;
                 dateOfBirth: Date;
                 gender: import(".prisma/client").$Enums.Gender;
                 nationality: string | null;
@@ -130,14 +132,12 @@ export declare class GuardiansController {
                 dominantFoot: import(".prisma/client").$Enums.DominantFoot | null;
                 emergencyContactName: string | null;
                 emergencyContactPhone: string | null;
-                teamId: string | null;
                 trainingGroupId: string | null;
-                primaryCoachId: string | null;
             };
         } & {
             id: string;
-            createdAt: Date;
             academyId: string;
+            createdAt: Date;
             playerId: string;
             guardianId: string;
             relationship: import(".prisma/client").$Enums.GuardianRelationship;
@@ -145,13 +145,13 @@ export declare class GuardiansController {
         })[];
     } & {
         id: string;
-        createdAt: Date;
-        updatedAt: Date;
+        academyId: string;
         email: string | null;
         firstName: string;
         lastName: string;
-        academyId: string;
         phone: string;
+        createdAt: Date;
+        updatedAt: Date;
         deletedAt: Date | null;
         userId: string | null;
         address: string | null;

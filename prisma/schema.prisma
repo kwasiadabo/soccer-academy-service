@@ -1950,6 +1950,13 @@ model PendingAcademySignup {
   adminLastName     String
   adminPasswordHash String
 
+  // The currently-active payment link's own deadline — refreshed to now+72h
+  // every time a fresh Paystack session is minted (initial signup, or a
+  // resume) so no single link outlives that window, even though the overall
+  // PendingAcademySignup can survive longer via the reminder-email resume
+  // flow below, each attempt getting its own fresh 72h budget.
+  paymentLinkExpiresAt DateTime
+
   reminderSentAt        DateTime?
   deletionWarningSentAt DateTime?
 
