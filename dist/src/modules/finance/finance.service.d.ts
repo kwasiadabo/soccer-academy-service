@@ -103,8 +103,8 @@ export declare class FinanceService {
         name: string;
         createdAt: Date;
         updatedAt: Date;
-        description: string | null;
         academyId: string;
+        description: string | null;
         isActive: boolean;
     }[]>;
     createFeeItem(dto: CreateFeeItemDto): Prisma.Prisma__FeeItemClient<{
@@ -112,8 +112,8 @@ export declare class FinanceService {
         name: string;
         createdAt: Date;
         updatedAt: Date;
-        description: string | null;
         academyId: string;
+        description: string | null;
         isActive: boolean;
     }, never, import("@prisma/client/runtime/library").DefaultArgs>;
     updateFeeItem(id: string, dto: UpdateFeeItemDto): Promise<{
@@ -121,8 +121,8 @@ export declare class FinanceService {
         name: string;
         createdAt: Date;
         updatedAt: Date;
-        description: string | null;
         academyId: string;
+        description: string | null;
         isActive: boolean;
     }>;
     findAllFeeTypes(includeInactive?: boolean): Prisma.PrismaPromise<({
@@ -132,25 +132,25 @@ export declare class FinanceService {
                 name: string;
                 createdAt: Date;
                 updatedAt: Date;
-                description: string | null;
                 academyId: string;
+                description: string | null;
                 isActive: boolean;
             };
         } & {
             createdAt: Date;
             updatedAt: Date;
             academyId: string;
+            amount: Prisma.Decimal;
             feeTypeId: string;
             feeItemId: string;
-            amount: Prisma.Decimal;
         })[];
     } & {
         id: string;
         name: string;
         createdAt: Date;
         updatedAt: Date;
-        description: string | null;
         academyId: string;
+        description: string | null;
         isActive: boolean;
         isRegistrationFee: boolean;
         isRecurring: boolean;
@@ -165,25 +165,25 @@ export declare class FinanceService {
                 name: string;
                 createdAt: Date;
                 updatedAt: Date;
-                description: string | null;
                 academyId: string;
+                description: string | null;
                 isActive: boolean;
             };
         } & {
             createdAt: Date;
             updatedAt: Date;
             academyId: string;
+            amount: Prisma.Decimal;
             feeTypeId: string;
             feeItemId: string;
-            amount: Prisma.Decimal;
         })[];
     } & {
         id: string;
         name: string;
         createdAt: Date;
         updatedAt: Date;
-        description: string | null;
         academyId: string;
+        description: string | null;
         isActive: boolean;
         isRegistrationFee: boolean;
         isRecurring: boolean;
@@ -196,25 +196,25 @@ export declare class FinanceService {
                 name: string;
                 createdAt: Date;
                 updatedAt: Date;
-                description: string | null;
                 academyId: string;
+                description: string | null;
                 isActive: boolean;
             };
         } & {
             createdAt: Date;
             updatedAt: Date;
             academyId: string;
+            amount: Prisma.Decimal;
             feeTypeId: string;
             feeItemId: string;
-            amount: Prisma.Decimal;
         })[];
     } & {
         id: string;
         name: string;
         createdAt: Date;
         updatedAt: Date;
-        description: string | null;
         academyId: string;
+        description: string | null;
         isActive: boolean;
         isRegistrationFee: boolean;
         isRecurring: boolean;
@@ -227,25 +227,25 @@ export declare class FinanceService {
                 name: string;
                 createdAt: Date;
                 updatedAt: Date;
-                description: string | null;
                 academyId: string;
+                description: string | null;
                 isActive: boolean;
             };
         } & {
             createdAt: Date;
             updatedAt: Date;
             academyId: string;
+            amount: Prisma.Decimal;
             feeTypeId: string;
             feeItemId: string;
-            amount: Prisma.Decimal;
         })[];
     } & {
         id: string;
         name: string;
         createdAt: Date;
         updatedAt: Date;
-        description: string | null;
         academyId: string;
+        description: string | null;
         isActive: boolean;
         isRegistrationFee: boolean;
         isRecurring: boolean;
@@ -258,25 +258,25 @@ export declare class FinanceService {
                 name: string;
                 createdAt: Date;
                 updatedAt: Date;
-                description: string | null;
                 academyId: string;
+                description: string | null;
                 isActive: boolean;
             };
         } & {
             createdAt: Date;
             updatedAt: Date;
             academyId: string;
+            amount: Prisma.Decimal;
             feeTypeId: string;
             feeItemId: string;
-            amount: Prisma.Decimal;
         })[];
     } & {
         id: string;
         name: string;
         createdAt: Date;
         updatedAt: Date;
-        description: string | null;
         academyId: string;
+        description: string | null;
         isActive: boolean;
         isRegistrationFee: boolean;
         isRecurring: boolean;
@@ -290,25 +290,25 @@ export declare class FinanceService {
                     name: string;
                     createdAt: Date;
                     updatedAt: Date;
-                    description: string | null;
                     academyId: string;
+                    description: string | null;
                     isActive: boolean;
                 };
             } & {
                 createdAt: Date;
                 updatedAt: Date;
                 academyId: string;
+                amount: Prisma.Decimal;
                 feeTypeId: string;
                 feeItemId: string;
-                amount: Prisma.Decimal;
             })[];
         } & {
             id: string;
             name: string;
             createdAt: Date;
             updatedAt: Date;
-            description: string | null;
             academyId: string;
+            description: string | null;
             isActive: boolean;
             isRegistrationFee: boolean;
             isRecurring: boolean;
@@ -319,24 +319,24 @@ export declare class FinanceService {
             createdAt: Date;
             academyId: string;
             amount: Prisma.Decimal;
-            paymentId: string;
             invoiceId: string;
+            paymentId: string;
         }[];
     } & {
         id: string;
         status: import(".prisma/client").$Enums.InvoiceStatus;
         createdAt: Date;
         updatedAt: Date;
-        description: string | null;
-        academyId: string;
         deletedAt: Date | null;
-        playerId: string;
-        feeTypeId: string;
+        academyId: string;
+        description: string | null;
         amount: Prisma.Decimal;
-        gracePeriodDays: number;
+        playerId: string;
         invoiceNumber: string;
+        feeTypeId: string;
         discountAmount: Prisma.Decimal;
         dueDate: Date;
+        gracePeriodDays: number;
         issuedAt: Date;
         waivedAt: Date | null;
         waivedReason: string | null;
@@ -349,25 +349,25 @@ export declare class FinanceService {
                     name: string;
                     createdAt: Date;
                     updatedAt: Date;
-                    description: string | null;
                     academyId: string;
+                    description: string | null;
                     isActive: boolean;
                 };
             } & {
                 createdAt: Date;
                 updatedAt: Date;
                 academyId: string;
+                amount: Prisma.Decimal;
                 feeTypeId: string;
                 feeItemId: string;
-                amount: Prisma.Decimal;
             })[];
         } & {
             id: string;
             name: string;
             createdAt: Date;
             updatedAt: Date;
-            description: string | null;
             academyId: string;
+            description: string | null;
             isActive: boolean;
             isRegistrationFee: boolean;
             isRecurring: boolean;
@@ -378,24 +378,24 @@ export declare class FinanceService {
             createdAt: Date;
             academyId: string;
             amount: Prisma.Decimal;
-            paymentId: string;
             invoiceId: string;
+            paymentId: string;
         }[];
     } & {
         id: string;
         status: import(".prisma/client").$Enums.InvoiceStatus;
         createdAt: Date;
         updatedAt: Date;
-        description: string | null;
-        academyId: string;
         deletedAt: Date | null;
-        playerId: string;
-        feeTypeId: string;
+        academyId: string;
+        description: string | null;
         amount: Prisma.Decimal;
-        gracePeriodDays: number;
+        playerId: string;
         invoiceNumber: string;
+        feeTypeId: string;
         discountAmount: Prisma.Decimal;
         dueDate: Date;
+        gracePeriodDays: number;
         issuedAt: Date;
         waivedAt: Date | null;
         waivedReason: string | null;
@@ -406,8 +406,8 @@ export declare class FinanceService {
             createdAt: Date;
             academyId: string;
             amount: Prisma.Decimal;
-            paymentId: string;
             invoiceId: string;
+            paymentId: string;
         }[];
     } & {
         id: string;
@@ -415,8 +415,9 @@ export declare class FinanceService {
         createdAt: Date;
         updatedAt: Date;
         academyId: string;
-        playerId: string;
         amount: Prisma.Decimal;
+        paidAt: Date;
+        playerId: string;
         receiptNumber: string;
         method: import(".prisma/client").$Enums.PaymentMethod;
         reference: string | null;
@@ -424,7 +425,6 @@ export declare class FinanceService {
         reversedByUserId: string | null;
         reversedAt: Date | null;
         reversalReason: string | null;
-        paidAt: Date;
     }>;
     getTeamStats(): Promise<{
         teams: {

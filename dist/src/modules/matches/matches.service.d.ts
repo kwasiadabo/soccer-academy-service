@@ -39,12 +39,12 @@ export declare class MatchesService {
             remarks: string | null;
             matchId: string;
             assessedByCoachId: string;
+            overallRating: Prisma.Decimal | null;
             technicalRating: Prisma.Decimal | null;
             tacticalRating: Prisma.Decimal | null;
             teamContributionRating: Prisma.Decimal | null;
             disciplineRating: Prisma.Decimal | null;
             effortRating: Prisma.Decimal | null;
-            overallRating: Prisma.Decimal | null;
             recommendations: string | null;
         }[];
         team: {
@@ -53,9 +53,9 @@ export declare class MatchesService {
             createdAt: Date;
             updatedAt: Date;
             academyId: string;
-            branchId: string | null;
             isActive: boolean;
             ageCategoryId: string;
+            branchId: string | null;
             seasonId: string;
             headCoachId: string | null;
         };
@@ -89,10 +89,10 @@ export declare class MatchesService {
         updatedAt: Date;
         academyId: string;
         teamId: string;
+        matchDate: Date;
         opponentId: string;
         competitionName: string | null;
         venue: string | null;
-        matchDate: Date;
         homeScore: number | null;
         awayScore: number | null;
         notes: string | null;
@@ -111,12 +111,12 @@ export declare class MatchesService {
             remarks: string | null;
             matchId: string;
             assessedByCoachId: string;
+            overallRating: Prisma.Decimal | null;
             technicalRating: Prisma.Decimal | null;
             tacticalRating: Prisma.Decimal | null;
             teamContributionRating: Prisma.Decimal | null;
             disciplineRating: Prisma.Decimal | null;
             effortRating: Prisma.Decimal | null;
-            overallRating: Prisma.Decimal | null;
             recommendations: string | null;
         }[];
         team: {
@@ -125,9 +125,9 @@ export declare class MatchesService {
             createdAt: Date;
             updatedAt: Date;
             academyId: string;
-            branchId: string | null;
             isActive: boolean;
             ageCategoryId: string;
+            branchId: string | null;
             seasonId: string;
             headCoachId: string | null;
         };
@@ -160,10 +160,10 @@ export declare class MatchesService {
         updatedAt: Date;
         academyId: string;
         teamId: string;
+        matchDate: Date;
         opponentId: string;
         competitionName: string | null;
         venue: string | null;
-        matchDate: Date;
         homeScore: number | null;
         awayScore: number | null;
         notes: string | null;
@@ -177,12 +177,12 @@ export declare class MatchesService {
             remarks: string | null;
             matchId: string;
             assessedByCoachId: string;
+            overallRating: Prisma.Decimal | null;
             technicalRating: Prisma.Decimal | null;
             tacticalRating: Prisma.Decimal | null;
             teamContributionRating: Prisma.Decimal | null;
             disciplineRating: Prisma.Decimal | null;
             effortRating: Prisma.Decimal | null;
-            overallRating: Prisma.Decimal | null;
             recommendations: string | null;
         }[];
         team: {
@@ -191,9 +191,9 @@ export declare class MatchesService {
             createdAt: Date;
             updatedAt: Date;
             academyId: string;
-            branchId: string | null;
             isActive: boolean;
             ageCategoryId: string;
+            branchId: string | null;
             seasonId: string;
             headCoachId: string | null;
         };
@@ -227,10 +227,10 @@ export declare class MatchesService {
         updatedAt: Date;
         academyId: string;
         teamId: string;
+        matchDate: Date;
         opponentId: string;
         competitionName: string | null;
         venue: string | null;
-        matchDate: Date;
         homeScore: number | null;
         awayScore: number | null;
         notes: string | null;
@@ -244,12 +244,12 @@ export declare class MatchesService {
             remarks: string | null;
             matchId: string;
             assessedByCoachId: string;
+            overallRating: Prisma.Decimal | null;
             technicalRating: Prisma.Decimal | null;
             tacticalRating: Prisma.Decimal | null;
             teamContributionRating: Prisma.Decimal | null;
             disciplineRating: Prisma.Decimal | null;
             effortRating: Prisma.Decimal | null;
-            overallRating: Prisma.Decimal | null;
             recommendations: string | null;
         }[];
         team: {
@@ -258,9 +258,9 @@ export declare class MatchesService {
             createdAt: Date;
             updatedAt: Date;
             academyId: string;
-            branchId: string | null;
             isActive: boolean;
             ageCategoryId: string;
+            branchId: string | null;
             seasonId: string;
             headCoachId: string | null;
         };
@@ -294,10 +294,10 @@ export declare class MatchesService {
         updatedAt: Date;
         academyId: string;
         teamId: string;
+        matchDate: Date;
         opponentId: string;
         competitionName: string | null;
         venue: string | null;
-        matchDate: Date;
         homeScore: number | null;
         awayScore: number | null;
         notes: string | null;
@@ -312,12 +312,12 @@ export declare class MatchesService {
             remarks: string | null;
             matchId: string;
             assessedByCoachId: string;
+            overallRating: Prisma.Decimal | null;
             technicalRating: Prisma.Decimal | null;
             tacticalRating: Prisma.Decimal | null;
             teamContributionRating: Prisma.Decimal | null;
             disciplineRating: Prisma.Decimal | null;
             effortRating: Prisma.Decimal | null;
-            overallRating: Prisma.Decimal | null;
             recommendations: string | null;
         }[];
         team: {
@@ -326,9 +326,9 @@ export declare class MatchesService {
             createdAt: Date;
             updatedAt: Date;
             academyId: string;
-            branchId: string | null;
             isActive: boolean;
             ageCategoryId: string;
+            branchId: string | null;
             seasonId: string;
             headCoachId: string | null;
         };
@@ -362,10 +362,10 @@ export declare class MatchesService {
         updatedAt: Date;
         academyId: string;
         teamId: string;
+        matchDate: Date;
         opponentId: string;
         competitionName: string | null;
         venue: string | null;
-        matchDate: Date;
         homeScore: number | null;
         awayScore: number | null;
         notes: string | null;
@@ -379,12 +379,12 @@ export declare class MatchesService {
             remarks: string | null;
             matchId: string;
             assessedByCoachId: string;
+            overallRating: Prisma.Decimal | null;
             technicalRating: Prisma.Decimal | null;
             tacticalRating: Prisma.Decimal | null;
             teamContributionRating: Prisma.Decimal | null;
             disciplineRating: Prisma.Decimal | null;
             effortRating: Prisma.Decimal | null;
-            overallRating: Prisma.Decimal | null;
             recommendations: string | null;
         }[];
         team: {
@@ -393,9 +393,9 @@ export declare class MatchesService {
             createdAt: Date;
             updatedAt: Date;
             academyId: string;
-            branchId: string | null;
             isActive: boolean;
             ageCategoryId: string;
+            branchId: string | null;
             seasonId: string;
             headCoachId: string | null;
         };
@@ -429,10 +429,10 @@ export declare class MatchesService {
         updatedAt: Date;
         academyId: string;
         teamId: string;
+        matchDate: Date;
         opponentId: string;
         competitionName: string | null;
         venue: string | null;
-        matchDate: Date;
         homeScore: number | null;
         awayScore: number | null;
         notes: string | null;

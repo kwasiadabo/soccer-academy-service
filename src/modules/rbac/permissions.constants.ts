@@ -66,6 +66,10 @@ export const ROLE_PERMISSIONS: Record<string, PermissionKey[]> = {
     // Lets a Receptionist upload/replace the public marketing-site gallery photos
     // (Saturday training / match day), same staff set as ISSUES_MANAGE.
     PERMISSIONS.GALLERY_MANAGE,
+    // The "Setup > Users" screen is shared by every staff role, not just Admin
+    // (see the frontend's /admin/users route) — without this a Receptionist
+    // hitting GET /users gets a 403 and the page just shows an empty/error list.
+    PERMISSIONS.USERS_MANAGE,
   ],
   [ROLE_NAMES.HEAD_COACH]: [
     PERMISSIONS.ACADEMY_CONFIG_VIEW,

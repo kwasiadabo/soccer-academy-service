@@ -50,6 +50,7 @@ exports.ROLE_PERMISSIONS = {
         exports.PERMISSIONS.ISSUES_MANAGE,
         exports.PERMISSIONS.ORDERS_MANAGE,
         exports.PERMISSIONS.GALLERY_MANAGE,
+        exports.PERMISSIONS.USERS_MANAGE,
     ],
     [exports.ROLE_NAMES.HEAD_COACH]: [
         exports.PERMISSIONS.ACADEMY_CONFIG_VIEW,

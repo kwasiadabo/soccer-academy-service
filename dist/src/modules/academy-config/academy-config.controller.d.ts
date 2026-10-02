@@ -12,10 +12,10 @@ export declare class AcademyConfigController {
         createdAt: Date;
         updatedAt: Date;
         academyId: string;
+        isActive: boolean;
         branchId: string | null;
         startDate: Date;
         endDate: Date;
-        isActive: boolean;
     }[]>;
     createSeason(dto: CreateSeasonDto): Promise<{
         id: string;
@@ -23,10 +23,10 @@ export declare class AcademyConfigController {
         createdAt: Date;
         updatedAt: Date;
         academyId: string;
+        isActive: boolean;
         branchId: string | null;
         startDate: Date;
         endDate: Date;
-        isActive: boolean;
     }>;
     updateSeason(id: string, dto: UpdateSeasonDto): Promise<{
         id: string;
@@ -34,10 +34,10 @@ export declare class AcademyConfigController {
         createdAt: Date;
         updatedAt: Date;
         academyId: string;
+        isActive: boolean;
         branchId: string | null;
         startDate: Date;
         endDate: Date;
-        isActive: boolean;
     }>;
     listAgeCategories(): import(".prisma/client").Prisma.PrismaPromise<{
         id: string;
@@ -46,8 +46,8 @@ export declare class AcademyConfigController {
         updatedAt: Date;
         academyId: string;
         sortOrder: number;
-        branchId: string | null;
         isActive: boolean;
+        branchId: string | null;
         code: string;
         minAge: number;
         maxAge: number;
@@ -59,8 +59,8 @@ export declare class AcademyConfigController {
         updatedAt: Date;
         academyId: string;
         sortOrder: number;
-        branchId: string | null;
         isActive: boolean;
+        branchId: string | null;
         code: string;
         minAge: number;
         maxAge: number;
@@ -72,8 +72,8 @@ export declare class AcademyConfigController {
         updatedAt: Date;
         academyId: string;
         sortOrder: number;
-        branchId: string | null;
         isActive: boolean;
+        branchId: string | null;
         code: string;
         minAge: number;
         maxAge: number;
@@ -87,37 +87,26 @@ export declare class AcademyConfigController {
                 email: string | null;
                 firstName: string;
                 lastName: string;
-                role: import(".prisma/client").$Enums.StaffRole;
-                academyId: string;
                 phone: string | null;
                 deletedAt: Date | null;
-                userId: string | null;
+                academyId: string;
                 isActive: boolean;
+                userId: string | null;
                 middleName: string | null;
+                role: import(".prisma/client").$Enums.StaffRole;
                 bio: string | null;
             };
         } & {
             id: string;
             createdAt: Date;
-            role: import(".prisma/client").$Enums.CoachAssignmentRole;
             academyId: string;
             teamId: string | null;
             trainingGroupId: string | null;
+            role: import(".prisma/client").$Enums.CoachAssignmentRole;
             coachId: string;
             effectiveFrom: Date;
             effectiveTo: Date | null;
         })[];
-        season: {
-            id: string;
-            name: string;
-            createdAt: Date;
-            updatedAt: Date;
-            academyId: string;
-            branchId: string | null;
-            startDate: Date;
-            endDate: Date;
-            isActive: boolean;
-        };
         ageCategory: {
             id: string;
             name: string;
@@ -125,11 +114,22 @@ export declare class AcademyConfigController {
             updatedAt: Date;
             academyId: string;
             sortOrder: number;
-            branchId: string | null;
             isActive: boolean;
+            branchId: string | null;
             code: string;
             minAge: number;
             maxAge: number;
+        };
+        season: {
+            id: string;
+            name: string;
+            createdAt: Date;
+            updatedAt: Date;
+            academyId: string;
+            isActive: boolean;
+            branchId: string | null;
+            startDate: Date;
+            endDate: Date;
         };
         headCoach: {
             id: string;
@@ -138,13 +138,13 @@ export declare class AcademyConfigController {
             email: string | null;
             firstName: string;
             lastName: string;
-            role: import(".prisma/client").$Enums.StaffRole;
-            academyId: string;
             phone: string | null;
             deletedAt: Date | null;
-            userId: string | null;
+            academyId: string;
             isActive: boolean;
+            userId: string | null;
             middleName: string | null;
+            role: import(".prisma/client").$Enums.StaffRole;
             bio: string | null;
         } | null;
     } & {
@@ -153,9 +153,9 @@ export declare class AcademyConfigController {
         createdAt: Date;
         updatedAt: Date;
         academyId: string;
-        branchId: string | null;
         isActive: boolean;
         ageCategoryId: string;
+        branchId: string | null;
         seasonId: string;
         headCoachId: string | null;
     })[]>;
@@ -165,9 +165,9 @@ export declare class AcademyConfigController {
         createdAt: Date;
         updatedAt: Date;
         academyId: string;
-        branchId: string | null;
         isActive: boolean;
         ageCategoryId: string;
+        branchId: string | null;
         seasonId: string;
         headCoachId: string | null;
     }, never, import("@prisma/client/runtime/library").DefaultArgs>;
@@ -177,9 +177,9 @@ export declare class AcademyConfigController {
         createdAt: Date;
         updatedAt: Date;
         academyId: string;
-        branchId: string | null;
         isActive: boolean;
         ageCategoryId: string;
+        branchId: string | null;
         seasonId: string;
         headCoachId: string | null;
     }>;
@@ -190,9 +190,9 @@ export declare class AcademyConfigController {
             createdAt: Date;
             updatedAt: Date;
             academyId: string;
-            branchId: string | null;
             isActive: boolean;
             ageCategoryId: string;
+            branchId: string | null;
             seasonId: string;
             headCoachId: string | null;
         };
@@ -203,13 +203,13 @@ export declare class AcademyConfigController {
             email: string | null;
             firstName: string;
             lastName: string;
-            role: import(".prisma/client").$Enums.StaffRole;
-            academyId: string;
             phone: string | null;
             deletedAt: Date | null;
-            userId: string | null;
+            academyId: string;
             isActive: boolean;
+            userId: string | null;
             middleName: string | null;
+            role: import(".prisma/client").$Enums.StaffRole;
             bio: string | null;
         } | null;
     } & {
@@ -218,10 +218,10 @@ export declare class AcademyConfigController {
         createdAt: Date;
         updatedAt: Date;
         academyId: string;
-        branchId: string | null;
         isActive: boolean;
         teamId: string;
         primaryCoachId: string | null;
+        branchId: string | null;
     })[]>;
     createTrainingGroup(dto: CreateTrainingGroupDto): import(".prisma/client").Prisma.Prisma__TrainingGroupClient<{
         id: string;
@@ -229,10 +229,10 @@ export declare class AcademyConfigController {
         createdAt: Date;
         updatedAt: Date;
         academyId: string;
-        branchId: string | null;
         isActive: boolean;
         teamId: string;
         primaryCoachId: string | null;
+        branchId: string | null;
     }, never, import("@prisma/client/runtime/library").DefaultArgs>;
     updateTrainingGroup(id: string, dto: UpdateTrainingGroupDto): Promise<{
         id: string;
@@ -240,9 +240,9 @@ export declare class AcademyConfigController {
         createdAt: Date;
         updatedAt: Date;
         academyId: string;
-        branchId: string | null;
         isActive: boolean;
         teamId: string;
         primaryCoachId: string | null;
+        branchId: string | null;
     }>;
 }

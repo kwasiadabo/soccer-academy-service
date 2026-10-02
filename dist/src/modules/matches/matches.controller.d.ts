@@ -30,12 +30,12 @@ export declare class MatchesController {
             remarks: string | null;
             matchId: string;
             assessedByCoachId: string;
+            overallRating: import("@prisma/client/runtime/library").Decimal | null;
             technicalRating: import("@prisma/client/runtime/library").Decimal | null;
             tacticalRating: import("@prisma/client/runtime/library").Decimal | null;
             teamContributionRating: import("@prisma/client/runtime/library").Decimal | null;
             disciplineRating: import("@prisma/client/runtime/library").Decimal | null;
             effortRating: import("@prisma/client/runtime/library").Decimal | null;
-            overallRating: import("@prisma/client/runtime/library").Decimal | null;
             recommendations: string | null;
         }[];
         team: {
@@ -44,9 +44,9 @@ export declare class MatchesController {
             createdAt: Date;
             updatedAt: Date;
             academyId: string;
-            branchId: string | null;
             isActive: boolean;
             ageCategoryId: string;
+            branchId: string | null;
             seasonId: string;
             headCoachId: string | null;
         };
@@ -80,10 +80,10 @@ export declare class MatchesController {
         updatedAt: Date;
         academyId: string;
         teamId: string;
+        matchDate: Date;
         opponentId: string;
         competitionName: string | null;
         venue: string | null;
-        matchDate: Date;
         homeScore: number | null;
         awayScore: number | null;
         notes: string | null;
@@ -102,12 +102,12 @@ export declare class MatchesController {
             remarks: string | null;
             matchId: string;
             assessedByCoachId: string;
+            overallRating: import("@prisma/client/runtime/library").Decimal | null;
             technicalRating: import("@prisma/client/runtime/library").Decimal | null;
             tacticalRating: import("@prisma/client/runtime/library").Decimal | null;
             teamContributionRating: import("@prisma/client/runtime/library").Decimal | null;
             disciplineRating: import("@prisma/client/runtime/library").Decimal | null;
             effortRating: import("@prisma/client/runtime/library").Decimal | null;
-            overallRating: import("@prisma/client/runtime/library").Decimal | null;
             recommendations: string | null;
         }[];
         team: {
@@ -116,9 +116,9 @@ export declare class MatchesController {
             createdAt: Date;
             updatedAt: Date;
             academyId: string;
-            branchId: string | null;
             isActive: boolean;
             ageCategoryId: string;
+            branchId: string | null;
             seasonId: string;
             headCoachId: string | null;
         };
@@ -151,10 +151,10 @@ export declare class MatchesController {
         updatedAt: Date;
         academyId: string;
         teamId: string;
+        matchDate: Date;
         opponentId: string;
         competitionName: string | null;
         venue: string | null;
-        matchDate: Date;
         homeScore: number | null;
         awayScore: number | null;
         notes: string | null;
@@ -168,12 +168,12 @@ export declare class MatchesController {
             remarks: string | null;
             matchId: string;
             assessedByCoachId: string;
+            overallRating: import("@prisma/client/runtime/library").Decimal | null;
             technicalRating: import("@prisma/client/runtime/library").Decimal | null;
             tacticalRating: import("@prisma/client/runtime/library").Decimal | null;
             teamContributionRating: import("@prisma/client/runtime/library").Decimal | null;
             disciplineRating: import("@prisma/client/runtime/library").Decimal | null;
             effortRating: import("@prisma/client/runtime/library").Decimal | null;
-            overallRating: import("@prisma/client/runtime/library").Decimal | null;
             recommendations: string | null;
         }[];
         team: {
@@ -182,9 +182,9 @@ export declare class MatchesController {
             createdAt: Date;
             updatedAt: Date;
             academyId: string;
-            branchId: string | null;
             isActive: boolean;
             ageCategoryId: string;
+            branchId: string | null;
             seasonId: string;
             headCoachId: string | null;
         };
@@ -218,10 +218,10 @@ export declare class MatchesController {
         updatedAt: Date;
         academyId: string;
         teamId: string;
+        matchDate: Date;
         opponentId: string;
         competitionName: string | null;
         venue: string | null;
-        matchDate: Date;
         homeScore: number | null;
         awayScore: number | null;
         notes: string | null;
@@ -235,12 +235,12 @@ export declare class MatchesController {
             remarks: string | null;
             matchId: string;
             assessedByCoachId: string;
+            overallRating: import("@prisma/client/runtime/library").Decimal | null;
             technicalRating: import("@prisma/client/runtime/library").Decimal | null;
             tacticalRating: import("@prisma/client/runtime/library").Decimal | null;
             teamContributionRating: import("@prisma/client/runtime/library").Decimal | null;
             disciplineRating: import("@prisma/client/runtime/library").Decimal | null;
             effortRating: import("@prisma/client/runtime/library").Decimal | null;
-            overallRating: import("@prisma/client/runtime/library").Decimal | null;
             recommendations: string | null;
         }[];
         team: {
@@ -249,9 +249,9 @@ export declare class MatchesController {
             createdAt: Date;
             updatedAt: Date;
             academyId: string;
-            branchId: string | null;
             isActive: boolean;
             ageCategoryId: string;
+            branchId: string | null;
             seasonId: string;
             headCoachId: string | null;
         };
@@ -285,10 +285,10 @@ export declare class MatchesController {
         updatedAt: Date;
         academyId: string;
         teamId: string;
+        matchDate: Date;
         opponentId: string;
         competitionName: string | null;
         venue: string | null;
-        matchDate: Date;
         homeScore: number | null;
         awayScore: number | null;
         notes: string | null;
@@ -302,12 +302,12 @@ export declare class MatchesController {
             remarks: string | null;
             matchId: string;
             assessedByCoachId: string;
+            overallRating: import("@prisma/client/runtime/library").Decimal | null;
             technicalRating: import("@prisma/client/runtime/library").Decimal | null;
             tacticalRating: import("@prisma/client/runtime/library").Decimal | null;
             teamContributionRating: import("@prisma/client/runtime/library").Decimal | null;
             disciplineRating: import("@prisma/client/runtime/library").Decimal | null;
             effortRating: import("@prisma/client/runtime/library").Decimal | null;
-            overallRating: import("@prisma/client/runtime/library").Decimal | null;
             recommendations: string | null;
         }[];
         team: {
@@ -316,9 +316,9 @@ export declare class MatchesController {
             createdAt: Date;
             updatedAt: Date;
             academyId: string;
-            branchId: string | null;
             isActive: boolean;
             ageCategoryId: string;
+            branchId: string | null;
             seasonId: string;
             headCoachId: string | null;
         };
@@ -352,10 +352,10 @@ export declare class MatchesController {
         updatedAt: Date;
         academyId: string;
         teamId: string;
+        matchDate: Date;
         opponentId: string;
         competitionName: string | null;
         venue: string | null;
-        matchDate: Date;
         homeScore: number | null;
         awayScore: number | null;
         notes: string | null;
@@ -369,12 +369,12 @@ export declare class MatchesController {
             remarks: string | null;
             matchId: string;
             assessedByCoachId: string;
+            overallRating: import("@prisma/client/runtime/library").Decimal | null;
             technicalRating: import("@prisma/client/runtime/library").Decimal | null;
             tacticalRating: import("@prisma/client/runtime/library").Decimal | null;
             teamContributionRating: import("@prisma/client/runtime/library").Decimal | null;
             disciplineRating: import("@prisma/client/runtime/library").Decimal | null;
             effortRating: import("@prisma/client/runtime/library").Decimal | null;
-            overallRating: import("@prisma/client/runtime/library").Decimal | null;
             recommendations: string | null;
         }[];
         team: {
@@ -383,9 +383,9 @@ export declare class MatchesController {
             createdAt: Date;
             updatedAt: Date;
             academyId: string;
-            branchId: string | null;
             isActive: boolean;
             ageCategoryId: string;
+            branchId: string | null;
             seasonId: string;
             headCoachId: string | null;
         };
@@ -419,10 +419,10 @@ export declare class MatchesController {
         updatedAt: Date;
         academyId: string;
         teamId: string;
+        matchDate: Date;
         opponentId: string;
         competitionName: string | null;
         venue: string | null;
-        matchDate: Date;
         homeScore: number | null;
         awayScore: number | null;
         notes: string | null;

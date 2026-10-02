@@ -10,11 +10,11 @@ export declare class AssessmentsController {
         criteria: {
             id: string;
             name: string;
-            description: string | null;
             academyId: string;
+            description: string | null;
             sortOrder: number;
-            templateId: string;
             category: import(".prisma/client").$Enums.AssessmentCategory;
+            templateId: string;
         }[];
     } & {
         id: string;
@@ -36,15 +36,30 @@ export declare class AssessmentsController {
                 name: string;
             } | null;
         };
+        template: {
+            id: string;
+            name: string;
+            createdAt: Date;
+            updatedAt: Date;
+            academyId: string;
+            isActive: boolean;
+            ageCategoryId: string | null;
+            ratingScale: import(".prisma/client").$Enums.RatingScaleType;
+        } | null;
+        assessedByCoach: {
+            id: string;
+            firstName: string;
+            lastName: string;
+        };
         ratings: ({
             criteria: {
                 id: string;
                 name: string;
-                description: string | null;
                 academyId: string;
+                description: string | null;
                 sortOrder: number;
-                templateId: string;
                 category: import(".prisma/client").$Enums.AssessmentCategory;
+                templateId: string;
             } | null;
             sessionActivity: {
                 id: string;
@@ -64,27 +79,12 @@ export declare class AssessmentsController {
             ratingValue: import("@prisma/client/runtime/library").Decimal;
             ratingLabel: string | null;
         })[];
-        template: {
-            id: string;
-            name: string;
-            createdAt: Date;
-            updatedAt: Date;
-            academyId: string;
-            isActive: boolean;
-            ageCategoryId: string | null;
-            ratingScale: import(".prisma/client").$Enums.RatingScaleType;
-        } | null;
-        assessedByCoach: {
-            id: string;
-            firstName: string;
-            lastName: string;
-        };
     } & {
         id: string;
         createdAt: Date;
         updatedAt: Date;
-        academyId: string;
         deletedAt: Date | null;
+        academyId: string;
         playerId: string;
         trainingSessionId: string | null;
         templateId: string | null;
@@ -99,11 +99,11 @@ export declare class AssessmentsController {
         criteria: {
             id: string;
             name: string;
-            description: string | null;
             academyId: string;
+            description: string | null;
             sortOrder: number;
-            templateId: string;
             category: import(".prisma/client").$Enums.AssessmentCategory;
+            templateId: string;
         }[];
     } & {
         id: string;
@@ -119,11 +119,11 @@ export declare class AssessmentsController {
         criteria: {
             id: string;
             name: string;
-            description: string | null;
             academyId: string;
+            description: string | null;
             sortOrder: number;
-            templateId: string;
             category: import(".prisma/client").$Enums.AssessmentCategory;
+            templateId: string;
         }[];
     } & {
         id: string;
@@ -139,11 +139,11 @@ export declare class AssessmentsController {
         criteria: {
             id: string;
             name: string;
-            description: string | null;
             academyId: string;
+            description: string | null;
             sortOrder: number;
-            templateId: string;
             category: import(".prisma/client").$Enums.AssessmentCategory;
+            templateId: string;
         }[];
     } & {
         id: string;
@@ -156,15 +156,30 @@ export declare class AssessmentsController {
         ratingScale: import(".prisma/client").$Enums.RatingScaleType;
     }>;
     findForPlayer(playerId: string, user: RequestUser): Promise<({
+        template: {
+            id: string;
+            name: string;
+            createdAt: Date;
+            updatedAt: Date;
+            academyId: string;
+            isActive: boolean;
+            ageCategoryId: string | null;
+            ratingScale: import(".prisma/client").$Enums.RatingScaleType;
+        } | null;
+        assessedByCoach: {
+            id: string;
+            firstName: string;
+            lastName: string;
+        };
         ratings: ({
             criteria: {
                 id: string;
                 name: string;
-                description: string | null;
                 academyId: string;
+                description: string | null;
                 sortOrder: number;
-                templateId: string;
                 category: import(".prisma/client").$Enums.AssessmentCategory;
+                templateId: string;
             } | null;
             sessionActivity: {
                 id: string;
@@ -184,27 +199,12 @@ export declare class AssessmentsController {
             ratingValue: import("@prisma/client/runtime/library").Decimal;
             ratingLabel: string | null;
         })[];
-        template: {
-            id: string;
-            name: string;
-            createdAt: Date;
-            updatedAt: Date;
-            academyId: string;
-            isActive: boolean;
-            ageCategoryId: string | null;
-            ratingScale: import(".prisma/client").$Enums.RatingScaleType;
-        } | null;
-        assessedByCoach: {
-            id: string;
-            firstName: string;
-            lastName: string;
-        };
     } & {
         id: string;
         createdAt: Date;
         updatedAt: Date;
-        academyId: string;
         deletedAt: Date | null;
+        academyId: string;
         playerId: string;
         trainingSessionId: string | null;
         templateId: string | null;
@@ -216,15 +216,30 @@ export declare class AssessmentsController {
         developmentGoals: string | null;
     })[]>;
     createAssessment(playerId: string, dto: CreatePlayerAssessmentDto, user: RequestUser): Promise<{
+        template: {
+            id: string;
+            name: string;
+            createdAt: Date;
+            updatedAt: Date;
+            academyId: string;
+            isActive: boolean;
+            ageCategoryId: string | null;
+            ratingScale: import(".prisma/client").$Enums.RatingScaleType;
+        } | null;
+        assessedByCoach: {
+            id: string;
+            firstName: string;
+            lastName: string;
+        };
         ratings: ({
             criteria: {
                 id: string;
                 name: string;
-                description: string | null;
                 academyId: string;
+                description: string | null;
                 sortOrder: number;
-                templateId: string;
                 category: import(".prisma/client").$Enums.AssessmentCategory;
+                templateId: string;
             } | null;
             sessionActivity: {
                 id: string;
@@ -244,27 +259,12 @@ export declare class AssessmentsController {
             ratingValue: import("@prisma/client/runtime/library").Decimal;
             ratingLabel: string | null;
         })[];
-        template: {
-            id: string;
-            name: string;
-            createdAt: Date;
-            updatedAt: Date;
-            academyId: string;
-            isActive: boolean;
-            ageCategoryId: string | null;
-            ratingScale: import(".prisma/client").$Enums.RatingScaleType;
-        } | null;
-        assessedByCoach: {
-            id: string;
-            firstName: string;
-            lastName: string;
-        };
     } & {
         id: string;
         createdAt: Date;
         updatedAt: Date;
-        academyId: string;
         deletedAt: Date | null;
+        academyId: string;
         playerId: string;
         trainingSessionId: string | null;
         templateId: string | null;
@@ -276,15 +276,30 @@ export declare class AssessmentsController {
         developmentGoals: string | null;
     }>;
     updateAssessment(playerId: string, assessmentId: string, dto: UpdatePlayerAssessmentDto, user: RequestUser): Promise<{
+        template: {
+            id: string;
+            name: string;
+            createdAt: Date;
+            updatedAt: Date;
+            academyId: string;
+            isActive: boolean;
+            ageCategoryId: string | null;
+            ratingScale: import(".prisma/client").$Enums.RatingScaleType;
+        } | null;
+        assessedByCoach: {
+            id: string;
+            firstName: string;
+            lastName: string;
+        };
         ratings: ({
             criteria: {
                 id: string;
                 name: string;
-                description: string | null;
                 academyId: string;
+                description: string | null;
                 sortOrder: number;
-                templateId: string;
                 category: import(".prisma/client").$Enums.AssessmentCategory;
+                templateId: string;
             } | null;
             sessionActivity: {
                 id: string;
@@ -304,27 +319,12 @@ export declare class AssessmentsController {
             ratingValue: import("@prisma/client/runtime/library").Decimal;
             ratingLabel: string | null;
         })[];
-        template: {
-            id: string;
-            name: string;
-            createdAt: Date;
-            updatedAt: Date;
-            academyId: string;
-            isActive: boolean;
-            ageCategoryId: string | null;
-            ratingScale: import(".prisma/client").$Enums.RatingScaleType;
-        } | null;
-        assessedByCoach: {
-            id: string;
-            firstName: string;
-            lastName: string;
-        };
     } & {
         id: string;
         createdAt: Date;
         updatedAt: Date;
-        academyId: string;
         deletedAt: Date | null;
+        academyId: string;
         playerId: string;
         trainingSessionId: string | null;
         templateId: string | null;

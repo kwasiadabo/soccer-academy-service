@@ -12,8 +12,8 @@ export declare class FinanceController {
         name: string;
         createdAt: Date;
         updatedAt: Date;
-        description: string | null;
         academyId: string;
+        description: string | null;
         isActive: boolean;
     }[]>;
     createFeeItem(dto: CreateFeeItemDto): import(".prisma/client").Prisma.Prisma__FeeItemClient<{
@@ -21,8 +21,8 @@ export declare class FinanceController {
         name: string;
         createdAt: Date;
         updatedAt: Date;
-        description: string | null;
         academyId: string;
+        description: string | null;
         isActive: boolean;
     }, never, import("@prisma/client/runtime/library").DefaultArgs>;
     updateFeeItem(id: string, dto: UpdateFeeItemDto): Promise<{
@@ -30,8 +30,8 @@ export declare class FinanceController {
         name: string;
         createdAt: Date;
         updatedAt: Date;
-        description: string | null;
         academyId: string;
+        description: string | null;
         isActive: boolean;
     }>;
     findAllFeeTypes(includeInactive?: string): import(".prisma/client").Prisma.PrismaPromise<({
@@ -41,25 +41,25 @@ export declare class FinanceController {
                 name: string;
                 createdAt: Date;
                 updatedAt: Date;
-                description: string | null;
                 academyId: string;
+                description: string | null;
                 isActive: boolean;
             };
         } & {
             createdAt: Date;
             updatedAt: Date;
             academyId: string;
+            amount: import("@prisma/client/runtime/library").Decimal;
             feeTypeId: string;
             feeItemId: string;
-            amount: import("@prisma/client/runtime/library").Decimal;
         })[];
     } & {
         id: string;
         name: string;
         createdAt: Date;
         updatedAt: Date;
-        description: string | null;
         academyId: string;
+        description: string | null;
         isActive: boolean;
         isRegistrationFee: boolean;
         isRecurring: boolean;
@@ -72,25 +72,25 @@ export declare class FinanceController {
                 name: string;
                 createdAt: Date;
                 updatedAt: Date;
-                description: string | null;
                 academyId: string;
+                description: string | null;
                 isActive: boolean;
             };
         } & {
             createdAt: Date;
             updatedAt: Date;
             academyId: string;
+            amount: import("@prisma/client/runtime/library").Decimal;
             feeTypeId: string;
             feeItemId: string;
-            amount: import("@prisma/client/runtime/library").Decimal;
         })[];
     } & {
         id: string;
         name: string;
         createdAt: Date;
         updatedAt: Date;
-        description: string | null;
         academyId: string;
+        description: string | null;
         isActive: boolean;
         isRegistrationFee: boolean;
         isRecurring: boolean;
@@ -103,25 +103,25 @@ export declare class FinanceController {
                 name: string;
                 createdAt: Date;
                 updatedAt: Date;
-                description: string | null;
                 academyId: string;
+                description: string | null;
                 isActive: boolean;
             };
         } & {
             createdAt: Date;
             updatedAt: Date;
             academyId: string;
+            amount: import("@prisma/client/runtime/library").Decimal;
             feeTypeId: string;
             feeItemId: string;
-            amount: import("@prisma/client/runtime/library").Decimal;
         })[];
     } & {
         id: string;
         name: string;
         createdAt: Date;
         updatedAt: Date;
-        description: string | null;
         academyId: string;
+        description: string | null;
         isActive: boolean;
         isRegistrationFee: boolean;
         isRecurring: boolean;
@@ -134,25 +134,25 @@ export declare class FinanceController {
                 name: string;
                 createdAt: Date;
                 updatedAt: Date;
-                description: string | null;
                 academyId: string;
+                description: string | null;
                 isActive: boolean;
             };
         } & {
             createdAt: Date;
             updatedAt: Date;
             academyId: string;
+            amount: import("@prisma/client/runtime/library").Decimal;
             feeTypeId: string;
             feeItemId: string;
-            amount: import("@prisma/client/runtime/library").Decimal;
         })[];
     } & {
         id: string;
         name: string;
         createdAt: Date;
         updatedAt: Date;
-        description: string | null;
         academyId: string;
+        description: string | null;
         isActive: boolean;
         isRegistrationFee: boolean;
         isRecurring: boolean;
@@ -165,25 +165,25 @@ export declare class FinanceController {
                 name: string;
                 createdAt: Date;
                 updatedAt: Date;
-                description: string | null;
                 academyId: string;
+                description: string | null;
                 isActive: boolean;
             };
         } & {
             createdAt: Date;
             updatedAt: Date;
             academyId: string;
+            amount: import("@prisma/client/runtime/library").Decimal;
             feeTypeId: string;
             feeItemId: string;
-            amount: import("@prisma/client/runtime/library").Decimal;
         })[];
     } & {
         id: string;
         name: string;
         createdAt: Date;
         updatedAt: Date;
-        description: string | null;
         academyId: string;
+        description: string | null;
         isActive: boolean;
         isRegistrationFee: boolean;
         isRecurring: boolean;
@@ -215,25 +215,25 @@ export declare class FinanceController {
                     name: string;
                     createdAt: Date;
                     updatedAt: Date;
-                    description: string | null;
                     academyId: string;
+                    description: string | null;
                     isActive: boolean;
                 };
             } & {
                 createdAt: Date;
                 updatedAt: Date;
                 academyId: string;
+                amount: import("@prisma/client/runtime/library").Decimal;
                 feeTypeId: string;
                 feeItemId: string;
-                amount: import("@prisma/client/runtime/library").Decimal;
             })[];
         } & {
             id: string;
             name: string;
             createdAt: Date;
             updatedAt: Date;
-            description: string | null;
             academyId: string;
+            description: string | null;
             isActive: boolean;
             isRegistrationFee: boolean;
             isRecurring: boolean;
@@ -244,24 +244,24 @@ export declare class FinanceController {
             createdAt: Date;
             academyId: string;
             amount: import("@prisma/client/runtime/library").Decimal;
-            paymentId: string;
             invoiceId: string;
+            paymentId: string;
         }[];
     } & {
         id: string;
         status: import(".prisma/client").$Enums.InvoiceStatus;
         createdAt: Date;
         updatedAt: Date;
-        description: string | null;
-        academyId: string;
         deletedAt: Date | null;
-        playerId: string;
-        feeTypeId: string;
+        academyId: string;
+        description: string | null;
         amount: import("@prisma/client/runtime/library").Decimal;
-        gracePeriodDays: number;
+        playerId: string;
         invoiceNumber: string;
+        feeTypeId: string;
         discountAmount: import("@prisma/client/runtime/library").Decimal;
         dueDate: Date;
+        gracePeriodDays: number;
         issuedAt: Date;
         waivedAt: Date | null;
         waivedReason: string | null;
@@ -274,25 +274,25 @@ export declare class FinanceController {
                     name: string;
                     createdAt: Date;
                     updatedAt: Date;
-                    description: string | null;
                     academyId: string;
+                    description: string | null;
                     isActive: boolean;
                 };
             } & {
                 createdAt: Date;
                 updatedAt: Date;
                 academyId: string;
+                amount: import("@prisma/client/runtime/library").Decimal;
                 feeTypeId: string;
                 feeItemId: string;
-                amount: import("@prisma/client/runtime/library").Decimal;
             })[];
         } & {
             id: string;
             name: string;
             createdAt: Date;
             updatedAt: Date;
-            description: string | null;
             academyId: string;
+            description: string | null;
             isActive: boolean;
             isRegistrationFee: boolean;
             isRecurring: boolean;
@@ -303,24 +303,24 @@ export declare class FinanceController {
             createdAt: Date;
             academyId: string;
             amount: import("@prisma/client/runtime/library").Decimal;
-            paymentId: string;
             invoiceId: string;
+            paymentId: string;
         }[];
     } & {
         id: string;
         status: import(".prisma/client").$Enums.InvoiceStatus;
         createdAt: Date;
         updatedAt: Date;
-        description: string | null;
-        academyId: string;
         deletedAt: Date | null;
-        playerId: string;
-        feeTypeId: string;
+        academyId: string;
+        description: string | null;
         amount: import("@prisma/client/runtime/library").Decimal;
-        gracePeriodDays: number;
+        playerId: string;
         invoiceNumber: string;
+        feeTypeId: string;
         discountAmount: import("@prisma/client/runtime/library").Decimal;
         dueDate: Date;
+        gracePeriodDays: number;
         issuedAt: Date;
         waivedAt: Date | null;
         waivedReason: string | null;
@@ -331,8 +331,8 @@ export declare class FinanceController {
             createdAt: Date;
             academyId: string;
             amount: import("@prisma/client/runtime/library").Decimal;
-            paymentId: string;
             invoiceId: string;
+            paymentId: string;
         }[];
     } & {
         id: string;
@@ -340,8 +340,9 @@ export declare class FinanceController {
         createdAt: Date;
         updatedAt: Date;
         academyId: string;
-        playerId: string;
         amount: import("@prisma/client/runtime/library").Decimal;
+        paidAt: Date;
+        playerId: string;
         receiptNumber: string;
         method: import(".prisma/client").$Enums.PaymentMethod;
         reference: string | null;
@@ -349,7 +350,6 @@ export declare class FinanceController {
         reversedByUserId: string | null;
         reversedAt: Date | null;
         reversalReason: string | null;
-        paidAt: Date;
     }>;
     runRecurringInvoices(): Promise<{
         created: number;

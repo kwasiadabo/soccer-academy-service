@@ -13,8 +13,8 @@ export declare class MyShopController {
             createdAt: Date;
             academyId: string;
             sortOrder: number;
-            documentId: string;
             productId: string;
+            documentId: string;
         }[];
         variants: {
             id: string;
@@ -32,12 +32,12 @@ export declare class MyShopController {
         name: string;
         createdAt: Date;
         updatedAt: Date;
-        description: string | null;
-        academyId: string;
         deletedAt: Date | null;
-        isActive: boolean;
+        academyId: string;
+        description: string | null;
         category: import(".prisma/client").$Enums.ProductCategory;
         basePrice: import("@prisma/client/runtime/library").Decimal;
+        isActive: boolean;
     })[]>;
     getProduct(id: string): Promise<{
         images: {
@@ -45,8 +45,8 @@ export declare class MyShopController {
             createdAt: Date;
             academyId: string;
             sortOrder: number;
-            documentId: string;
             productId: string;
+            documentId: string;
         }[];
         variants: {
             id: string;
@@ -64,25 +64,30 @@ export declare class MyShopController {
         name: string;
         createdAt: Date;
         updatedAt: Date;
-        description: string | null;
-        academyId: string;
         deletedAt: Date | null;
-        isActive: boolean;
+        academyId: string;
+        description: string | null;
         category: import(".prisma/client").$Enums.ProductCategory;
         basePrice: import("@prisma/client/runtime/library").Decimal;
+        isActive: boolean;
     }>;
     getProductImage(id: string, imageId: string, res: Response): Promise<void>;
     listMyOrders(user: RequestUser): Promise<({
+        guardian: {
+            id: string;
+            firstName: string;
+            lastName: string;
+        };
+        submittedBy: {
+            id: string;
+            firstName: string;
+            lastName: string;
+        } | null;
         player: {
             id: string;
             firstName: string;
             lastName: string;
             playerCode: string | null;
-        };
-        guardian: {
-            id: string;
-            firstName: string;
-            lastName: string;
         };
         invoice: {
             id: string;
@@ -104,20 +109,20 @@ export declare class MyShopController {
                         createdAt: Date;
                         academyId: string;
                         sortOrder: number;
-                        documentId: string;
                         productId: string;
+                        documentId: string;
                     }[];
                 } & {
                     id: string;
                     name: string;
                     createdAt: Date;
                     updatedAt: Date;
-                    description: string | null;
-                    academyId: string;
                     deletedAt: Date | null;
-                    isActive: boolean;
+                    academyId: string;
+                    description: string | null;
                     category: import(".prisma/client").$Enums.ProductCategory;
                     basePrice: import("@prisma/client/runtime/library").Decimal;
+                    isActive: boolean;
                 };
             } & {
                 id: string;
@@ -140,38 +145,38 @@ export declare class MyShopController {
             unitPriceAtOrder: import("@prisma/client/runtime/library").Decimal;
             lineTotal: import("@prisma/client/runtime/library").Decimal;
         })[];
-        submittedBy: {
-            id: string;
-            firstName: string;
-            lastName: string;
-        } | null;
     } & {
         id: string;
         status: import(".prisma/client").$Enums.MerchandiseOrderStatus;
         createdAt: Date;
         updatedAt: Date;
         academyId: string;
-        playerId: string;
         guardianId: string;
-        invoiceId: string | null;
         submittedByUserId: string | null;
         guestName: string | null;
         guestPhone: string | null;
         guestEmail: string | null;
+        playerId: string;
         totalAmount: import("@prisma/client/runtime/library").Decimal;
+        invoiceId: string | null;
         staffNotes: string | null;
     })[]>;
     getMyOrder(id: string, user: RequestUser): Promise<{
+        guardian: {
+            id: string;
+            firstName: string;
+            lastName: string;
+        };
+        submittedBy: {
+            id: string;
+            firstName: string;
+            lastName: string;
+        } | null;
         player: {
             id: string;
             firstName: string;
             lastName: string;
             playerCode: string | null;
-        };
-        guardian: {
-            id: string;
-            firstName: string;
-            lastName: string;
         };
         invoice: {
             id: string;
@@ -193,20 +198,20 @@ export declare class MyShopController {
                         createdAt: Date;
                         academyId: string;
                         sortOrder: number;
-                        documentId: string;
                         productId: string;
+                        documentId: string;
                     }[];
                 } & {
                     id: string;
                     name: string;
                     createdAt: Date;
                     updatedAt: Date;
-                    description: string | null;
-                    academyId: string;
                     deletedAt: Date | null;
-                    isActive: boolean;
+                    academyId: string;
+                    description: string | null;
                     category: import(".prisma/client").$Enums.ProductCategory;
                     basePrice: import("@prisma/client/runtime/library").Decimal;
+                    isActive: boolean;
                 };
             } & {
                 id: string;
@@ -229,38 +234,38 @@ export declare class MyShopController {
             unitPriceAtOrder: import("@prisma/client/runtime/library").Decimal;
             lineTotal: import("@prisma/client/runtime/library").Decimal;
         })[];
-        submittedBy: {
-            id: string;
-            firstName: string;
-            lastName: string;
-        } | null;
     } & {
         id: string;
         status: import(".prisma/client").$Enums.MerchandiseOrderStatus;
         createdAt: Date;
         updatedAt: Date;
         academyId: string;
-        playerId: string;
         guardianId: string;
-        invoiceId: string | null;
         submittedByUserId: string | null;
         guestName: string | null;
         guestPhone: string | null;
         guestEmail: string | null;
+        playerId: string;
         totalAmount: import("@prisma/client/runtime/library").Decimal;
+        invoiceId: string | null;
         staffNotes: string | null;
     }>;
     createOrder(dto: CreateOrderDto, user: RequestUser): Promise<{
+        guardian: {
+            id: string;
+            firstName: string;
+            lastName: string;
+        };
+        submittedBy: {
+            id: string;
+            firstName: string;
+            lastName: string;
+        } | null;
         player: {
             id: string;
             firstName: string;
             lastName: string;
             playerCode: string | null;
-        };
-        guardian: {
-            id: string;
-            firstName: string;
-            lastName: string;
         };
         invoice: {
             id: string;
@@ -282,20 +287,20 @@ export declare class MyShopController {
                         createdAt: Date;
                         academyId: string;
                         sortOrder: number;
-                        documentId: string;
                         productId: string;
+                        documentId: string;
                     }[];
                 } & {
                     id: string;
                     name: string;
                     createdAt: Date;
                     updatedAt: Date;
-                    description: string | null;
-                    academyId: string;
                     deletedAt: Date | null;
-                    isActive: boolean;
+                    academyId: string;
+                    description: string | null;
                     category: import(".prisma/client").$Enums.ProductCategory;
                     basePrice: import("@prisma/client/runtime/library").Decimal;
+                    isActive: boolean;
                 };
             } & {
                 id: string;
@@ -318,25 +323,20 @@ export declare class MyShopController {
             unitPriceAtOrder: import("@prisma/client/runtime/library").Decimal;
             lineTotal: import("@prisma/client/runtime/library").Decimal;
         })[];
-        submittedBy: {
-            id: string;
-            firstName: string;
-            lastName: string;
-        } | null;
     } & {
         id: string;
         status: import(".prisma/client").$Enums.MerchandiseOrderStatus;
         createdAt: Date;
         updatedAt: Date;
         academyId: string;
-        playerId: string;
         guardianId: string;
-        invoiceId: string | null;
         submittedByUserId: string | null;
         guestName: string | null;
         guestPhone: string | null;
         guestEmail: string | null;
+        playerId: string;
         totalAmount: import("@prisma/client/runtime/library").Decimal;
+        invoiceId: string | null;
         staffNotes: string | null;
     }>;
 }

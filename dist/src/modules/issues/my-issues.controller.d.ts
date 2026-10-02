@@ -6,13 +6,13 @@ export declare class MyIssuesController {
     private readonly issuesService;
     constructor(issuesService: IssuesService);
     listMine(user: RequestUser): Promise<({
+        _count: {
+            messages: number;
+        };
         guardian: {
             id: string;
             firstName: string;
             lastName: string;
-        };
-        _count: {
-            messages: number;
         };
         submittedBy: {
             id: string;
@@ -24,8 +24,8 @@ export declare class MyIssuesController {
         status: import(".prisma/client").$Enums.IssueStatus;
         createdAt: Date;
         updatedAt: Date;
-        description: string;
         academyId: string;
+        description: string;
         guardianId: string;
         submittedByUserId: string;
         subject: string;
@@ -47,8 +47,8 @@ export declare class MyIssuesController {
         status: import(".prisma/client").$Enums.IssueStatus;
         createdAt: Date;
         updatedAt: Date;
-        description: string;
         academyId: string;
+        description: string;
         guardianId: string;
         submittedByUserId: string;
         subject: string;
@@ -85,8 +85,8 @@ export declare class MyIssuesController {
         status: import(".prisma/client").$Enums.IssueStatus;
         createdAt: Date;
         updatedAt: Date;
-        description: string;
         academyId: string;
+        description: string;
         guardianId: string;
         submittedByUserId: string;
         subject: string;
@@ -123,8 +123,8 @@ export declare class MyIssuesController {
         status: import(".prisma/client").$Enums.IssueStatus;
         createdAt: Date;
         updatedAt: Date;
-        description: string;
         academyId: string;
+        description: string;
         guardianId: string;
         submittedByUserId: string;
         subject: string;

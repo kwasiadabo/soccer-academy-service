@@ -7,13 +7,13 @@ export declare class GuardiansController {
         players: ({
             player: {
                 id: string;
-                academyId: string;
-                firstName: string;
-                lastName: string;
                 status: import(".prisma/client").$Enums.PlayerStatus;
                 createdAt: Date;
                 updatedAt: Date;
+                firstName: string;
+                lastName: string;
                 deletedAt: Date | null;
+                academyId: string;
                 playerCode: string | null;
                 middleName: string | null;
                 dateOfBirth: Date;
@@ -34,23 +34,23 @@ export declare class GuardiansController {
             };
         } & {
             id: string;
-            academyId: string;
             createdAt: Date;
-            playerId: string;
+            academyId: string;
             guardianId: string;
+            playerId: string;
             relationship: import(".prisma/client").$Enums.GuardianRelationship;
             isPrimary: boolean;
         })[];
     } & {
         id: string;
-        academyId: string;
+        createdAt: Date;
+        updatedAt: Date;
         email: string | null;
         firstName: string;
         lastName: string;
         phone: string;
-        createdAt: Date;
-        updatedAt: Date;
         deletedAt: Date | null;
+        academyId: string;
         userId: string | null;
         address: string | null;
     })[]>;
@@ -58,13 +58,13 @@ export declare class GuardiansController {
         players: ({
             player: {
                 id: string;
-                academyId: string;
-                firstName: string;
-                lastName: string;
                 status: import(".prisma/client").$Enums.PlayerStatus;
                 createdAt: Date;
                 updatedAt: Date;
+                firstName: string;
+                lastName: string;
                 deletedAt: Date | null;
+                academyId: string;
                 playerCode: string | null;
                 middleName: string | null;
                 dateOfBirth: Date;
@@ -85,23 +85,23 @@ export declare class GuardiansController {
             };
         } & {
             id: string;
-            academyId: string;
             createdAt: Date;
-            playerId: string;
+            academyId: string;
             guardianId: string;
+            playerId: string;
             relationship: import(".prisma/client").$Enums.GuardianRelationship;
             isPrimary: boolean;
         })[];
     } & {
         id: string;
-        academyId: string;
+        createdAt: Date;
+        updatedAt: Date;
         email: string | null;
         firstName: string;
         lastName: string;
         phone: string;
-        createdAt: Date;
-        updatedAt: Date;
         deletedAt: Date | null;
+        academyId: string;
         userId: string | null;
         address: string | null;
     }>;
@@ -109,13 +109,13 @@ export declare class GuardiansController {
         players: ({
             player: {
                 id: string;
-                academyId: string;
-                firstName: string;
-                lastName: string;
                 status: import(".prisma/client").$Enums.PlayerStatus;
                 createdAt: Date;
                 updatedAt: Date;
+                firstName: string;
+                lastName: string;
                 deletedAt: Date | null;
+                academyId: string;
                 playerCode: string | null;
                 middleName: string | null;
                 dateOfBirth: Date;
@@ -136,23 +136,23 @@ export declare class GuardiansController {
             };
         } & {
             id: string;
-            academyId: string;
             createdAt: Date;
-            playerId: string;
+            academyId: string;
             guardianId: string;
+            playerId: string;
             relationship: import(".prisma/client").$Enums.GuardianRelationship;
             isPrimary: boolean;
         })[];
     } & {
         id: string;
-        academyId: string;
+        createdAt: Date;
+        updatedAt: Date;
         email: string | null;
         firstName: string;
         lastName: string;
         phone: string;
-        createdAt: Date;
-        updatedAt: Date;
         deletedAt: Date | null;
+        academyId: string;
         userId: string | null;
         address: string | null;
     }>;

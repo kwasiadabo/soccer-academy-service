@@ -14,8 +14,8 @@ export declare class ProductsController {
             createdAt: Date;
             academyId: string;
             sortOrder: number;
-            documentId: string;
             productId: string;
+            documentId: string;
         }[];
         variants: {
             id: string;
@@ -33,12 +33,12 @@ export declare class ProductsController {
         name: string;
         createdAt: Date;
         updatedAt: Date;
-        description: string | null;
-        academyId: string;
         deletedAt: Date | null;
-        isActive: boolean;
+        academyId: string;
+        description: string | null;
         category: import(".prisma/client").$Enums.ProductCategory;
         basePrice: import("@prisma/client/runtime/library").Decimal;
+        isActive: boolean;
     })[]>;
     findOne(id: string): Promise<{
         images: {
@@ -46,8 +46,8 @@ export declare class ProductsController {
             createdAt: Date;
             academyId: string;
             sortOrder: number;
-            documentId: string;
             productId: string;
+            documentId: string;
         }[];
         variants: {
             id: string;
@@ -65,12 +65,12 @@ export declare class ProductsController {
         name: string;
         createdAt: Date;
         updatedAt: Date;
-        description: string | null;
-        academyId: string;
         deletedAt: Date | null;
-        isActive: boolean;
+        academyId: string;
+        description: string | null;
         category: import(".prisma/client").$Enums.ProductCategory;
         basePrice: import("@prisma/client/runtime/library").Decimal;
+        isActive: boolean;
     }>;
     getImage(id: string, imageId: string, res: Response): Promise<void>;
     create(dto: CreateProductDto): import(".prisma/client").Prisma.Prisma__ProductClient<{
@@ -79,8 +79,8 @@ export declare class ProductsController {
             createdAt: Date;
             academyId: string;
             sortOrder: number;
-            documentId: string;
             productId: string;
+            documentId: string;
         }[];
         variants: {
             id: string;
@@ -98,12 +98,12 @@ export declare class ProductsController {
         name: string;
         createdAt: Date;
         updatedAt: Date;
-        description: string | null;
-        academyId: string;
         deletedAt: Date | null;
-        isActive: boolean;
+        academyId: string;
+        description: string | null;
         category: import(".prisma/client").$Enums.ProductCategory;
         basePrice: import("@prisma/client/runtime/library").Decimal;
+        isActive: boolean;
     }, never, import("@prisma/client/runtime/library").DefaultArgs>;
     update(id: string, dto: UpdateProductDto): Promise<{
         images: {
@@ -111,8 +111,8 @@ export declare class ProductsController {
             createdAt: Date;
             academyId: string;
             sortOrder: number;
-            documentId: string;
             productId: string;
+            documentId: string;
         }[];
         variants: {
             id: string;
@@ -130,12 +130,12 @@ export declare class ProductsController {
         name: string;
         createdAt: Date;
         updatedAt: Date;
-        description: string | null;
-        academyId: string;
         deletedAt: Date | null;
-        isActive: boolean;
+        academyId: string;
+        description: string | null;
         category: import(".prisma/client").$Enums.ProductCategory;
         basePrice: import("@prisma/client/runtime/library").Decimal;
+        isActive: boolean;
     }>;
     addVariant(id: string, dto: CreateVariantDto): Promise<{
         images: {
@@ -143,8 +143,8 @@ export declare class ProductsController {
             createdAt: Date;
             academyId: string;
             sortOrder: number;
-            documentId: string;
             productId: string;
+            documentId: string;
         }[];
         variants: {
             id: string;
@@ -162,12 +162,12 @@ export declare class ProductsController {
         name: string;
         createdAt: Date;
         updatedAt: Date;
-        description: string | null;
-        academyId: string;
         deletedAt: Date | null;
-        isActive: boolean;
+        academyId: string;
+        description: string | null;
         category: import(".prisma/client").$Enums.ProductCategory;
         basePrice: import("@prisma/client/runtime/library").Decimal;
+        isActive: boolean;
     }>;
     updateVariant(id: string, variantId: string, dto: UpdateVariantDto): Promise<{
         images: {
@@ -175,8 +175,8 @@ export declare class ProductsController {
             createdAt: Date;
             academyId: string;
             sortOrder: number;
-            documentId: string;
             productId: string;
+            documentId: string;
         }[];
         variants: {
             id: string;
@@ -194,12 +194,12 @@ export declare class ProductsController {
         name: string;
         createdAt: Date;
         updatedAt: Date;
-        description: string | null;
-        academyId: string;
         deletedAt: Date | null;
-        isActive: boolean;
+        academyId: string;
+        description: string | null;
         category: import(".prisma/client").$Enums.ProductCategory;
         basePrice: import("@prisma/client/runtime/library").Decimal;
+        isActive: boolean;
     }>;
     addImage(id: string, file: Express.Multer.File, user: RequestUser): Promise<{
         images: {
@@ -207,8 +207,8 @@ export declare class ProductsController {
             createdAt: Date;
             academyId: string;
             sortOrder: number;
-            documentId: string;
             productId: string;
+            documentId: string;
         }[];
         variants: {
             id: string;
@@ -226,12 +226,12 @@ export declare class ProductsController {
         name: string;
         createdAt: Date;
         updatedAt: Date;
-        description: string | null;
-        academyId: string;
         deletedAt: Date | null;
-        isActive: boolean;
+        academyId: string;
+        description: string | null;
         category: import(".prisma/client").$Enums.ProductCategory;
         basePrice: import("@prisma/client/runtime/library").Decimal;
+        isActive: boolean;
     }>;
     removeImage(id: string, imageId: string): Promise<{
         images: {
@@ -239,8 +239,8 @@ export declare class ProductsController {
             createdAt: Date;
             academyId: string;
             sortOrder: number;
-            documentId: string;
             productId: string;
+            documentId: string;
         }[];
         variants: {
             id: string;
@@ -258,11 +258,11 @@ export declare class ProductsController {
         name: string;
         createdAt: Date;
         updatedAt: Date;
-        description: string | null;
-        academyId: string;
         deletedAt: Date | null;
-        isActive: boolean;
+        academyId: string;
+        description: string | null;
         category: import(".prisma/client").$Enums.ProductCategory;
         basePrice: import("@prisma/client/runtime/library").Decimal;
+        isActive: boolean;
     }>;
 }
