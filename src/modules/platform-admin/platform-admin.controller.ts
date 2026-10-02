@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Patch, Post, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Param, Patch, Post, Query, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiConsumes, ApiOkResponse, ApiOperation, ApiTags, ApiUnauthorizedResponse } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
@@ -148,6 +148,16 @@ export class PlatformAdminController {
   @ApiOkResponse({ description: 'Lead updated.' })
   updateLeadStatus(@Param('id') id: string, @Body() dto: UpdateLeadStatusDto) {
     return this.platformAdmin.updateLeadStatus(id, dto.status);
+  }
+
+  @Get('billing/summary')
+  @UseGuards(PlatformAdminAuthGuard)
+  @ApiBearerAuth()
+  @ApiUnauthorizedResponse({ description: 'Missing or invalid platform admin token.' })
+  @ApiOperation({ summary: 'Per-academy amount charged, paid, and outstanding for a given month.' })
+  @ApiOkResponse({ description: 'Billing summary returned.' })
+  getBillingSummary(@Query('month') month?: string) {
+    return this.platformAdmin.getBillingSummary(month);
   }
 
   // Public — the SAMS landing page's pricing section reads the live price.

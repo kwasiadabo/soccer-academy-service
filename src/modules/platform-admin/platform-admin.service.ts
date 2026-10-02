@@ -274,6 +274,63 @@ export class PlatformAdminService {
     return results;
   }
 
+  // Per-academy billing summary for a given calendar month: how much SAMS
+  // invoiced that academy for the billing period(s) starting in that month,
+  // how much of that has actually been paid, and what's still outstanding
+  // (PENDING or FAILED invoices). `month` is "YYYY-MM"; defaults to the
+  // current month. Like listAcademiesWithHealth, this reads PlatformInvoice/
+  // AcademySubscription directly — neither is tenant-scoped/RLS-protected.
+  async getBillingSummary(month?: string) {
+    const monthStart = month ? new Date(`${month}-01T00:00:00.000Z`) : new Date();
+    if (month && Number.isNaN(monthStart.getTime())) {
+      throw new BadRequestException('Invalid month — expected "YYYY-MM".');
+    }
+    monthStart.setUTCDate(1);
+    monthStart.setUTCHours(0, 0, 0, 0);
+    const monthEnd = new Date(monthStart);
+    monthEnd.setUTCMonth(monthEnd.getUTCMonth() + 1);
+
+    const academies = await this.prisma.academy.findMany({ orderBy: { name: 'asc' } });
+    const pricing = await this.getPricing();
+
+    const academyRows = await Promise.all(
+      academies.map(async (academy) => {
+        const invoices = await this.prisma.platformInvoice.findMany({
+          where: { academyId: academy.id, periodStart: { gte: monthStart, lt: monthEnd } },
+        });
+        const amountCharged = invoices.reduce((sum, invoice) => sum + Number(invoice.amount), 0);
+        const amountPaid = invoices
+          .filter((invoice) => invoice.status === 'PAID')
+          .reduce((sum, invoice) => sum + Number(invoice.amount), 0);
+
+        return {
+          academyId: academy.id,
+          academyName: academy.name,
+          amountCharged,
+          amountPaid,
+          outstanding: amountCharged - amountPaid,
+          invoiceCount: invoices.length,
+        };
+      }),
+    );
+
+    const totals = academyRows.reduce(
+      (acc, row) => ({
+        amountCharged: acc.amountCharged + row.amountCharged,
+        amountPaid: acc.amountPaid + row.amountPaid,
+        outstanding: acc.outstanding + row.outstanding,
+      }),
+      { amountCharged: 0, amountPaid: 0, outstanding: 0 },
+    );
+
+    return {
+      month: monthStart.toISOString().slice(0, 7),
+      currency: pricing.currency,
+      academies: academyRows,
+      totals,
+    };
+  }
+
   async getPricing() {
     const pricing = await this.prisma.platformPricing.findUnique({ where: { id: 'default' } });
     return {
