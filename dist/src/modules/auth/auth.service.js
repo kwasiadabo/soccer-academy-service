@@ -50,6 +50,7 @@ const jwt_1 = require("@nestjs/jwt");
 const bcrypt = __importStar(require("bcrypt"));
 const crypto_1 = require("crypto");
 const tenant_context_service_1 = require("../../common/tenant-context/tenant-context.service");
+const email_template_1 = require("../../common/email/email-template");
 const platform_email_service_1 = require("../billing/platform-email.service");
 const prisma_service_1 = require("../prisma/prisma.service");
 const RESET_TOKEN_TTL_MS = 60 * 60 * 1000;
@@ -192,9 +193,13 @@ let AuthService = AuthService_1 = class AuthService {
         const sent = await this.platformEmail.send({
             to: user.email,
             subject: 'Reset your SAMS password',
-            html: `<p>We received a request to reset your SAMS password.</p>
-        <p><a href="${resetLink}">Click here to choose a new password</a>. This link expires in 1 hour.</p>
-        <p>If you didn't request this, you can safely ignore this email.</p>`,
+            html: (0, email_template_1.renderEmailLayout)({
+                title: 'Reset your password',
+                bodyHtml: `<p style="margin:0 0 20px;">We received a request to reset your SAMS password.</p>
+          ${(0, email_template_1.emailButton)('Choose a new password', resetLink)}
+          <p style="margin:0 0 8px;">This link expires in 1 hour.</p>
+          <p style="margin:0;color:#8a8a82;font-size:13px;">If you didn't request this, you can safely ignore this email.</p>`,
+            }),
         });
         if (!sent) {
             this.logger.log(`Password reset requested for ${user.email}: ${resetLink}`);

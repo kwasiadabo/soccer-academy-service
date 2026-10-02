@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, Logger, NotFoundException } from '@nes
 import { Cron } from '@nestjs/schedule';
 import { randomUUID } from 'crypto';
 import { TenantContextService } from '../../common/tenant-context/tenant-context.service';
+import { emailButton, escapeHtml, renderEmailLayout } from '../../common/email/email-template';
 import { PrismaService } from '../prisma/prisma.service';
 import { PlatformEmailService } from './platform-email.service';
 import { PlatformPaystackService } from './platform-paystack.service';
@@ -224,13 +225,19 @@ export class BillingService {
     const settings = await this.prisma.academySettings.findUnique({ where: { academyId } });
     const to = settings?.emailUser;
     if (!to) return;
+    const billingUrl = `https://${slug}.sams.variablexsolutions.com/admin/billing`;
     await this.platformEmail.send({
       to,
       subject: `Your SAMS subscription expires in ${daysRemaining} day${daysRemaining === 1 ? '' : 's'}`,
-      html: `<p>Hi ${settings?.brandName ?? slug},</p>
-        <p>Your SAMS subscription is due for renewal in <strong>${daysRemaining} day${daysRemaining === 1 ? '' : 's'}</strong>.
-        Sign in to your admin dashboard's Billing page to make sure payment goes through — if it lapses, every account
-        at your academy will be blocked from signing in until payment is made.</p>`,
+      html: renderEmailLayout({
+        title: 'Your subscription is due for renewal',
+        bodyHtml: `<p style="margin:0 0 16px;">Hi ${escapeHtml(settings?.brandName ?? slug)},</p>
+          <p style="margin:0 0 20px;">Your SAMS subscription is due for renewal in
+            <strong>${daysRemaining} day${daysRemaining === 1 ? '' : 's'}</strong>. Sign in to your admin dashboard's
+            Billing page to make sure payment goes through — if it lapses, every account at your academy will be
+            blocked from signing in until payment is made.</p>
+          ${emailButton('Go to Billing', billingUrl)}`,
+      }),
     });
   }
 

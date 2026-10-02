@@ -9,6 +9,7 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { createHash, randomBytes } from 'crypto';
 import { TenantContextService } from '../../common/tenant-context/tenant-context.service';
+import { emailButton, renderEmailLayout } from '../../common/email/email-template';
 import { PlatformEmailService } from '../billing/platform-email.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { JwtPayload } from './types';
@@ -226,9 +227,13 @@ export class AuthService {
     const sent = await this.platformEmail.send({
       to: user.email,
       subject: 'Reset your SAMS password',
-      html: `<p>We received a request to reset your SAMS password.</p>
-        <p><a href="${resetLink}">Click here to choose a new password</a>. This link expires in 1 hour.</p>
-        <p>If you didn't request this, you can safely ignore this email.</p>`,
+      html: renderEmailLayout({
+        title: 'Reset your password',
+        bodyHtml: `<p style="margin:0 0 20px;">We received a request to reset your SAMS password.</p>
+          ${emailButton('Choose a new password', resetLink)}
+          <p style="margin:0 0 8px;">This link expires in 1 hour.</p>
+          <p style="margin:0;color:#8a8a82;font-size:13px;">If you didn't request this, you can safely ignore this email.</p>`,
+      }),
     });
 
     // Falls back to logging the link so it's still usable when no platform

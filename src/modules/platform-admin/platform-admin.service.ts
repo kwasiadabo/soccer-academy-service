@@ -6,6 +6,7 @@ import { AcademyStatus, InquiryStatus, PendingAcademySignup } from '@prisma/clie
 import * as bcrypt from 'bcrypt';
 import { randomBytes, randomUUID } from 'crypto';
 import { TenantContextService } from '../../common/tenant-context/tenant-context.service';
+import { emailButton, emailFootnote, escapeHtml, renderEmailLayout } from '../../common/email/email-template';
 import { BillingService } from '../billing/billing.service';
 import { PlatformEmailService } from '../billing/platform-email.service';
 import { PlatformPaystackService } from '../billing/platform-paystack.service';
@@ -37,18 +38,6 @@ function paymentLinkExpiry(): Date {
 
 function generateTemporaryPassword(): string {
   return randomBytes(9).toString('base64url');
-}
-
-// The lead form is public and unauthenticated, so its fields must never be
-// interpolated into the notification email's HTML unescaped — otherwise
-// anyone could inject markup/links into a message SAMS staff open and trust.
-function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
 }
 
 @Injectable()
@@ -410,8 +399,9 @@ export class PlatformAdminService {
 
     await this.sendPendingSignupEmail(pending, {
       subject: `Complete payment to activate ${pending.name} on SAMS`,
+      title: 'Complete your payment to activate your account',
       intro: `You're almost done bringing <strong>${escapeHtml(pending.name)}</strong> onto SAMS. Pay the
-        one-time signup fee using the link below within the next ${PAYMENT_LINK_VALID_HOURS} hours to activate
+        one-time signup fee using the button below within the next ${PAYMENT_LINK_VALID_HOURS} hours to activate
         your account — the link expires after that.`,
     });
 
@@ -495,16 +485,19 @@ export class PlatformAdminService {
 
   private async sendPendingSignupEmail(
     pending: PendingAcademySignup,
-    params: { subject: string; intro: string },
+    params: { subject: string; title: string; intro: string },
   ): Promise<void> {
     const resumeUrl = `${pending.frontendOrigin}/signup/resume?token=${pending.resumeToken}`;
     await this.platformEmail.send({
       to: pending.adminEmail,
       subject: params.subject,
-      html: `<p>Hi ${escapeHtml(pending.adminFirstName)},</p>
-        <p>${params.intro}</p>
-        <p><a href="${resumeUrl}">Continue to payment</a></p>
-        <p>If the button doesn't work, copy this link into your browser: ${resumeUrl}</p>`,
+      html: renderEmailLayout({
+        title: params.title,
+        bodyHtml: `<p style="margin:0 0 16px;">Hi ${escapeHtml(pending.adminFirstName)},</p>
+          <p style="margin:0 0 20px;">${params.intro}</p>
+          ${emailButton('Continue to payment', resumeUrl)}
+          ${emailFootnote(`If the button doesn't work, copy this link into your browser: ${resumeUrl}`)}`,
+      }),
     });
   }
 
@@ -528,6 +521,7 @@ export class PlatformAdminService {
       if (ageDays >= PENDING_SIGNUP_DELETION_WARNING_AFTER_DAYS && !pending.deletionWarningSentAt) {
         await this.sendPendingSignupEmail(pending, {
           subject: `Your SAMS signup for ${pending.name} will be deleted soon`,
+          title: 'Action needed: your signup is about to be deleted',
           intro: `We still haven't received the one-time signup fee for <strong>${escapeHtml(pending.name)}</strong>.
             If payment isn't completed within ${PENDING_SIGNUP_DELETE_AFTER_DAYS - PENDING_SIGNUP_DELETION_WARNING_AFTER_DAYS}
             more day${PENDING_SIGNUP_DELETE_AFTER_DAYS - PENDING_SIGNUP_DELETION_WARNING_AFTER_DAYS === 1 ? '' : 's'},
@@ -543,6 +537,7 @@ export class PlatformAdminService {
       if (ageDays >= PENDING_SIGNUP_REMINDER_AFTER_DAYS && !pending.reminderSentAt) {
         await this.sendPendingSignupEmail(pending, {
           subject: `Reminder: finish bringing ${pending.name} onto SAMS`,
+          title: 'Reminder: your signup is still pending',
           intro: `You started signing <strong>${escapeHtml(pending.name)}</strong> up for SAMS a couple of days ago
             but haven't completed the one-time signup fee yet.`,
         });
@@ -569,17 +564,24 @@ export class PlatformAdminService {
   // can't turn into a failed submission for the prospect.
   private async notifyNewLead(dto: SubmitPlatformLeadDto): Promise<void> {
     const to = this.config.get<string>('SAMS_LEADS_NOTIFICATION_EMAIL') ?? 'adabo@variablexsolutions.com';
+    const row = (label: string, value: string) => `<tr>
+        <td style="padding:8px 0;border-bottom:1px solid #ececea;color:#8a8a82;font-size:13px;width:140px;vertical-align:top;">${label}</td>
+        <td style="padding:8px 0;border-bottom:1px solid #ececea;font-size:14px;">${value}</td>
+      </tr>`;
     await this.platformEmail.send({
       to,
       subject: `New walkthrough request — ${dto.academyName}`,
-      html: `<p>A prospective academy just asked to bring their academy onto SAMS.</p>
-        <ul>
-          <li><strong>Academy:</strong> ${escapeHtml(dto.academyName)}</li>
-          <li><strong>Training location:</strong> ${escapeHtml(dto.trainingLocation)}</li>
-          <li><strong>Contact:</strong> ${escapeHtml(dto.contactName)} — ${escapeHtml(dto.contactEmail)} — ${escapeHtml(dto.contactPhone)}</li>
-          ${dto.message ? `<li><strong>Message:</strong> ${escapeHtml(dto.message)}</li>` : ''}
-        </ul>
-        <p>Open the platform dashboard's Leads tab to follow up.</p>`,
+      html: renderEmailLayout({
+        title: 'New walkthrough request',
+        bodyHtml: `<p style="margin:0 0 20px;">A prospective academy just asked to bring their academy onto SAMS.</p>
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:20px;">
+            ${row('Academy', escapeHtml(dto.academyName))}
+            ${row('Location', escapeHtml(dto.trainingLocation))}
+            ${row('Contact', `${escapeHtml(dto.contactName)} — ${escapeHtml(dto.contactEmail)} — ${escapeHtml(dto.contactPhone)}`)}
+            ${dto.message ? row('Message', escapeHtml(dto.message)) : ''}
+          </table>
+          <p style="margin:0;">Open the platform dashboard's Leads tab to follow up.</p>`,
+      }),
     });
   }
 

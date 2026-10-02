@@ -14,6 +14,7 @@ exports.TrainingService = void 0;
 const common_1 = require("@nestjs/common");
 const schedule_1 = require("@nestjs/schedule");
 const tenant_context_service_1 = require("../../common/tenant-context/tenant-context.service");
+const email_template_1 = require("../../common/email/email-template");
 const prisma_service_1 = require("../prisma/prisma.service");
 const coach_context_service_1 = require("../coaches/coach-context.service");
 const email_service_1 = require("../messaging/email.service");
@@ -596,7 +597,13 @@ let TrainingService = TrainingService_1 = class TrainingService {
         const subject = `${dayName} training session created — ${teamName}`;
         const message = `A ${dayName} training session for ${teamName} has been scheduled for ${dateLabel}, ${timeLabel}${session.location ? ` at ${session.location}` : ''}.`;
         await Promise.all(Array.from(recipients.values()).map((recipient) => Promise.all([
-            recipient.email ? this.email.send({ to: recipient.email, subject, html: `<p>${message}</p>` }) : Promise.resolve(false),
+            recipient.email
+                ? this.email.send({
+                    to: recipient.email,
+                    subject,
+                    html: (0, email_template_1.renderEmailLayout)({ title: 'New training session', bodyHtml: `<p style="margin:0;">${message}</p>` }),
+                })
+                : Promise.resolve(false),
             recipient.phone ? this.sms.send(recipient.phone, message) : Promise.resolve(false),
         ])));
     }

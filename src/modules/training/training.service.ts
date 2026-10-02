@@ -2,6 +2,7 @@ import { BadRequestException, ConflictException, ForbiddenException, Injectable,
 import { Cron } from '@nestjs/schedule';
 import { AttendanceStatus, Prisma, TrainingApprovalStatus } from '@prisma/client';
 import { TenantContextService } from '../../common/tenant-context/tenant-context.service';
+import { renderEmailLayout } from '../../common/email/email-template';
 import { PrismaService } from '../prisma/prisma.service';
 import { CoachContextService } from '../coaches/coach-context.service';
 import { EmailService } from '../messaging/email.service';
@@ -740,7 +741,13 @@ export class TrainingService {
     await Promise.all(
       Array.from(recipients.values()).map((recipient) =>
         Promise.all([
-          recipient.email ? this.email.send({ to: recipient.email, subject, html: `<p>${message}</p>` }) : Promise.resolve(false),
+          recipient.email
+            ? this.email.send({
+                to: recipient.email,
+                subject,
+                html: renderEmailLayout({ title: 'New training session', bodyHtml: `<p style="margin:0;">${message}</p>` }),
+              })
+            : Promise.resolve(false),
           recipient.phone ? this.sms.send(recipient.phone, message) : Promise.resolve(false),
         ]),
       ),
